@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { Sponsor } from "@shared/schema";
@@ -37,7 +37,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, ExternalLink, Image as ImageIcon } from "lucide-react";
+import { Plus, Pencil, Trash2, ExternalLink, Image as ImageIcon, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminSponsors() {
@@ -45,6 +45,9 @@ export default function AdminSponsors() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     name: "",
@@ -125,40 +128,96 @@ export default function AdminSponsors() {
     },
   });
 
-  const handleCreate = () => {
-    const sponsorData = {
-      name: formData.name,
-      tier: formData.tier,
-      logo: formData.logo,
-      website: formData.website || undefined,
-      description: formData.description,
-      social: {
-        facebook: formData.facebook || undefined,
-        twitter: formData.twitter || undefined,
-        instagram: formData.instagram || undefined,
-      },
-    };
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'sponsors');
 
-    createMutation.mutate(sponsorData);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
-  const handleEdit = () => {
+  const handleCreate = async () => {
+    try {
+      let logoUrl = formData.logo;
+      
+      if (logoFile) {
+        setUploadingLogo(true);
+        logoUrl = await uploadFile(logoFile);
+      }
+
+      const sponsorData = {
+        name: formData.name,
+        tier: formData.tier,
+        logo: logoUrl,
+        website: formData.website || undefined,
+        description: formData.description,
+        social: {
+          facebook: formData.facebook || undefined,
+          twitter: formData.twitter || undefined,
+          instagram: formData.instagram || undefined,
+        },
+      };
+
+      createMutation.mutate(sponsorData);
+      setLogoFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
+  };
+
+  const handleEdit = async () => {
     if (!selectedSponsor) return;
 
-    const sponsorData = {
-      name: formData.name,
-      tier: formData.tier,
-      logo: formData.logo,
-      website: formData.website || undefined,
-      description: formData.description,
-      social: {
-        facebook: formData.facebook || undefined,
-        twitter: formData.twitter || undefined,
-        instagram: formData.instagram || undefined,
-      },
-    };
+    try {
+      let logoUrl = formData.logo;
+      
+      if (logoFile) {
+        setUploadingLogo(true);
+        logoUrl = await uploadFile(logoFile);
+      }
 
-    updateMutation.mutate({ id: selectedSponsor.id, data: sponsorData });
+      const sponsorData = {
+        name: formData.name,
+        tier: formData.tier,
+        logo: logoUrl,
+        website: formData.website || undefined,
+        description: formData.description,
+        social: {
+          facebook: formData.facebook || undefined,
+          twitter: formData.twitter || undefined,
+          instagram: formData.instagram || undefined,
+        },
+      };
+
+      updateMutation.mutate({ id: selectedSponsor.id, data: sponsorData });
+      setLogoFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   const handleDelete = (id: string, name: string) => {
@@ -372,12 +431,13 @@ export default function AdminSponsors() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="logo">Logo URL</Label>
+              <Label htmlFor="logo">Upload Logo</Label>
               <Input
                 id="logo"
-                value={formData.logo}
-                onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
-                placeholder="https://example.com/logo.png"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-logo"
               />
             </div>
@@ -421,8 +481,8 @@ export default function AdminSponsors() {
             <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel">
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending} data-testid="button-submit-sponsor">
-              {createMutation.isPending ? "Adding..." : "Add Sponsor"}
+            <Button onClick={handleCreate} disabled={createMutation.isPending || uploadingLogo} data-testid="button-submit-sponsor">
+              {uploadingLogo ? "Uploading..." : createMutation.isPending ? "Adding..." : "Add Sponsor"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -475,11 +535,13 @@ export default function AdminSponsors() {
               </div>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-logo">Logo URL</Label>
+              <Label htmlFor="edit-logo">Upload New Logo (optional)</Label>
               <Input
                 id="edit-logo"
-                value={formData.logo}
-                onChange={(e) => setFormData({ ...formData, logo: e.target.value })}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-edit-logo"
               />
             </div>
@@ -522,8 +584,8 @@ export default function AdminSponsors() {
             <Button variant="outline" onClick={() => setIsEditOpen(false)} data-testid="button-cancel-edit">
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={updateMutation.isPending} data-testid="button-save-sponsor">
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            <Button onClick={handleEdit} disabled={updateMutation.isPending || uploadingLogo} data-testid="button-save-sponsor">
+              {uploadingLogo ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

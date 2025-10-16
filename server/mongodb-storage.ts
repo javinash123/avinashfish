@@ -487,13 +487,13 @@ export class MongoDBStorage implements IStorage {
   }
 
   async updateSponsor(id: string, updates: UpdateSponsor): Promise<Sponsor | undefined> {
-    const updateData = { ...updates };
+    const updateData: any = { ...updates };
     if (updates.social) {
       updateData.social = {
         facebook: updates.social.facebook as string | undefined,
         twitter: updates.social.twitter as string | undefined,
         instagram: updates.social.instagram as string | undefined,
-      };
+      } as { facebook?: string; twitter?: string; instagram?: string };
     }
     const result = await this.sponsors.findOneAndUpdate(
       { id },

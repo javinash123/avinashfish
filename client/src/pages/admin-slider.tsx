@@ -1,5 +1,5 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -7,13 +7,17 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { SliderImage, SiteSettings } from "@shared/schema";
-import { Trash2, Plus } from "lucide-react";
+import { Trash2, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 
 export default function AdminSlider() {
   const { toast } = useToast();
-  const [newImageUrl, setNewImageUrl] = useState("");
-  const [logoUrl, setLogoUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [uploadingSlider, setUploadingSlider] = useState(false);
+  const [uploadingLogo, setUploadingLogo] = useState(false);
+  const sliderFileInputRef = useRef<HTMLInputElement>(null);
+  const logoFileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: sliderImages = [] } = useQuery<SliderImage[]>({
     queryKey: ["/api/admin/slider-images"],
@@ -22,12 +26,6 @@ export default function AdminSlider() {
   const { data: siteSettings } = useQuery<SiteSettings>({
     queryKey: ["/api/site-settings"],
   });
-
-  useEffect(() => {
-    if (siteSettings?.logoUrl) {
-      setLogoUrl(siteSettings.logoUrl);
-    }
-  }, [siteSettings]);
 
   const createImageMutation = useMutation({
     mutationFn: async (imageUrl: string) => {
@@ -44,7 +42,10 @@ export default function AdminSlider() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/admin/slider-images"] });
       queryClient.invalidateQueries({ queryKey: ["/api/slider-images"] });
-      setNewImageUrl("");
+      setSelectedFile(null);
+      if (sliderFileInputRef.current) {
+        sliderFileInputRef.current.value = '';
+      }
       toast({
         title: "Success",
         description: "Slider image added successfully",
@@ -110,6 +111,10 @@ export default function AdminSlider() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/site-settings"] });
+      setLogoFile(null);
+      if (logoFileInputRef.current) {
+        logoFileInputRef.current.value = '';
+      }
       toast({
         title: "Success",
         description: "Logo updated successfully",
@@ -125,28 +130,72 @@ export default function AdminSlider() {
     },
   });
 
-  const handleAddImage = () => {
-    if (!newImageUrl.trim()) {
-      toast({
-        title: "Error",
-        description: "Please enter an image URL",
-        variant: "destructive",
-      });
-      return;
+  const uploadFile = async (file: File, type: string): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', type);
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
     }
-    createImageMutation.mutate(newImageUrl);
+
+    const data = await response.json();
+    return data.url;
   };
 
-  const handleUpdateLogo = () => {
-    if (!logoUrl.trim()) {
+  const handleAddSliderImage = async () => {
+    if (!selectedFile) {
       toast({
         title: "Error",
-        description: "Please enter a logo URL",
+        description: "Please select an image file",
         variant: "destructive",
       });
       return;
     }
-    updateLogoMutation.mutate(logoUrl);
+
+    try {
+      setUploadingSlider(true);
+      const imageUrl = await uploadFile(selectedFile, 'slider');
+      createImageMutation.mutate(imageUrl);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingSlider(false);
+    }
+  };
+
+  const handleUpdateLogo = async () => {
+    if (!logoFile) {
+      toast({
+        title: "Error",
+        description: "Please select a logo file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      setUploadingLogo(true);
+      const logoUrl = await uploadFile(logoFile, 'logo');
+      updateLogoMutation.mutate(logoUrl);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload logo",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingLogo(false);
+    }
   };
 
   return (
@@ -162,26 +211,28 @@ export default function AdminSlider() {
         <CardHeader>
           <CardTitle>Site Logo</CardTitle>
           <CardDescription>
-            Update the logo displayed in the header
+            Upload the logo displayed in the header
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="logo-url">Logo URL</Label>
+            <Label htmlFor="logo-file">Upload Logo</Label>
             <div className="flex gap-2">
               <Input
-                id="logo-url"
-                placeholder="https://example.com/logo.png"
-                value={logoUrl}
-                onChange={(e) => setLogoUrl(e.target.value)}
-                data-testid="input-logo-url"
+                id="logo-file"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setLogoFile(e.target.files?.[0] || null)}
+                ref={logoFileInputRef}
+                data-testid="input-logo-file"
               />
               <Button
                 onClick={handleUpdateLogo}
-                disabled={updateLogoMutation.isPending}
+                disabled={uploadingLogo || !logoFile}
                 data-testid="button-update-logo"
               >
-                {updateLogoMutation.isPending ? "Updating..." : "Update Logo"}
+                <Upload className="h-4 w-4 mr-2" />
+                {uploadingLogo ? "Uploading..." : "Update Logo"}
               </Button>
             </div>
           </div>
@@ -203,27 +254,28 @@ export default function AdminSlider() {
         <CardHeader>
           <CardTitle>Hero Slider Images</CardTitle>
           <CardDescription>
-            Add and manage images for the homepage hero slider
+            Upload and manage images for the homepage hero slider
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           <div className="space-y-2">
-            <Label htmlFor="new-image-url">New Image URL</Label>
+            <Label htmlFor="slider-file">Upload New Slider Image</Label>
             <div className="flex gap-2">
               <Input
-                id="new-image-url"
-                placeholder="https://example.com/image.jpg"
-                value={newImageUrl}
-                onChange={(e) => setNewImageUrl(e.target.value)}
+                id="slider-file"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                ref={sliderFileInputRef}
                 data-testid="input-new-slider-image"
               />
               <Button
-                onClick={handleAddImage}
-                disabled={createImageMutation.isPending}
+                onClick={handleAddSliderImage}
+                disabled={uploadingSlider || !selectedFile}
                 data-testid="button-add-slider-image"
               >
-                <Plus className="h-4 w-4 mr-2" />
-                {createImageMutation.isPending ? "Adding..." : "Add Image"}
+                <Upload className="h-4 w-4 mr-2" />
+                {uploadingSlider ? "Uploading..." : "Add Image"}
               </Button>
             </div>
           </div>

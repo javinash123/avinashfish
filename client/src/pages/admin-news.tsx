@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { News } from "@shared/schema";
@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Trophy, Newspaper, Search } from "lucide-react";
+import { Plus, Pencil, Trash2, Trophy, Newspaper, Search, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminNews() {
@@ -44,6 +44,9 @@ export default function AdminNews() {
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "match-report" | "announcement" | "news">("all");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     title: "",
@@ -125,38 +128,94 @@ export default function AdminNews() {
     },
   });
 
-  const handleCreate = () => {
-    const newsData = {
-      title: formData.title,
-      excerpt: formData.excerpt,
-      content: formData.content,
-      category: formData.category,
-      author: formData.author,
-      date: formData.date,
-      readTime: formData.readTime,
-      image: formData.image,
-      competition: formData.competition || undefined,
-    };
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'news');
 
-    createMutation.mutate(newsData);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
-  const handleEdit = () => {
+  const handleCreate = async () => {
+    try {
+      let imageUrl = formData.image;
+      
+      if (imageFile) {
+        setUploadingImage(true);
+        imageUrl = await uploadFile(imageFile);
+      }
+
+      const newsData = {
+        title: formData.title,
+        excerpt: formData.excerpt,
+        content: formData.content,
+        category: formData.category,
+        author: formData.author,
+        date: formData.date,
+        readTime: formData.readTime,
+        image: imageUrl,
+        competition: formData.competition || undefined,
+      };
+
+      createMutation.mutate(newsData);
+      setImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleEdit = async () => {
     if (!selectedArticle) return;
 
-    const newsData = {
-      title: formData.title,
-      excerpt: formData.excerpt,
-      content: formData.content,
-      category: formData.category,
-      author: formData.author,
-      date: formData.date,
-      readTime: formData.readTime,
-      image: formData.image,
-      competition: formData.competition || undefined,
-    };
+    try {
+      let imageUrl = formData.image;
+      
+      if (imageFile) {
+        setUploadingImage(true);
+        imageUrl = await uploadFile(imageFile);
+      }
 
-    updateMutation.mutate({ id: selectedArticle.id, data: newsData });
+      const newsData = {
+        title: formData.title,
+        excerpt: formData.excerpt,
+        content: formData.content,
+        category: formData.category,
+        author: formData.author,
+        date: formData.date,
+        readTime: formData.readTime,
+        image: imageUrl,
+        competition: formData.competition || undefined,
+      };
+
+      updateMutation.mutate({ id: selectedArticle.id, data: newsData });
+      setImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -453,12 +512,13 @@ export default function AdminNews() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="image">Image URL</Label>
+              <Label htmlFor="image">Upload Image</Label>
               <Input
                 id="image"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-image"
               />
             </div>
@@ -489,8 +549,8 @@ export default function AdminNews() {
             <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel">
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending} data-testid="button-publish">
-              {createMutation.isPending ? "Publishing..." : "Publish Article"}
+            <Button onClick={handleCreate} disabled={createMutation.isPending || uploadingImage} data-testid="button-publish">
+              {uploadingImage ? "Uploading..." : createMutation.isPending ? "Publishing..." : "Publish Article"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -572,13 +632,18 @@ export default function AdminNews() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-image">Image URL</Label>
+              <Label htmlFor="edit-image">Upload New Image (optional)</Label>
               <Input
                 id="edit-image"
-                value={formData.image}
-                onChange={(e) => setFormData({ ...formData, image: e.target.value })}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-edit-image"
               />
+              {formData.image && !imageFile && (
+                <p className="text-sm text-muted-foreground">Current: {formData.image}</p>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-excerpt">Excerpt</Label>
@@ -605,8 +670,8 @@ export default function AdminNews() {
             <Button variant="outline" onClick={() => setIsEditOpen(false)} data-testid="button-cancel-edit">
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={updateMutation.isPending} data-testid="button-save-edit">
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            <Button onClick={handleEdit} disabled={updateMutation.isPending || uploadingImage} data-testid="button-save-edit">
+              {uploadingImage ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

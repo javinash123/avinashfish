@@ -40,7 +40,6 @@ import {
   SidebarProvider,
   SidebarTrigger,
 } from "@/components/ui/sidebar";
-import { ThemeToggle } from "@/components/theme-toggle";
 import AdminCompetitions from "./admin-competitions";
 import AdminAnglers from "./admin-anglers";
 import AdminSponsors from "./admin-sponsors";
@@ -396,7 +395,6 @@ export default function AdminDashboard() {
                 <LogOut className="h-4 w-4 mr-2" />
                 Logout
               </Button>
-              <ThemeToggle />
             </div>
           </header>
 

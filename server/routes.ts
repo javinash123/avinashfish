@@ -3,6 +3,9 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { registerUserSchema, loginUserSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
 import Stripe from "stripe";
+import multer from "multer";
+import path from "path";
+import fs from "fs";
 import "./types"; // Import session types
 
 // Stripe integration for payment processing
@@ -12,6 +15,86 @@ const stripe = process.env.STRIPE_SECRET_KEY
   : null;
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Whitelist of allowed upload types to prevent directory traversal
+  const ALLOWED_UPLOAD_TYPES = ['slider', 'news', 'gallery', 'sponsors', 'logo'] as const;
+  type AllowedUploadType = typeof ALLOWED_UPLOAD_TYPES[number];
+  
+  const sanitizeUploadType = (type: string): AllowedUploadType => {
+    const sanitized = type.toLowerCase().trim();
+    if (ALLOWED_UPLOAD_TYPES.includes(sanitized as AllowedUploadType)) {
+      return sanitized as AllowedUploadType;
+    }
+    // Default to 'gallery' if invalid type provided
+    return 'gallery';
+  };
+
+  // Configure multer for file uploads
+  const storage_config = multer.diskStorage({
+    destination: (req, file, cb) => {
+      const rawType = req.body.type || 'gallery';
+      const type = sanitizeUploadType(rawType);
+      const uploadPath = path.join(process.cwd(), 'attached_assets', 'uploads', type);
+      
+      // Security check: ensure the resolved path is within our upload directory
+      const baseUploadDir = path.join(process.cwd(), 'attached_assets', 'uploads');
+      const resolvedPath = path.resolve(uploadPath);
+      
+      if (!resolvedPath.startsWith(path.resolve(baseUploadDir))) {
+        return cb(new Error('Invalid upload path'), '');
+      }
+      
+      // Ensure directory exists
+      if (!fs.existsSync(uploadPath)) {
+        fs.mkdirSync(uploadPath, { recursive: true });
+      }
+      
+      cb(null, uploadPath);
+    },
+    filename: (req, file, cb) => {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, file.fieldname + '-' + uniqueSuffix + ext);
+    }
+  });
+
+  const upload = multer({ 
+    storage: storage_config,
+    fileFilter: (req, file, cb) => {
+      // Accept only image files
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(new Error('Only image files are allowed'));
+      }
+    },
+    limits: {
+      fileSize: 5 * 1024 * 1024 // 5MB limit
+    }
+  });
+
+  // File upload endpoint
+  app.post("/api/upload", upload.single('image'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No file uploaded" });
+      }
+
+      const rawType = req.body.type || 'gallery';
+      const type = sanitizeUploadType(rawType);
+      const fileName = req.file.filename;
+      const fileUrl = `/assets/uploads/${type}/${fileName}`;
+
+      res.json({ 
+        url: fileUrl,
+        filename: fileName,
+        message: "File uploaded successfully" 
+      });
+    } catch (error: any) {
+      console.error("File upload error:", error);
+      res.status(500).json({ message: "File upload failed: " + error.message });
+    }
+  });
+
   // Competition pricing - in production, this should come from database
   // TODO: Move to database when competitions table is implemented
   const competitionPricing: Record<string, { entryFee: number; bookingFee: number }> = {

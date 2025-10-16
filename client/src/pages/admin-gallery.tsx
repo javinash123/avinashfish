@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { GalleryImage } from "@shared/schema";
@@ -26,7 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, Fish, Calendar, Image as ImageIcon, Trophy } from "lucide-react";
+import { Plus, Pencil, Trash2, Fish, Calendar, Image as ImageIcon, Trophy, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
 export default function AdminGallery() {
@@ -35,6 +35,9 @@ export default function AdminGallery() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<"all" | "event" | "catch">("all");
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
     url: "",
@@ -115,36 +118,92 @@ export default function AdminGallery() {
     },
   });
 
-  const handleCreate = () => {
-    const imageData = {
-      url: formData.url,
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      competition: formData.competition || undefined,
-      date: formData.date,
-      angler: formData.angler || undefined,
-      weight: formData.weight || undefined,
-    };
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'gallery');
 
-    createMutation.mutate(imageData);
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
+    }
+
+    const data = await response.json();
+    return data.url;
   };
 
-  const handleEdit = () => {
+  const handleCreate = async () => {
+    try {
+      let imageUrl = formData.url;
+      
+      if (imageFile) {
+        setUploadingImage(true);
+        imageUrl = await uploadFile(imageFile);
+      }
+
+      const imageData = {
+        url: imageUrl,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        competition: formData.competition || undefined,
+        date: formData.date,
+        angler: formData.angler || undefined,
+        weight: formData.weight || undefined,
+      };
+
+      createMutation.mutate(imageData);
+      setImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleEdit = async () => {
     if (!selectedImage) return;
 
-    const imageData = {
-      url: formData.url,
-      title: formData.title,
-      description: formData.description,
-      category: formData.category,
-      competition: formData.competition || undefined,
-      date: formData.date,
-      angler: formData.angler || undefined,
-      weight: formData.weight || undefined,
-    };
+    try {
+      let imageUrl = formData.url;
+      
+      if (imageFile) {
+        setUploadingImage(true);
+        imageUrl = await uploadFile(imageFile);
+      }
 
-    updateMutation.mutate({ id: selectedImage.id, data: imageData });
+      const imageData = {
+        url: imageUrl,
+        title: formData.title,
+        description: formData.description,
+        category: formData.category,
+        competition: formData.competition || undefined,
+        date: formData.date,
+        angler: formData.angler || undefined,
+        weight: formData.weight || undefined,
+      };
+
+      updateMutation.mutate({ id: selectedImage.id, data: imageData });
+      setImageFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
   };
 
   const handleDelete = (id: string, title: string) => {
@@ -319,12 +378,13 @@ export default function AdminGallery() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="url">Image URL</Label>
+              <Label htmlFor="url">Upload Image</Label>
               <Input
                 id="url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-                placeholder="https://example.com/image.jpg"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-url"
               />
             </div>
@@ -415,8 +475,8 @@ export default function AdminGallery() {
             <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel">
               Cancel
             </Button>
-            <Button onClick={handleCreate} disabled={createMutation.isPending} data-testid="button-upload">
-              {createMutation.isPending ? "Uploading..." : "Upload Image"}
+            <Button onClick={handleCreate} disabled={createMutation.isPending || uploadingImage} data-testid="button-upload">
+              {uploadingImage ? "Uploading..." : createMutation.isPending ? "Saving..." : "Upload Image"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -432,11 +492,13 @@ export default function AdminGallery() {
           </DialogHeader>
           <div className="grid gap-4 py-4">
             <div className="grid gap-2">
-              <Label htmlFor="edit-url">Image URL</Label>
+              <Label htmlFor="edit-url">Upload New Image (optional)</Label>
               <Input
                 id="edit-url"
-                value={formData.url}
-                onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                type="file"
+                accept="image/*"
+                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
+                ref={fileInputRef}
                 data-testid="input-edit-url"
               />
             </div>
@@ -522,8 +584,8 @@ export default function AdminGallery() {
             <Button variant="outline" onClick={() => setIsEditOpen(false)} data-testid="button-cancel-edit">
               Cancel
             </Button>
-            <Button onClick={handleEdit} disabled={updateMutation.isPending} data-testid="button-save-edit">
-              {updateMutation.isPending ? "Saving..." : "Save Changes"}
+            <Button onClick={handleEdit} disabled={updateMutation.isPending || uploadingImage} data-testid="button-save-edit">
+              {uploadingImage ? "Uploading..." : updateMutation.isPending ? "Saving..." : "Save Changes"}
             </Button>
           </DialogFooter>
         </DialogContent>

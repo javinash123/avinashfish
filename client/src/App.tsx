@@ -64,8 +64,6 @@ function Router() {
   );
 }
 
-import { Router as WouterRouter } from "wouter"; // assuming this is imported
-
 function App() {
   return (
     <QueryClientProvider client={queryClient}>

@@ -88,6 +88,9 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Serve uploaded files statically
+  app.use('/assets', express.static('attached_assets'));
+  
   // Instead of using Router, just pass `app` directly
   const server = await registerRoutes(app);
 
