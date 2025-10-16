@@ -28,20 +28,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return 'gallery';
   };
 
-  // Configure multer for file uploads
+  // Configure multer for file uploads - store in temp location first
   const storage_config = multer.diskStorage({
     destination: (req, file, cb) => {
-      const rawType = req.body.type || 'gallery';
-      const type = sanitizeUploadType(rawType);
-      const uploadPath = path.join(process.cwd(), 'attached_assets', 'uploads', type);
-      
-      // Security check: ensure the resolved path is within our upload directory
-      const baseUploadDir = path.join(process.cwd(), 'attached_assets', 'uploads');
-      const resolvedPath = path.resolve(uploadPath);
-      
-      if (!resolvedPath.startsWith(path.resolve(baseUploadDir))) {
-        return cb(new Error('Invalid upload path'), '');
-      }
+      // Use a temp directory for initial upload
+      const uploadPath = path.join(process.cwd(), 'attached_assets', 'uploads', 'temp');
       
       // Ensure directory exists
       if (!fs.existsSync(uploadPath)) {
@@ -81,7 +72,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       const rawType = req.body.type || 'gallery';
       const type = sanitizeUploadType(rawType);
+      
+      // Move file from temp to correct directory
+      const tempPath = req.file.path;
+      const targetDir = path.join(process.cwd(), 'attached_assets', 'uploads', type);
+      
+      // Security check: ensure the resolved path is within our upload directory
+      const baseUploadDir = path.join(process.cwd(), 'attached_assets', 'uploads');
+      const resolvedPath = path.resolve(targetDir);
+      
+      if (!resolvedPath.startsWith(path.resolve(baseUploadDir))) {
+        // Clean up temp file
+        fs.unlinkSync(tempPath);
+        return res.status(400).json({ message: 'Invalid upload type' });
+      }
+      
+      // Ensure target directory exists
+      if (!fs.existsSync(targetDir)) {
+        fs.mkdirSync(targetDir, { recursive: true });
+      }
+      
       const fileName = req.file.filename;
+      const targetPath = path.join(targetDir, fileName);
+      
+      // Move file to correct location
+      fs.renameSync(tempPath, targetPath);
+      
       const fileUrl = `/assets/uploads/${type}/${fileName}`;
 
       res.json({ 
@@ -91,6 +107,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("File upload error:", error);
+      // Clean up temp file if it exists
+      if (req.file?.path && fs.existsSync(req.file.path)) {
+        fs.unlinkSync(req.file.path);
+      }
       res.status(500).json({ message: "File upload failed: " + error.message });
     }
   });
