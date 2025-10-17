@@ -220,11 +220,7 @@ export default function News() {
                 </div>
                 <div className="space-y-3">
                   <p className="text-muted-foreground font-medium">{selectedArticle.excerpt}</p>
-                  <div className="prose prose-sm max-w-none" data-testid="text-dialog-news-content">
-                    {selectedArticle.content.split('\n').map((paragraph, index) => (
-                      <p key={index}>{paragraph}</p>
-                    ))}
-                  </div>
+                  <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: selectedArticle.content }} />
                   <div className="flex items-center gap-4 text-sm pt-4 border-t">
                     <span className="text-muted-foreground">By {selectedArticle.author}</span>
                     {selectedArticle.competition && (

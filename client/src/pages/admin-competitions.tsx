@@ -472,22 +472,20 @@ export default function AdminCompetitions() {
   // Helper function to compute competition status based on date and time
   const getCompetitionStatus = (comp: Competition): string => {
     const now = new Date();
-    const startDateTime = new Date(`${comp.date}T${comp.time}`);
-    const endDateTime = comp.endTime ? new Date(`${comp.date}T${comp.endTime}`) : null;
+    const compDate = new Date(comp.date);
+    const startDateTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : compDate;
     
-    // If no end time is set, use old logic
-    if (!endDateTime) {
-      if (startDateTime < now) {
-        return "completed";
-      }
-      const hoursUntilComp = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-      if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
-        return "live";
-      }
-      return "upcoming";
+    // If no end time specified, assume competition ends at end of day (23:59:59)
+    let endDateTime: Date;
+    if (comp.endTime) {
+      endDateTime = new Date(`${comp.date}T${comp.endTime}`);
+    } else {
+      // Set to end of day (23:59:59)
+      endDateTime = new Date(comp.date);
+      endDateTime.setHours(23, 59, 59, 999);
     }
     
-    // New logic with end time
+    // Compute status based on start and end times
     if (now < startDateTime) {
       return "upcoming";  // Before start time
     } else if (now >= startDateTime && now <= endDateTime) {
@@ -673,7 +671,7 @@ export default function AdminCompetitions() {
       </Card>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Create New Competition</DialogTitle>
             <DialogDescription>
@@ -830,7 +828,7 @@ export default function AdminCompetitions() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Competition</DialogTitle>
             <DialogDescription>

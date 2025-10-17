@@ -23,18 +23,28 @@ export default function Home() {
   });
 
   // Helper function to compute competition status based on date and time
-  const getCompetitionStatus = (comp: Competition): string => {
+  const getCompetitionStatus = (comp: Competition): "upcoming" | "live" | "completed" => {
     const now = new Date();
-    const compDateTime = new Date(`${comp.date}T${comp.time}`);
+    const compDate = new Date(comp.date);
+    const compStartTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : compDate;
     
-    // If competition date/time has passed, it's completed
-    if (compDateTime < now) {
+    // If no end time specified, assume competition ends at end of day (23:59:59)
+    let compEndTime: Date;
+    if (comp.endTime) {
+      compEndTime = new Date(`${comp.date}T${comp.endTime}`);
+    } else {
+      // Set to end of day (23:59:59)
+      compEndTime = new Date(comp.date);
+      compEndTime.setHours(23, 59, 59, 999);
+    }
+    
+    // If current time is after end time, it's completed
+    if (now > compEndTime) {
       return "completed";
     }
     
-    // If competition is within the next 24 hours, it's live
-    const hoursUntilComp = (compDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
+    // If current time is between start and end time, it's live
+    if (now >= compStartTime && now <= compEndTime) {
       return "live";
     }
     
@@ -42,8 +52,13 @@ export default function Home() {
     return "upcoming";
   };
 
+  // Filter upcoming competitions - only show if start time is in the future
   const upcomingCompetitions = competitionsData
-    .filter((comp) => getCompetitionStatus(comp) === "upcoming")
+    .filter((comp) => {
+      const now = new Date();
+      const compStartTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : new Date(comp.date);
+      return now < compStartTime; // Only show competitions that haven't started yet
+    })
     .slice(0, 3)
     .map((comp) => ({
       id: comp.id,
@@ -54,7 +69,8 @@ export default function Home() {
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,
       entryFee: `£${comp.entryFee}`,
       prizePool: `£${comp.prizePool}`,
-      status: getCompetitionStatus(comp) as "upcoming",
+      status: "upcoming" as const,
+      imageUrl: comp.imageUrl || undefined,
     }));
 
   // Get all live competitions

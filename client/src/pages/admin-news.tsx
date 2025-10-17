@@ -36,6 +36,8 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Plus, Pencil, Trash2, Trophy, Newspaper, Search, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
+import ReactQuill from 'react-quill';
+import 'react-quill/dist/quill.snow.css';
 
 export default function AdminNews() {
   const { toast } = useToast();
@@ -535,13 +537,13 @@ export default function AdminNews() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="content">Full Content</Label>
-              <Textarea
-                id="content"
+              <ReactQuill
+                theme="snow"
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                placeholder="Full article content..."
-                rows={6}
-                data-testid="input-content"
+                onChange={(value) => setFormData({ ...formData, content: value })}
+                placeholder="Write your article content with formatting..."
+                className="bg-background"
+                style={{ height: '200px', marginBottom: '50px' }}
               />
             </div>
           </div>
@@ -657,12 +659,12 @@ export default function AdminNews() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-content">Full Content</Label>
-              <Textarea
-                id="edit-content"
+              <ReactQuill
+                theme="snow"
                 value={formData.content}
-                onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-                rows={6}
-                data-testid="input-edit-content"
+                onChange={(value) => setFormData({ ...formData, content: value })}
+                className="bg-background"
+                style={{ height: '200px', marginBottom: '50px' }}
               />
             </div>
           </div>
