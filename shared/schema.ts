@@ -199,6 +199,7 @@ export const competitions = pgTable("competitions", {
   name: text("name").notNull(),
   date: text("date").notNull(),
   time: text("time").notNull(),
+  endTime: text("end_time"),
   venue: text("venue").notNull(),
   pegsTotal: integer("pegs_total").notNull(),
   pegsBooked: integer("pegs_booked").notNull().default(0),
@@ -208,6 +209,7 @@ export const competitions = pgTable("competitions", {
   description: text("description").notNull(),
   type: text("type").notNull(),
   rules: text("rules").array(),
+  imageUrl: text("image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

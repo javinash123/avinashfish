@@ -211,6 +211,7 @@ export class MongoDBStorage implements IStorage {
           name: "Spring Championship 2025",
           date: liveCompDate.toISOString().split('T')[0],
           time: "08:00",
+          endTime: "16:00",
           venue: "Riverside Lake",
           description: "Our flagship spring competition featuring the best anglers from across the region",
           pegsTotal: 30,
@@ -220,6 +221,7 @@ export class MongoDBStorage implements IStorage {
           status: "upcoming",
           type: "Championship",
           rules: ["Standard match rules apply", "Barbless hooks only", "Keep nets mandatory"],
+          imageUrl: null,
           createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
         },
         {
@@ -227,6 +229,7 @@ export class MongoDBStorage implements IStorage {
           name: "Midweek Match",
           date: upcomingComp1Date.toISOString().split('T')[0],
           time: "07:00",
+          endTime: "15:00",
           venue: "Canal Section 5",
           description: "Relaxed midweek competition perfect for all skill levels",
           pegsTotal: 20,
@@ -236,6 +239,7 @@ export class MongoDBStorage implements IStorage {
           status: "upcoming",
           type: "Open Match",
           rules: ["All methods allowed", "No bloodworm or joker"],
+          imageUrl: null,
           createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
         },
         {
@@ -243,6 +247,7 @@ export class MongoDBStorage implements IStorage {
           name: "Monthly Open",
           date: upcomingComp2Date.toISOString().split('T')[0],
           time: "06:30",
+          endTime: "14:30",
           venue: "Meadow Lakes",
           description: "Open competition with substantial prize fund",
           pegsTotal: 40,
@@ -252,6 +257,7 @@ export class MongoDBStorage implements IStorage {
           status: "upcoming",
           type: "Open Match",
           rules: ["Barbless hooks only", "All pegs fishable"],
+          imageUrl: null,
           createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         },
       ];
@@ -597,6 +603,8 @@ export class MongoDBStorage implements IStorage {
       status: competition.status ?? "upcoming",
       pegsBooked: competition.pegsBooked ?? 0,
       rules: competition.rules ?? null,
+      endTime: competition.endTime ?? null,
+      imageUrl: competition.imageUrl ?? null,
       createdAt: new Date(),
     };
     await this.competitions.insertOne(newCompetition);
@@ -672,10 +680,20 @@ export class MongoDBStorage implements IStorage {
 
   // Leaderboard methods
   async getLeaderboard(competitionId: string): Promise<LeaderboardEntry[]> {
-    return await this.leaderboardEntries
+    const entries = await this.leaderboardEntries
       .find({ competitionId })
-      .sort({ totalWeight: -1, numberOfFish: -1 })
       .toArray();
+    
+    const sortedEntries = entries.sort((a, b) => {
+      const weightA = parseFloat(a.weight.toString().replace(/[^\d.-]/g, ''));
+      const weightB = parseFloat(b.weight.toString().replace(/[^\d.-]/g, ''));
+      return weightB - weightA;
+    });
+    
+    return sortedEntries.map((entry, index) => ({
+      ...entry,
+      position: index + 1,
+    }));
   }
 
   async getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]> {

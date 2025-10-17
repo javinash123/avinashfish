@@ -107,7 +107,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                 </TableCell>
                 <TableCell className="text-right">
                   <span className="font-mono font-bold text-lg" data-testid={`text-weight-${entry.position}`}>
-                    {entry.weight}
+                    {entry.weight} lbs
                   </span>
                 </TableCell>
               </TableRow>

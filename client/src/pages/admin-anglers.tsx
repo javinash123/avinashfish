@@ -278,7 +278,7 @@ export default function AdminAnglers() {
                   <TableCell>{angler.email}</TableCell>
                   <TableCell>{angler.club || "-"}</TableCell>
                   <TableCell>
-                    {new Date(angler.createdAt).toLocaleDateString('en-GB')}
+                    {new Date(angler.createdAt).toLocaleDateString('en-GB', { timeZone: 'Europe/London' })}
                   </TableCell>
                   <TableCell>
                     <div className="text-sm text-muted-foreground">
@@ -385,7 +385,8 @@ export default function AdminAnglers() {
                   <p className="text-sm">{new Date(selectedAngler.createdAt).toLocaleDateString('en-GB', { 
                     day: 'numeric', 
                     month: 'long', 
-                    year: 'numeric' 
+                    year: 'numeric',
+                    timeZone: 'Europe/London'
                   })}</p>
                 </div>
                 <div>

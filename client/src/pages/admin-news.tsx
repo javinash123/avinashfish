@@ -396,7 +396,7 @@ export default function AdminNews() {
                     </TableCell>
                     <TableCell>{article.author}</TableCell>
                     <TableCell>
-                      {new Date(article.date).toLocaleDateString('en-GB')}
+                      {new Date(article.date).toLocaleDateString('en-GB', { timeZone: 'Europe/London' })}
                     </TableCell>
                     <TableCell className="text-right">
                       <div className="flex justify-end gap-2">

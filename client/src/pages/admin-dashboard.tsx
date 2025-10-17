@@ -177,7 +177,7 @@ export default function AdminDashboard() {
     .map(comp => ({
       id: comp.id,
       name: comp.name,
-      date: new Date(comp.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+      date: new Date(comp.date).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Europe/London' }),
       venue: comp.venue,
       pegsTotal: comp.pegsTotal,
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,

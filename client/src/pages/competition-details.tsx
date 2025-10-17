@@ -149,6 +149,19 @@ export default function CompetitionDetails() {
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           <div className="lg:col-span-2">
             <div className="relative h-64 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
+              {competition.imageUrl ? (
+                <img
+                  src={competition.imageUrl}
+                  alt={competition.name}
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="text-center text-primary/20">
+                    <MapPin className="h-24 w-24 mx-auto" />
+                  </div>
+                </div>
+              )}
               <div className="absolute top-4 right-4">
                 <Badge
                   className="bg-chart-4 text-white animate-pulse"
@@ -156,11 +169,6 @@ export default function CompetitionDetails() {
                 >
                   Live Now
                 </Badge>
-              </div>
-              <div className="absolute inset-0 flex items-center justify-center">
-                <div className="text-center text-primary/20">
-                  <MapPin className="h-24 w-24 mx-auto" />
-                </div>
               </div>
             </div>
 
@@ -187,7 +195,9 @@ export default function CompetitionDetails() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Time</div>
-                  <div className="font-medium">{competition.time}</div>
+                  <div className="font-medium">
+                    {competition.time}{competition.endTime ? ` - ${competition.endTime}` : ''}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">

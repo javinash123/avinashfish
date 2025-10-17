@@ -170,7 +170,7 @@ export default function Profile() {
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Calendar className="h-4 w-4" />
-                  <span>Member since {new Date(displayUser.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</span>
+                  <span>Member since {new Date(displayUser.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'Europe/London' })}</span>
                 </div>
               </div>
             </div>
@@ -316,7 +316,8 @@ export default function Profile() {
                                     <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
                                       day: 'numeric',
                                       month: 'short',
-                                      year: 'numeric'
+                                      year: 'numeric',
+                                      timeZone: 'Europe/London'
                                     })}</span>
                                   </div>
                                   <div className="flex items-center gap-1">

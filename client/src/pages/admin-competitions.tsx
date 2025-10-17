@@ -168,7 +168,7 @@ export default function AdminCompetitions() {
         peg: variables.pegNumber,
         weight: parseFloat(variables.weight),
         angler: anglerName,
-        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' })
+        time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })
       };
       
       const existingEntries = weighInEntries[selectedCompetition?.id || ""] || [];
@@ -181,7 +181,7 @@ export default function AdminCompetitions() {
       
       toast({
         title: "Weight recorded",
-        description: `${variables.weight}kg recorded for ${anglerName} (Peg ${variables.pegNumber})`,
+        description: `${variables.weight} lbs recorded for ${anglerName} (Peg ${variables.pegNumber})`,
       });
     },
     onError: () => {
@@ -197,12 +197,14 @@ export default function AdminCompetitions() {
     name: "",
     date: "",
     time: "",
+    endTime: "",
     venue: "",
     pegsTotal: "",
     entryFee: "",
     prizePool: "",
     type: "",
     description: "",
+    imageUrl: "",
   });
 
   const handleCreate = () => {
@@ -210,6 +212,7 @@ export default function AdminCompetitions() {
       name: formData.name,
       date: formData.date,
       time: formData.time,
+      endTime: formData.endTime || null,
       venue: formData.venue,
       pegsTotal: parseInt(formData.pegsTotal),
       pegsBooked: 0,
@@ -218,6 +221,7 @@ export default function AdminCompetitions() {
       status: "upcoming",
       description: formData.description,
       type: formData.type,
+      imageUrl: formData.imageUrl || null,
     });
     setIsCreateOpen(false);
     resetForm();
@@ -232,12 +236,14 @@ export default function AdminCompetitions() {
         name: formData.name,
         date: formData.date,
         time: formData.time,
+        endTime: formData.endTime || null,
         venue: formData.venue,
         pegsTotal: parseInt(formData.pegsTotal),
         entryFee: formData.entryFee,
         prizePool: formData.prizePool,
         type: formData.type,
         description: formData.description,
+        imageUrl: formData.imageUrl || null,
       },
     });
     setIsEditOpen(false);
@@ -255,12 +261,14 @@ export default function AdminCompetitions() {
       name: competition.name,
       date: competition.date,
       time: competition.time,
+      endTime: competition.endTime || "",
       venue: competition.venue,
       pegsTotal: competition.pegsTotal.toString(),
       entryFee: competition.entryFee,
       prizePool: competition.prizePool,
       type: competition.type,
       description: competition.description,
+      imageUrl: competition.imageUrl || "",
     });
     setIsEditOpen(true);
   };
@@ -280,12 +288,14 @@ export default function AdminCompetitions() {
       name: "",
       date: "",
       time: "",
+      endTime: "",
       venue: "",
       pegsTotal: "",
       entryFee: "",
       prizePool: "",
       type: "",
       description: "",
+      imageUrl: "",
     });
   };
 
@@ -515,7 +525,7 @@ export default function AdminCompetitions() {
                   </TableCell>
                   <TableCell>
                     <div className="text-sm">
-                      {new Date(competition.date).toLocaleDateString('en-GB')}
+                      {new Date(competition.date).toLocaleDateString('en-GB', { timeZone: 'Europe/London' })}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {competition.time}
@@ -636,17 +646,17 @@ export default function AdminCompetitions() {
                 />
               </div>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="date">Date</Label>
+              <Input
+                id="date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                data-testid="input-date"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="date">Date</Label>
-                <Input
-                  id="date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  data-testid="input-date"
-                />
-              </div>
               <div className="grid gap-2">
                 <Label htmlFor="time">Start Time</Label>
                 <Input
@@ -655,6 +665,16 @@ export default function AdminCompetitions() {
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                   data-testid="input-time"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endTime">End Time</Label>
+                <Input
+                  id="endTime"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  data-testid="input-end-time"
                 />
               </div>
             </div>
@@ -709,6 +729,17 @@ export default function AdminCompetitions() {
                 }
                 placeholder="Competition details and rules..."
                 data-testid="input-description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="imageUrl">Competition Image URL</Label>
+              <Input
+                id="imageUrl"
+                type="url"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                placeholder="https://example.com/competition-image.jpg"
+                data-testid="input-image-url"
               />
             </div>
           </div>
@@ -768,17 +799,17 @@ export default function AdminCompetitions() {
                 />
               </div>
             </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-date">Date</Label>
+              <Input
+                id="edit-date"
+                type="date"
+                value={formData.date}
+                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                data-testid="input-edit-date"
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="grid gap-2">
-                <Label htmlFor="edit-date">Date</Label>
-                <Input
-                  id="edit-date"
-                  type="date"
-                  value={formData.date}
-                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                  data-testid="input-edit-date"
-                />
-              </div>
               <div className="grid gap-2">
                 <Label htmlFor="edit-time">Start Time</Label>
                 <Input
@@ -787,6 +818,16 @@ export default function AdminCompetitions() {
                   value={formData.time}
                   onChange={(e) => setFormData({ ...formData, time: e.target.value })}
                   data-testid="input-edit-time"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-endTime">End Time</Label>
+                <Input
+                  id="edit-endTime"
+                  type="time"
+                  value={formData.endTime}
+                  onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                  data-testid="input-edit-end-time"
                 />
               </div>
             </div>
@@ -837,6 +878,17 @@ export default function AdminCompetitions() {
                   setFormData({ ...formData, description: e.target.value })
                 }
                 data-testid="input-edit-description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-imageUrl">Competition Image URL</Label>
+              <Input
+                id="edit-imageUrl"
+                type="url"
+                value={formData.imageUrl}
+                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
+                placeholder="https://example.com/competition-image.jpg"
+                data-testid="input-edit-image-url"
               />
             </div>
           </div>
@@ -944,7 +996,7 @@ export default function AdminCompetitions() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="weight">Weight (kg)</Label>
+                <Label htmlFor="weight">Weight (lbs)</Label>
                 <Input
                   id="weight"
                   type="number"
@@ -987,7 +1039,7 @@ export default function AdminCompetitions() {
                             </Badge>
                           </TableCell>
                           <TableCell>{entry.angler}</TableCell>
-                          <TableCell className="font-semibold">{entry.weight} kg</TableCell>
+                          <TableCell className="font-semibold">{entry.weight} lbs</TableCell>
                         </TableRow>
                       ))}
                     </TableBody>
