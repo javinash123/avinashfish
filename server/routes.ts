@@ -16,7 +16,7 @@ const stripe = process.env.STRIPE_SECRET_KEY
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Whitelist of allowed upload types to prevent directory traversal
-  const ALLOWED_UPLOAD_TYPES = ['slider', 'news', 'gallery', 'sponsors', 'logo'] as const;
+  const ALLOWED_UPLOAD_TYPES = ['slider', 'news', 'gallery', 'sponsors', 'logo', 'competitions'] as const;
   type AllowedUploadType = typeof ALLOWED_UPLOAD_TYPES[number];
   
   const sanitizeUploadType = (type: string): AllowedUploadType => {
@@ -666,18 +666,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Helper function to compute competition status
       const getCompetitionStatus = (comp: any): string => {
         const now = new Date();
-        const compDateTime = new Date(`${comp.date}T${comp.time}`);
+        const startDateTime = new Date(`${comp.date}T${comp.time}`);
+        const endDateTime = comp.endTime ? new Date(`${comp.date}T${comp.endTime}`) : null;
         
-        if (compDateTime < now) {
-          return "completed";
+        // If no end time is set, use old logic
+        if (!endDateTime) {
+          if (startDateTime < now) {
+            return "completed";
+          }
+          const hoursUntilComp = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+          if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
+            return "live";
+          }
+          return "upcoming";
         }
         
-        const hoursUntilComp = (compDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-        if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
-          return "live";
+        // New logic with end time
+        if (now < startDateTime) {
+          return "upcoming";  // Before start time
+        } else if (now >= startDateTime && now <= endDateTime) {
+          return "live";  // Between start and end time
+        } else {
+          return "completed";  // After end time
         }
-        
-        return "upcoming";
       };
 
       const activeCompetitions = competitions.filter(comp => 

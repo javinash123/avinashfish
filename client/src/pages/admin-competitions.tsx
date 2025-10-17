@@ -206,8 +206,74 @@ export default function AdminCompetitions() {
     description: "",
     imageUrl: "",
   });
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string>("");
 
-  const handleCreate = () => {
+  const uploadImage = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'competitions');
+    
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    
+    if (!response.ok) {
+      throw new Error('Image upload failed');
+    }
+    
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: "",
+      date: "",
+      time: "",
+      endTime: "",
+      venue: "",
+      pegsTotal: "",
+      entryFee: "",
+      prizePool: "",
+      type: "",
+      description: "",
+      imageUrl: "",
+    });
+    setImageFile(null);
+    setImagePreview("");
+  };
+
+  const handleCreate = async () => {
+    let imageUrl = formData.imageUrl;
+    
+    // Upload image if a file was selected
+    if (imageFile) {
+      try {
+        imageUrl = await uploadImage(imageFile);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
+    
     createMutation.mutate({
       name: formData.name,
       date: formData.date,
@@ -221,14 +287,30 @@ export default function AdminCompetitions() {
       status: "upcoming",
       description: formData.description,
       type: formData.type,
-      imageUrl: formData.imageUrl || null,
+      imageUrl: imageUrl || null,
     });
     setIsCreateOpen(false);
     resetForm();
   };
 
-  const handleEdit = () => {
+  const handleEdit = async () => {
     if (!selectedCompetition) return;
+
+    let imageUrl = formData.imageUrl;
+    
+    // Upload image if a new file was selected
+    if (imageFile) {
+      try {
+        imageUrl = await uploadImage(imageFile);
+      } catch (error) {
+        toast({
+          title: "Error",
+          description: "Failed to upload image",
+          variant: "destructive",
+        });
+        return;
+      }
+    }
 
     updateMutation.mutate({
       id: selectedCompetition.id,
@@ -243,7 +325,7 @@ export default function AdminCompetitions() {
         prizePool: formData.prizePool,
         type: formData.type,
         description: formData.description,
-        imageUrl: formData.imageUrl || null,
+        imageUrl: imageUrl || null,
       },
     });
     setIsEditOpen(false);
@@ -270,6 +352,7 @@ export default function AdminCompetitions() {
       description: competition.description,
       imageUrl: competition.imageUrl || "",
     });
+    setImagePreview(competition.imageUrl || "");
     setIsEditOpen(true);
   };
 
@@ -281,22 +364,6 @@ export default function AdminCompetitions() {
   const openWeighIn = (competition: Competition) => {
     setSelectedCompetition(competition);
     setIsWeighInOpen(true);
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: "",
-      date: "",
-      time: "",
-      endTime: "",
-      venue: "",
-      pegsTotal: "",
-      entryFee: "",
-      prizePool: "",
-      type: "",
-      description: "",
-      imageUrl: "",
-    });
   };
 
   const handleAutoAssignPegs = () => {
@@ -405,21 +472,29 @@ export default function AdminCompetitions() {
   // Helper function to compute competition status based on date and time
   const getCompetitionStatus = (comp: Competition): string => {
     const now = new Date();
-    const compDateTime = new Date(`${comp.date}T${comp.time}`);
+    const startDateTime = new Date(`${comp.date}T${comp.time}`);
+    const endDateTime = comp.endTime ? new Date(`${comp.date}T${comp.endTime}`) : null;
     
-    // If competition date/time has passed, it's completed
-    if (compDateTime < now) {
-      return "completed";
+    // If no end time is set, use old logic
+    if (!endDateTime) {
+      if (startDateTime < now) {
+        return "completed";
+      }
+      const hoursUntilComp = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
+      if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
+        return "live";
+      }
+      return "upcoming";
     }
     
-    // If competition is within the next 24 hours, it's live
-    const hoursUntilComp = (compDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
-      return "live";
+    // New logic with end time
+    if (now < startDateTime) {
+      return "upcoming";  // Before start time
+    } else if (now >= startDateTime && now <= endDateTime) {
+      return "live";  // Between start and end time
+    } else {
+      return "completed";  // After end time
     }
-    
-    // Otherwise, it's upcoming
-    return "upcoming";
   };
 
   const getStatusBadgeVariant = (status: string) => {
@@ -732,15 +807,17 @@ export default function AdminCompetitions() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="imageUrl">Competition Image URL</Label>
+              <Label htmlFor="image">Competition Image</Label>
               <Input
-                id="imageUrl"
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/competition-image.jpg"
-                data-testid="input-image-url"
+                id="image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                data-testid="input-image-file"
               />
+              {imagePreview && (
+                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md" />
+              )}
             </div>
           </div>
           <DialogFooter>
@@ -881,15 +958,17 @@ export default function AdminCompetitions() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-imageUrl">Competition Image URL</Label>
+              <Label htmlFor="edit-image">Competition Image</Label>
               <Input
-                id="edit-imageUrl"
-                type="url"
-                value={formData.imageUrl}
-                onChange={(e) => setFormData({ ...formData, imageUrl: e.target.value })}
-                placeholder="https://example.com/competition-image.jpg"
-                data-testid="input-edit-image-url"
+                id="edit-image"
+                type="file"
+                accept="image/*"
+                onChange={handleImageChange}
+                data-testid="input-edit-image-file"
               />
+              {imagePreview && (
+                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md" />
+              )}
             </div>
           </div>
           <DialogFooter>
