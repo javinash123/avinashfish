@@ -124,15 +124,6 @@ export default function AdminLogin() {
               {isLoading ? "Logging in..." : "Login"}
             </Button>
           </form>
-          <div className="mt-6 p-4 bg-muted rounded-md">
-            <p className="text-sm text-center text-muted-foreground">
-              <strong>Default credentials:</strong>
-              <br />
-              Email: admin@pegslam.co.uk
-              <br />
-              Password: admin123
-            </p>
-          </div>
         </CardContent>
       </Card>
     </div>

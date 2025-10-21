@@ -37,12 +37,12 @@ export default function Sponsors() {
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="relative bg-gradient-to-br from-primary via-primary/90 to-chart-2 text-white py-16">
+        <div className="relative bg-background border-b py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-sponsors-title">
               Our Sponsors & Partners
             </h1>
-            <p className="text-xl text-white/90 max-w-3xl">
+            <p className="text-xl text-muted-foreground max-w-3xl">
               We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
@@ -78,12 +78,12 @@ export default function Sponsors() {
   if (sponsors.length === 0) {
     return (
       <div className="min-h-screen bg-background">
-        <div className="relative bg-gradient-to-br from-primary via-primary/90 to-chart-2 text-white py-16">
+        <div className="relative bg-background border-b py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-sponsors-title">
               Our Sponsors & Partners
             </h1>
-            <p className="text-xl text-white/90 max-w-3xl">
+            <p className="text-xl text-muted-foreground max-w-3xl">
               We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
@@ -102,12 +102,12 @@ export default function Sponsors() {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="relative bg-gradient-to-br from-primary via-primary/90 to-chart-2 text-white py-16">
+      <div className="relative bg-background border-b py-16">
         <div className="container mx-auto px-4 lg:px-8">
           <h1 className="text-4xl md:text-5xl font-bold mb-4" data-testid="text-sponsors-title">
             Our Sponsors & Partners
           </h1>
-          <p className="text-xl text-white/90 max-w-3xl">
+          <p className="text-xl text-muted-foreground max-w-3xl">
             We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
           </p>
         </div>

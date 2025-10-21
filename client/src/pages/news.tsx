@@ -6,13 +6,17 @@ import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2 } from "lucide-react";
+import { SiFacebook, SiX } from "react-icons/si";
+import { FaWhatsapp } from "react-icons/fa";
 import type { News } from "@shared/schema";
 
 export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
+  const { toast } = useToast();
 
   const { data: newsArticles = [], isLoading } = useQuery<News[]>({
     queryKey: ["/api/news"],
@@ -232,6 +236,59 @@ export default function News() {
                         </div>
                       </>
                     )}
+                  </div>
+                  <div className="flex items-center gap-2 pt-4 border-t mt-4">
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">Share:</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const url = window.location.href;
+                        const text = selectedArticle.title;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + url)}`, '_blank');
+                      }}
+                      data-testid="button-share-whatsapp"
+                    >
+                      <FaWhatsapp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const url = window.location.href;
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-facebook"
+                    >
+                      <SiFacebook className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => {
+                        const url = window.location.href;
+                        const text = selectedArticle.title;
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-x"
+                    >
+                      <SiX className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        navigator.clipboard.writeText(window.location.href);
+                        toast({
+                          title: "Link copied",
+                          description: "Link copied to clipboard for sharing on Instagram",
+                        });
+                      }}
+                      data-testid="button-share-instagram"
+                    >
+                      Copy Link
+                    </Button>
                   </div>
                 </div>
               </div>

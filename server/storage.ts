@@ -745,6 +745,17 @@ export class MemStorage implements IStorage {
     const participant = this.competitionParticipants.get(participantId);
     if (!participant) return undefined;
 
+    // Check if this peg is already assigned to another participant in the same competition
+    const existingPegAssignment = Array.from(this.competitionParticipants.values()).find(
+      (p) => p.competitionId === participant.competitionId && 
+             p.id !== participantId && 
+             p.pegNumber === pegNumber
+    );
+
+    if (existingPegAssignment) {
+      throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
+    }
+
     const updatedParticipant: CompetitionParticipant = {
       ...participant,
       pegNumber,

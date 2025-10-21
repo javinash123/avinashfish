@@ -146,7 +146,9 @@ export function Header() {
                   {navItems.map((item) => (
                     <Link key={item.href} href={item.href} asChild>
                       <button
-                        onClick={() => setMobileMenuOpen(false)}
+                        onClick={() => {
+                          setMobileMenuOpen(false);
+                        }}
                         className={`px-4 py-3 rounded-md text-sm font-medium hover-elevate active-elevate-2 text-left ${
                           location === item.href
                             ? "bg-sidebar-accent text-sidebar-accent-foreground"
@@ -159,7 +161,11 @@ export function Header() {
                     </Link>
                   ))}
                   <Link href="/competitions" asChild>
-                    <Button className="mt-4 w-full" data-testid="button-mobile-book-peg">
+                    <Button 
+                      className="mt-4 w-full" 
+                      onClick={() => setMobileMenuOpen(false)}
+                      data-testid="button-mobile-book-peg"
+                    >
                       Book a Peg
                     </Button>
                   </Link>

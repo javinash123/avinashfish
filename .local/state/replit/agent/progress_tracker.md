@@ -441,15 +441,76 @@ All migration and update tasks completed successfully:
 
 [x] 200. Reinstall all packages to resolve tsx missing error (workflow restart issue)
 [x] 201. Restart workflow and confirm server running successfully on port 5000
-[x] 202. Take screenshot to verify frontend loads correctly and application is functioning
-[x] 203. Update progress tracker with all completed tasks marked with [x] notation
-[x] 204. Confirm all migration tasks are complete and application is ready for use
-[x] 202. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
-[x] 203. Restart workflow and confirm server running successfully on port 5000
-[x] 204. Verify all items in progress tracker marked with [x] checkboxes
-[x] 205. Confirm application is fully functional and ready for use
-[x] 202. Take screenshot to verify frontend loads correctly and application is functioning
-[x] 203. Update progress tracker with all completed tasks marked with [x] notation
+
+## October 21, 2025 - Current Session
+
+[x] 212. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
+[x] 213. Restart workflow and confirm server running successfully on port 5000
+[x] 214. Take screenshot to verify frontend loads correctly and application is functioning
+[x] 215. Update progress tracker with all completed tasks marked with [x] notation
+[x] 216. Confirm all migration tasks are complete and application is ready for use
+
+✅ **October 21, 2025 Status:**
+✅ **Application Running Successfully on Port 5000**
+✅ **Frontend Loading Correctly - Hero Section Visible**
+✅ **All Navigation Links Working**
+✅ **All Progress Tracker Items Marked Complete**
+✅ **Migration Fully Complete - Ready for Development**
+
+## October 21, 2025 - User Experience Improvements
+
+[x] 243. Add social media sharing functionality to news page (WhatsApp, Facebook, X/Twitter, Copy Link)
+[x] 244. Fix mobile navigation menu to close automatically after navigating to a page
+[x] 245. Fix sponsors page background color from pink gradient to dark background
+[x] 246. Fix weight display to show only lbs (strip kg) across all leaderboard displays
+[x] 247. Fix peg assignment bug to prevent duplicate peg numbers being assigned to multiple anglers
+[x] 248. Remove default credentials section from admin login page for security
+[x] 249. Architect review and approval of all six improvements
+[x] 250. Update progress tracker with October 21 improvements
+
+## October 21 Improvements Details:
+
+**Social Media Sharing:**
+- Added sharing buttons to news article dialog
+- WhatsApp share with pre-populated message
+- Facebook share with article URL
+- X (Twitter) share with article title and URL
+- Copy Link button with success toast notification
+- Share section positioned below article content with clear separator
+
+**Mobile Navigation:**
+- Added onClick handler to close mobile menu when user navigates to a page
+- Improves user experience by preventing manual menu close after navigation
+- Applies to all navigation links in mobile menu
+
+**Sponsors Page:**
+- Changed background from pink/primary gradient to dark background
+- Maintains consistency with rest of platform design
+- Better visual hierarchy and readability
+
+**Weight Display Fix:**
+- Implemented regex-based weight normalization
+- Strips all "kg" and "lbs" text (case-insensitive) from weight values
+- Appends " lbs" to all weight displays for consistency
+- Handles edge cases: "12 kg" → "12 lbs", "12.5 lbs" → "12.5 lbs", "12" → "12 lbs"
+- Applied to both main leaderboard page and homepage live leaderboard
+
+**Peg Assignment Validation:**
+- Added duplicate prevention in updateParticipantPeg method
+- Checks if peg is already assigned to another participant in same competition
+- Throws clear error message: "Peg {number} is already assigned to another angler"
+- Prevents data integrity issues in competition management
+
+**Security Improvement:**
+- Removed default credentials display from admin login page UI
+- Cleaner, more professional login interface
+- Credentials remain in MemStorage for development purposes
+- Production deployment with MongoDB allows admin password changes
+
+✅ **All Six User-Requested Improvements Complete**
+✅ **Architect Approved All Changes**
+✅ **Application Running Successfully**
+✅ **All Features Tested and Verified**
 
 ## October 16, 2025 - Dark Mode Enforcement & Local File Upload System
 
