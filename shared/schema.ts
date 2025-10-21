@@ -271,3 +271,38 @@ export const updateLeaderboardEntrySchema = createInsertSchema(leaderboardEntrie
 export type InsertLeaderboardEntry = z.infer<typeof insertLeaderboardEntrySchema>;
 export type UpdateLeaderboardEntry = z.infer<typeof updateLeaderboardEntrySchema>;
 export type LeaderboardEntry = typeof leaderboardEntries.$inferSelect;
+
+export const userGalleryPhotos = pgTable("user_gallery_photos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull(),
+  url: text("url").notNull(),
+  caption: text("caption"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertUserGalleryPhotoSchema = createInsertSchema(userGalleryPhotos).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateUserGalleryPhotoSchema = createInsertSchema(userGalleryPhotos).omit({
+  id: true,
+  userId: true,
+  createdAt: true,
+}).partial();
+
+export type InsertUserGalleryPhoto = z.infer<typeof insertUserGalleryPhotoSchema>;
+export type UpdateUserGalleryPhoto = z.infer<typeof updateUserGalleryPhotoSchema>;
+export type UserGalleryPhoto = typeof userGalleryPhotos.$inferSelect;
+
+export const updateUserProfileSchema = z.object({
+  bio: z.string().optional(),
+  club: z.string().optional(),
+  location: z.string().optional(),
+  favouriteMethod: z.string().optional(),
+  favouriteSpecies: z.string().optional(),
+}).refine(data => Object.values(data).some(val => val !== undefined), {
+  message: "At least one field must be provided",
+});
+
+export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;

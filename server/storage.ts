@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -12,6 +12,12 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
   updateUserStatus(id: string, status: string): Promise<User | undefined>;
+  updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined>;
+  
+  // User gallery methods
+  getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]>;
+  createUserGalleryPhoto(photo: InsertUserGalleryPhoto): Promise<UserGalleryPhoto>;
+  deleteUserGalleryPhoto(id: string, userId: string): Promise<boolean>;
   
   // Admin methods
   getAdmin(id: string): Promise<Admin | undefined>;
@@ -87,6 +93,7 @@ export class MemStorage implements IStorage {
   private competitions: Map<string, Competition>;
   private competitionParticipants: Map<string, CompetitionParticipant>;
   private leaderboardEntries: Map<string, LeaderboardEntry>;
+  private userGalleryPhotos: Map<string, UserGalleryPhoto>;
 
   constructor() {
     this.users = new Map();
@@ -98,6 +105,7 @@ export class MemStorage implements IStorage {
     this.competitions = new Map();
     this.competitionParticipants = new Map();
     this.leaderboardEntries = new Map();
+    this.userGalleryPhotos = new Map();
     
     // Create default admin account (password: admin123)
     const defaultAdminId = randomUUID();
@@ -410,6 +418,48 @@ export class MemStorage implements IStorage {
 
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      bio: updates.bio !== undefined ? updates.bio : user.bio,
+      club: updates.club !== undefined ? updates.club : user.club,
+      location: updates.location !== undefined ? updates.location : user.location,
+      favouriteMethod: updates.favouriteMethod !== undefined ? updates.favouriteMethod : user.favouriteMethod,
+      favouriteSpecies: updates.favouriteSpecies !== undefined ? updates.favouriteSpecies : user.favouriteSpecies,
+    };
+
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
+    return Array.from(this.userGalleryPhotos.values())
+      .filter(photo => photo.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async createUserGalleryPhoto(photo: InsertUserGalleryPhoto): Promise<UserGalleryPhoto> {
+    const id = randomUUID();
+    const newPhoto: UserGalleryPhoto = {
+      id,
+      userId: photo.userId,
+      url: photo.url,
+      caption: photo.caption ?? null,
+      createdAt: new Date(),
+    };
+    this.userGalleryPhotos.set(id, newPhoto);
+    return newPhoto;
+  }
+
+  async deleteUserGalleryPhoto(id: string, userId: string): Promise<boolean> {
+    const photo = this.userGalleryPhotos.get(id);
+    if (!photo || photo.userId !== userId) return false;
+    return this.userGalleryPhotos.delete(id);
   }
 
   async getAdmin(id: string): Promise<Admin | undefined> {

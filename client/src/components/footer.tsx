@@ -1,6 +1,6 @@
 import { Link } from "wouter";
 import { Fish, Mail, Phone, MapPin } from "lucide-react";
-import { SiInstagram, SiFacebook, SiYoutube } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiYoutube, SiTiktok } from "react-icons/si";
 import { Button } from "@/components/ui/button";
 
 export function Footer() {
@@ -20,20 +20,26 @@ export function Footer() {
     { 
       name: "Instagram", 
       icon: SiInstagram, 
-      href: "https://instagram.com/pegslam",
+      href: "https://www.instagram.com/pegslam/",
       testId: "link-footer-instagram"
     },
     { 
       name: "Facebook", 
       icon: SiFacebook, 
-      href: "https://facebook.com/pegslam",
+      href: "https://www.facebook.com/p/Peg-Slam-61575711046280/",
       testId: "link-footer-facebook"
     },
     { 
       name: "YouTube", 
       icon: SiYoutube, 
-      href: "https://youtube.com/@pegslam",
+      href: "https://www.youtube.com/@PegSlam",
       testId: "link-footer-youtube"
+    },
+    { 
+      name: "TikTok", 
+      icon: SiTiktok, 
+      href: "https://www.tiktok.com/@peg.slam",
+      testId: "link-footer-tiktok"
     },
   ];
 

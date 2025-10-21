@@ -1,22 +1,31 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   User as UserIcon, Trophy, Calendar, MapPin, Fish, TrendingUp, 
-  Settings, Edit, Award, Target, Loader2 
+  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon
 } from "lucide-react";
 import { Link, useRoute, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
-import { useQuery } from "@tanstack/react-query";
-import type { User, Competition, CompetitionParticipant } from "@shared/schema";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { User, Competition, CompetitionParticipant, UserGalleryPhoto } from "@shared/schema";
+import { EditProfileDialog } from "@/components/edit-profile-dialog";
 
 export default function Profile() {
   const [, params] = useRoute("/profile/:username");
   const [, setLocation] = useLocation();
   const { user: loggedInUser, isLoading: authLoading, isAuthenticated } = useAuth();
+  const { toast } = useToast();
+  const [editProfileOpen, setEditProfileOpen] = useState(false);
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [caption, setCaption] = useState("");
   
   const viewingUsername = params?.username;
   const isOwnProfile = !viewingUsername || viewingUsername === loggedInUser?.username;
@@ -42,6 +51,68 @@ export default function Profile() {
     queryKey: ["/api/user/stats"],
     enabled: isOwnProfile && isAuthenticated,
   });
+
+  const { data: galleryPhotos = [] } = useQuery<UserGalleryPhoto[]>({
+    queryKey: ["/api/user/gallery"],
+    enabled: isOwnProfile && isAuthenticated,
+  });
+
+  const addPhotoMutation = useMutation({
+    mutationFn: async (data: { url: string; caption?: string }) => {
+      const response = await apiRequest("POST", "/api/user/gallery", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/gallery"] });
+      toast({
+        title: "Photo added",
+        description: "Your photo has been added to your gallery.",
+      });
+      setPhotoUrl("");
+      setCaption("");
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add photo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePhotoMutation = useMutation({
+    mutationFn: async (photoId: string) => {
+      const response = await apiRequest("DELETE", `/api/user/gallery/${photoId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/user/gallery"] });
+      toast({
+        title: "Photo deleted",
+        description: "Your photo has been removed from your gallery.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete photo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddPhoto = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!photoUrl.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a photo URL",
+        variant: "destructive",
+      });
+      return;
+    }
+    addPhotoMutation.mutate({ url: photoUrl, caption: caption || undefined });
+  };
 
   useEffect(() => {
     if (!authLoading && !isAuthenticated && isOwnProfile) {
@@ -117,7 +188,12 @@ export default function Profile() {
                   </AvatarFallback>
                 </Avatar>
                 {isOwnProfile && (
-                  <Button variant="outline" className="w-full md:w-auto" data-testid="button-edit-profile">
+                  <Button 
+                    variant="outline" 
+                    className="w-full md:w-auto" 
+                    onClick={() => setEditProfileOpen(true)}
+                    data-testid="button-edit-profile"
+                  >
                     <Edit className="h-4 w-4 mr-2" />
                     Edit Profile
                   </Button>
@@ -245,6 +321,12 @@ export default function Profile() {
                 Upcoming Events
               </TabsTrigger>
             )}
+            {isOwnProfile && (
+              <TabsTrigger value="gallery" data-testid="tab-gallery">
+                <ImageIcon className="h-4 w-4 mr-2" />
+                Gallery
+              </TabsTrigger>
+            )}
           </TabsList>
 
           <TabsContent value="history" className="space-y-4">
@@ -345,8 +427,110 @@ export default function Profile() {
               </Card>
             </TabsContent>
           )}
+
+          {isOwnProfile && (
+            <TabsContent value="gallery" className="space-y-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>My Gallery</CardTitle>
+                  <CardDescription>
+                    Upload and manage your fishing photos
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <form onSubmit={handleAddPhoto} className="space-y-4 mb-6">
+                    <div className="space-y-2">
+                      <Label htmlFor="photoUrl">Photo URL</Label>
+                      <Input
+                        id="photoUrl"
+                        type="url"
+                        placeholder="https://example.com/photo.jpg"
+                        value={photoUrl}
+                        onChange={(e) => setPhotoUrl(e.target.value)}
+                        data-testid="input-photo-url"
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="caption">Caption (optional)</Label>
+                      <Input
+                        id="caption"
+                        placeholder="Add a caption..."
+                        value={caption}
+                        onChange={(e) => setCaption(e.target.value)}
+                        data-testid="input-caption"
+                      />
+                    </div>
+                    <Button
+                      type="submit"
+                      disabled={addPhotoMutation.isPending}
+                      data-testid="button-add-photo"
+                    >
+                      {addPhotoMutation.isPending ? (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Upload className="mr-2 h-4 w-4" />
+                      )}
+                      Add Photo
+                    </Button>
+                  </form>
+
+                  {galleryPhotos.length === 0 ? (
+                    <div className="text-center py-12">
+                      <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">
+                        No photos in your gallery yet
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Add your first photo to showcase your catches!
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {galleryPhotos.map((photo) => (
+                        <Card key={photo.id} className="overflow-hidden" data-testid={`card-photo-${photo.id}`}>
+                          <div className="aspect-square relative bg-muted">
+                            <img
+                              src={photo.url}
+                              alt={photo.caption || "Gallery photo"}
+                              className="w-full h-full object-cover"
+                            />
+                          </div>
+                          {photo.caption && (
+                            <CardContent className="pt-3">
+                              <p className="text-sm">{photo.caption}</p>
+                            </CardContent>
+                          )}
+                          <CardContent className="pt-2 pb-3">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              className="w-full"
+                              onClick={() => deletePhotoMutation.mutate(photo.id)}
+                              disabled={deletePhotoMutation.isPending}
+                              data-testid={`button-delete-${photo.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
+
+      {isOwnProfile && loggedInUser && (
+        <EditProfileDialog
+          open={editProfileOpen}
+          onOpenChange={setEditProfileOpen}
+          user={loggedInUser}
+        />
+      )}
     </div>
   );
 }

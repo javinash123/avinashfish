@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { registerUserSchema, loginUserSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { registerUserSchema, loginUserSchema, updateUserProfileSchema, insertUserGalleryPhotoSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -566,6 +566,89 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Get user stats error:", error);
       res.status(500).json({ message: "Error fetching stats: " + error.message });
+    }
+  });
+
+  app.put("/api/user/profile", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = updateUserProfileSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid profile data", errors: result.error.errors });
+      }
+
+      const updatedUser = await storage.updateUserProfile(userId, result.data);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Update profile error:", error);
+      res.status(500).json({ message: "Error updating profile: " + error.message });
+    }
+  });
+
+  app.get("/api/user/gallery", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const photos = await storage.getUserGalleryPhotos(userId);
+      res.json(photos);
+    } catch (error: any) {
+      console.error("Get gallery error:", error);
+      res.status(500).json({ message: "Error fetching gallery: " + error.message });
+    }
+  });
+
+  app.post("/api/user/gallery", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = insertUserGalleryPhotoSchema.safeParse({ ...req.body, userId });
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid photo data", errors: result.error.errors });
+      }
+
+      const photo = await storage.createUserGalleryPhoto(result.data);
+      res.status(201).json(photo);
+    } catch (error: any) {
+      console.error("Create gallery photo error:", error);
+      res.status(500).json({ message: "Error adding photo: " + error.message });
+    }
+  });
+
+  app.delete("/api/user/gallery/:id", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const deleted = await storage.deleteUserGalleryPhoto(req.params.id, userId);
+      if (!deleted) {
+        return res.status(403).json({ message: "Photo not found or you don't have permission to delete it" });
+      }
+
+      res.json({ message: "Photo deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete gallery photo error:", error);
+      res.status(500).json({ message: "Error deleting photo: " + error.message });
     }
   });
 

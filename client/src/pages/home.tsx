@@ -256,18 +256,17 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 bg-primary text-primary-foreground">
+      <section className="py-16 bg-background">
         <div className="container mx-auto px-4 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Join the Competition?
           </h2>
-          <p className="text-xl mb-8 opacity-90">
+          <p className="text-xl mb-8 text-muted-foreground">
             Create your angler profile and start booking today
           </p>
           <Link href="/register">
             <Button
               size="lg"
-              className="bg-white text-primary hover:bg-white/90"
               data-testid="button-cta-register"
             >
               Register Now

@@ -33,7 +33,8 @@ Preferred communication style: Simple, everyday language.
 ### User Authentication System
 
 *   **Angler Authentication:** Registration (email, username, password, names, club), secure login/logout, session-based, profile page with user details and competition history.
-*   **User Profile Features:** Displays personal info, fishing preferences, competition stats, upcoming competitions.
+*   **User Profile Features:** Displays personal info, fishing preferences, competition stats, upcoming competitions. Anglers can edit their bio, club, location, favourite method, and favourite species through an edit profile dialog.
+*   **User Gallery:** Anglers can upload and manage personal photo galleries on their profiles. Features include photo URL upload with optional captions, grid display of photos, and delete functionality with ownership verification.
 *   **Admin Angler Management:** View, search, filter, approve, block users; view profiles and send emails.
 *   **Competition Participation:** Anglers can join/leave competitions with peg assignment and capacity management.
 
