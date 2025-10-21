@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Fish, Menu, User, LogOut } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SiteSettings } from "@shared/schema";
 import {
@@ -40,6 +40,10 @@ export function Header() {
     { href: "/sponsors", label: "Sponsors" },
     { href: "/about", label: "About" },
   ];
+
+  useEffect(() => {
+    setMobileMenuOpen(false);
+  }, [location]);
 
   return (
     <header className="sticky top-0 z-50 w-full bg-black border-b border-border">

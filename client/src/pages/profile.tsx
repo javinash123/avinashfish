@@ -24,8 +24,9 @@ export default function Profile() {
   const { user: loggedInUser, isLoading: authLoading, isAuthenticated } = useAuth();
   const { toast } = useToast();
   const [editProfileOpen, setEditProfileOpen] = useState(false);
-  const [photoUrl, setPhotoUrl] = useState("");
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
+  const [isUploading, setIsUploading] = useState(false);
   
   const viewingUsername = params?.username;
   const isOwnProfile = !viewingUsername || viewingUsername === loggedInUser?.username;
@@ -68,7 +69,7 @@ export default function Profile() {
         title: "Photo added",
         description: "Your photo has been added to your gallery.",
       });
-      setPhotoUrl("");
+      setSelectedFile(null);
       setCaption("");
     },
     onError: (error: any) => {
@@ -101,17 +102,52 @@ export default function Profile() {
     },
   });
 
-  const handleAddPhoto = (e: React.FormEvent) => {
+  const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!photoUrl.trim()) {
+    
+    if (!selectedFile) {
       toast({
         title: "Error",
-        description: "Please enter a photo URL",
+        description: "Please select a photo to upload",
         variant: "destructive",
       });
       return;
     }
-    addPhotoMutation.mutate({ url: photoUrl, caption: caption || undefined });
+
+    try {
+      setIsUploading(true);
+      
+      // Upload the file first
+      const formData = new FormData();
+      formData.append('image', selectedFile);
+      formData.append('type', 'gallery');
+      
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.message || 'Failed to upload image');
+      }
+
+      const uploadData = await uploadResponse.json();
+      
+      // Now add the photo to gallery with the uploaded URL
+      addPhotoMutation.mutate({ 
+        url: uploadData.url, 
+        caption: caption || undefined 
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload photo",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   useEffect(() => {
@@ -440,15 +476,19 @@ export default function Profile() {
                 <CardContent>
                   <form onSubmit={handleAddPhoto} className="space-y-4 mb-6">
                     <div className="space-y-2">
-                      <Label htmlFor="photoUrl">Photo URL</Label>
+                      <Label htmlFor="photoFile">Choose Photo</Label>
                       <Input
-                        id="photoUrl"
-                        type="url"
-                        placeholder="https://example.com/photo.jpg"
-                        value={photoUrl}
-                        onChange={(e) => setPhotoUrl(e.target.value)}
-                        data-testid="input-photo-url"
+                        id="photoFile"
+                        type="file"
+                        accept="image/*"
+                        onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                        data-testid="input-photo-file"
                       />
+                      {selectedFile && (
+                        <p className="text-sm text-muted-foreground">
+                          Selected: {selectedFile.name}
+                        </p>
+                      )}
                     </div>
                     <div className="space-y-2">
                       <Label htmlFor="caption">Caption (optional)</Label>
@@ -462,15 +502,15 @@ export default function Profile() {
                     </div>
                     <Button
                       type="submit"
-                      disabled={addPhotoMutation.isPending}
+                      disabled={isUploading || addPhotoMutation.isPending}
                       data-testid="button-add-photo"
                     >
-                      {addPhotoMutation.isPending ? (
+                      {(isUploading || addPhotoMutation.isPending) ? (
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                       ) : (
                         <Upload className="mr-2 h-4 w-4" />
                       )}
-                      Add Photo
+                      {isUploading ? 'Uploading...' : 'Add Photo'}
                     </Button>
                   </form>
 

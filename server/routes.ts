@@ -558,9 +558,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)}kg` : "-",
-        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)}kg` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)}kg` : "-",
+        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
+        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
+        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
         totalCompetitions: leaderboardEntries.length,
       });
     } catch (error: any) {
@@ -724,13 +724,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalMatches: participations.length,
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)}kg` : "-",
-        avgWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)}kg` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)}kg` : "-",
+        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
+        avgWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
+        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
       });
     } catch (error: any) {
       console.error("Error fetching angler stats:", error);
       res.status(500).json({ message: "Error fetching angler stats: " + error.message });
+    }
+  });
+
+  app.get("/api/admin/anglers/:id/participations", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const userId = req.params.id;
+      const participations = await storage.getUserParticipations(userId);
+      const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
+      
+      // Get competition details for each participation
+      const participationsWithDetails = await Promise.all(
+        participations.map(async (participation) => {
+          const competition = await storage.getCompetition(participation.competitionId);
+          const leaderboardEntry = leaderboardEntries.find(
+            entry => entry.competitionId === participation.competitionId
+          );
+          
+          return {
+            competitionId: participation.competitionId,
+            competitionName: competition?.name || "Unknown",
+            date: competition?.date || "-",
+            venue: competition?.venue || "-",
+            pegNumber: participation.pegNumber || "-",
+            position: leaderboardEntry?.position || "-",
+            weight: leaderboardEntry?.weight || "-",
+          };
+        })
+      );
+
+      res.json(participationsWithDetails);
+    } catch (error: any) {
+      console.error("Error fetching angler participations:", error);
+      res.status(500).json({ message: "Error fetching angler participations: " + error.message });
     }
   });
 

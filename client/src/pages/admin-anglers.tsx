@@ -152,6 +152,20 @@ export default function AdminAnglers() {
     enabled: !!selectedAngler,
   });
 
+  // Fetch angler participation history
+  const { data: anglerParticipations = [] } = useQuery<Array<{
+    competitionId: string;
+    competitionName: string;
+    date: string;
+    venue: string;
+    pegNumber: number | string;
+    position: number | string;
+    weight: string;
+  }>>({
+    queryKey: [`/api/admin/anglers/${selectedAngler?.id}/participations`],
+    enabled: !!selectedAngler,
+  });
+
   const filteredAnglers = anglers.filter((angler) => {
     const fullName = `${angler.firstName} ${angler.lastName}`.toLowerCase();
     const matchesSearch = 
@@ -419,6 +433,60 @@ export default function AdminAnglers() {
                     </CardContent>
                   </Card>
                 </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h4 className="text-sm font-medium text-muted-foreground mb-3">Competition History</h4>
+                {anglerParticipations.length > 0 ? (
+                  <Card>
+                    <CardContent className="p-0">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Competition</TableHead>
+                            <TableHead>Date</TableHead>
+                            <TableHead>Venue</TableHead>
+                            <TableHead className="text-center">Peg</TableHead>
+                            <TableHead className="text-center">Position</TableHead>
+                            <TableHead className="text-right">Weight</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {anglerParticipations.map((participation, index) => (
+                            <TableRow key={participation.competitionId}>
+                              <TableCell className="font-medium">{participation.competitionName}</TableCell>
+                              <TableCell>{participation.date}</TableCell>
+                              <TableCell>{participation.venue}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant="outline" className="font-mono">
+                                  {participation.pegNumber}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-center">
+                                {participation.position !== "-" ? (
+                                  <Badge variant={participation.position === 1 ? "default" : "secondary"}>
+                                    {participation.position}
+                                  </Badge>
+                                ) : (
+                                  "-"
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right font-mono">
+                                {participation.weight}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </CardContent>
+                  </Card>
+                ) : (
+                  <p className="text-center text-muted-foreground py-4 text-sm">
+                    No competition history available
+                  </p>
+                )}
               </div>
             </div>
           )}

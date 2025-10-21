@@ -232,13 +232,13 @@ export default function CompetitionDetails() {
                       Entry Fee
                     </div>
                     <div className="text-3xl font-bold" data-testid="text-entry-fee">
-                      {competition.entryFee}
+                      £{competition.entryFee}
                     </div>
                   </div>
                   <div className="flex items-center gap-2 text-chart-3">
                     <Trophy className="h-5 w-5" />
                     <div>
-                      <span className="font-bold text-lg">{competition.prizePool}</span>
+                      <span className="font-bold text-lg">£{competition.prizePool}</span>
                       <span className="text-sm ml-1">Prize Pool</span>
                     </div>
                   </div>
@@ -318,7 +318,13 @@ export default function CompetitionDetails() {
           </TabsContent>
 
           <TabsContent value="leaderboard" className="mt-6">
-            <LeaderboardTable entries={leaderboard} isLive={true} />
+            <LeaderboardTable 
+              entries={leaderboard.map(entry => ({
+                ...entry,
+                weight: entry.weight.replace(/\s*kg\s*/gi, '').replace(/\s*lbs\s*/gi, '').trim() + ' lbs',
+              }))} 
+              isLive={true} 
+            />
           </TabsContent>
 
           <TabsContent value="participants" className="mt-6">

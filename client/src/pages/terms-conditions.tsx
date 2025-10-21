@@ -8,110 +8,192 @@ export default function TermsConditions() {
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-12 max-w-4xl">
-        <h1 className="text-4xl font-bold mb-6" data-testid="text-terms-title">Terms & Conditions</h1>
-        <p className="text-muted-foreground mb-8" data-testid="text-terms-updated">Last updated: October 10, 2025</p>
+        <h1 className="text-4xl font-bold mb-6" data-testid="text-terms-title">
+          Peg Slam Terms and Conditions
+        </h1>
+        <p className="text-muted-foreground mb-8" data-testid="text-terms-updated">
+          Last updated: October 2025
+        </p>
 
         <div className="space-y-6 text-foreground">
-          <section data-testid="section-terms-agreement">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-agreement-heading">1. Agreement to Terms</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-agreement-content">
-              By accessing and using the Peg Slam website and services, you accept and agree to be bound by 
-              the terms and provision of this agreement. If you do not agree to abide by the above, please 
-              do not use this service.
+          {/* 1. Introduction */}
+          <section data-testid="section-terms-intro">
+            <h2 className="text-2xl font-semibold mb-3">1. Introduction</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              These Terms and Conditions govern the use of the Peg Slam website (www.pegslam.com) and participation
+              in all Peg Slam-organised fishing events and competitions.
+              <br />
+              By accessing the website, registering for an event, or taking part in any Peg Slam activity, you agree
+              to these Terms and Conditions in full.
             </p>
           </section>
 
+          {/* 2. Organiser Information */}
+          <section data-testid="section-terms-org-info">
+            <h2 className="text-2xl font-semibold mb-3">2. Organiser Information</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              Peg Slam is a UK-based fishing competition organisation promoting angling for juniors, youth, and adults.
+              <br />
+              Contact: 📧 info@pegslam.com
+            </p>
+          </section>
+
+          {/* 3. Eligibility */}
+          <section data-testid="section-terms-eligibility">
+            <h2 className="text-2xl font-semibold mb-3">3. Eligibility</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Competitions are open to anglers in the relevant age categories as stated for each event.</li>
+              <li>Entrants under 18 must have written consent from a parent or guardian.</li>
+              <li>All participants must hold a valid Environment Agency Rod Licence where applicable.</li>
+              <li>Peg Slam reserves the right to refuse or cancel an entry for safety, conduct, or rule-breach reasons.</li>
+            </ul>
+          </section>
+
+          {/* 4. Event Registration and Fees */}
+          <section data-testid="section-terms-registration">
+            <h2 className="text-2xl font-semibold mb-3">4. Event Registration and Fees</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Entries must be made through official Peg Slam channels or authorised partners.</li>
+              <li>Entry fees, if applicable, must be paid in full before the stated deadline.</li>
+              <li>Fees are non-refundable unless an event is cancelled by Peg Slam.</li>
+              <li>Proof of payment may be required at registration.</li>
+            </ul>
+          </section>
+
+          {/* 5. Competition Rules */}
           <section data-testid="section-terms-competition">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-competition-heading">2. Competition Rules</h2>
-            <p className="text-muted-foreground leading-relaxed mb-3" data-testid="text-terms-competition-intro">
-              All participants in Peg Slam competitions must adhere to the following rules:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4" data-testid="list-terms-competition-rules">
-              <li>Participants must be 18 years of age or older</li>
-              <li>All bookings are subject to availability and confirmation</li>
-              <li>Participants must arrive at least 30 minutes before the competition start time</li>
-              <li>All catches must be recorded and verified by competition officials</li>
-              <li>The organizer's decision is final in all matters relating to the competition</li>
-              <li>Participants compete at their own risk</li>
+            <h2 className="text-2xl font-semibold mb-3">5. Competition Rules</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>All anglers must follow venue rules, safety requirements, and bailiff instructions.</li>
+              <li>Peg Slam match rules and local fishery regulations apply at all times.</li>
+              <li>Any participant found cheating, endangering others, or acting disrespectfully may be disqualified.</li>
+              <li>Peg Slam decisions on results, weigh-ins, or disputes are final.</li>
             </ul>
           </section>
 
-          <section data-testid="section-terms-booking">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-booking-heading">3. Booking and Payment</h2>
-            <p className="text-muted-foreground leading-relaxed mb-3" data-testid="text-terms-booking-intro">
-              When booking a peg for a competition:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4" data-testid="list-terms-booking-rules">
-              <li>Full payment is required at the time of booking</li>
-              <li>Bookings are non-refundable unless the competition is cancelled by the organizer</li>
-              <li>Transfer of bookings to another person is permitted up to 48 hours before the event</li>
-              <li>Prices are subject to change without notice</li>
-              <li>All payments are processed securely through our payment partner</li>
+          {/* 6. Conduct and Behaviour */}
+          <section data-testid="section-terms-behaviour">
+            <h2 className="text-2xl font-semibold mb-3">6. Conduct and Behaviour</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Respect towards officials, volunteers, and other competitors is mandatory.</li>
+              <li>Abusive or antisocial behaviour will result in removal from the event and potential future bans.</li>
+              <li>Alcohol or illegal substances are strictly prohibited during all competitions.</li>
             </ul>
           </section>
 
+          {/* 7. Safety and Liability */}
+          <section data-testid="section-terms-safety">
+            <h2 className="text-2xl font-semibold mb-3">7. Safety and Liability</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>All participants attend and compete at their own risk.</li>
+              <li>
+                Peg Slam, event staff, and venue owners accept no responsibility for personal injury, loss, or damage to
+                property unless caused by proven negligence.
+              </li>
+              <li>Suitable clothing, footwear, and safety equipment must be used at all times.</li>
+              <li>All under-18 anglers must be accompanied by a responsible adult.</li>
+            </ul>
+          </section>
+
+          {/* 8. Media and Photography */}
+          <section data-testid="section-terms-media">
+            <h2 className="text-2xl font-semibold mb-3">8. Media and Photography</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>
+                Peg Slam may photograph or film events for promotional use on websites, social media, and printed materials.
+              </li>
+              <li>Adult competitors consent to the use of images by entering an event.</li>
+              <li>Parents or guardians must provide consent for any under-18 participant to appear in media.</li>
+              <li>Requests for removal of images can be made via info@pegslam.com.</li>
+            </ul>
+          </section>
+
+          {/* 9. Website Use */}
+          <section data-testid="section-terms-website">
+            <h2 className="text-2xl font-semibold mb-3">9. Website Use</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Content on www.pegslam.com is for general information only.</li>
+              <li>Peg Slam does not guarantee uninterrupted or error-free website operation.</li>
+              <li>Copying, redistributing, or misusing Peg Slam content or branding without permission is prohibited.</li>
+            </ul>
+          </section>
+
+          {/* 10. Payments and Merchandise */}
+          <section data-testid="section-terms-payments">
+            <h2 className="text-2xl font-semibold mb-3">10. Payments and Merchandise</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Payments for entry fees or merchandise are processed through secure third-party providers.</li>
+              <li>Peg Slam does not store card information.</li>
+              <li>Prices and availability may change without notice.</li>
+            </ul>
+          </section>
+
+          {/* 11. Data Protection */}
+          <section data-testid="section-terms-data">
+            <h2 className="text-2xl font-semibold mb-3">11. Data Protection</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              All personal data is collected and managed in line with the Peg Slam Privacy Policy, available on the website.
+            </p>
+          </section>
+
+          {/* 12. Cancellation or Event Changes */}
           <section data-testid="section-terms-cancellation">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-cancellation-heading">4. Cancellation Policy</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-cancellation-content">
-              In the event of competition cancellation due to weather, safety concerns, or other unforeseen 
-              circumstances, full refunds will be issued. The organizer reserves the right to cancel or 
-              postpone any competition at their discretion. Participants will be notified as soon as possible.
-            </p>
-          </section>
-
-          <section data-testid="section-terms-liability">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-liability-heading">5. Liability</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-liability-content">
-              Peg Slam and its organizers will not be held liable for any injury, loss, or damage to persons 
-              or property during competitions. All participants are advised to have appropriate insurance 
-              coverage. Participants are responsible for their own equipment and belongings.
-            </p>
-          </section>
-
-          <section data-testid="section-terms-ip">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-ip-heading">6. Intellectual Property</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-ip-content">
-              All content on this website, including text, graphics, logos, images, and software, is the 
-              property of Peg Slam and is protected by copyright laws. Unauthorized use or reproduction 
-              is strictly prohibited.
-            </p>
-          </section>
-
-          <section data-testid="section-terms-conduct">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-conduct-heading">7. Code of Conduct</h2>
-            <p className="text-muted-foreground leading-relaxed mb-3" data-testid="text-terms-conduct-intro">
-              All participants are expected to:
-            </p>
-            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4" data-testid="list-terms-conduct-rules">
-              <li>Treat fellow competitors, officials, and staff with respect</li>
-              <li>Follow all venue rules and regulations</li>
-              <li>Not engage in any unsporting behavior</li>
-              <li>Respect the environment and practice catch and release responsibly</li>
-              <li>Not use any prohibited techniques or equipment</li>
+            <h2 className="text-2xl font-semibold mb-3">12. Cancellation or Event Changes</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Peg Slam reserves the right to change event dates, venues, or schedules due to weather, safety, or operational reasons.</li>
+              <li>In such cases, entrants will be notified and offered transfer or refund options where appropriate.</li>
             </ul>
           </section>
 
-          <section data-testid="section-terms-changes">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-changes-heading">8. Changes to Terms</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-changes-content">
-              We reserve the right to modify these terms at any time. Changes will be effective immediately 
-              upon posting to the website. Your continued use of the service constitutes acceptance of the 
-              modified terms.
+          {/* 13. Sponsorship and Prizes */}
+          <section data-testid="section-terms-sponsorship">
+            <h2 className="text-2xl font-semibold mb-3">13. Sponsorship and Prizes</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Sponsors may provide prizes, vouchers, or goods for Peg Slam events.</li>
+                            <li>Peg Slam is not responsible for the condition, warranty, or fulfilment of third-party prizes.</li>
+              <li>All prizes are non-transferable and may not be exchanged for cash.</li>
+            </ul>
+          </section>
+
+          {/* 14. Intellectual Property */}
+          <section data-testid="section-terms-ip">
+            <h2 className="text-2xl font-semibold mb-3">14. Intellectual Property</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              All content, logos, graphics, and materials on the Peg Slam website and event media are the property of Peg Slam and may not be reproduced without written permission.
             </p>
           </section>
 
-          <section data-testid="section-terms-contact">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-terms-contact-heading">9. Contact Information</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-terms-contact-intro">
-              For questions about these Terms & Conditions, please contact us at:
-            </p>
-            <p className="text-muted-foreground mt-2" data-testid="text-terms-contact-info">
-              Email: info@pegslam.co.uk<br />
-              Phone: +44 1234 567890
+          {/* 15. Disclaimers */}
+          <section data-testid="section-terms-disclaimers">
+            <h2 className="text-2xl font-semibold mb-3">15. Disclaimers</h2>
+            <ul className="list-disc list-inside space-y-2 text-muted-foreground ml-4">
+              <li>Peg Slam strives for accuracy in all event details and online content but does not guarantee completeness or error-free information.</li>
+              <li>Peg Slam is not liable for any indirect, incidental, or consequential losses arising from event participation or website use.</li>
+            </ul>
+          </section>
+
+          {/* 16. Governing Law */}
+          <section data-testid="section-terms-law">
+            <h2 className="text-2xl font-semibold mb-3">16. Governing Law</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              These Terms and Conditions are governed by and construed in accordance with the laws of England and Wales. Any disputes will be subject to the exclusive jurisdiction of the English courts.
             </p>
           </section>
+
+          {/* 17. Contact */}
+          <section data-testid="section-terms-contact">
+            <h2 className="text-2xl font-semibold mb-3">17. Contact</h2>
+            <p className="text-muted-foreground leading-relaxed">
+              For any questions regarding these Terms and Conditions, please contact:
+              <br />
+              📧 info@pegslam.com
+            </p>
+          </section>
+
+         
         </div>
       </div>
     </div>
   );
 }
+
