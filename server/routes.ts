@@ -1247,6 +1247,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Admin competition management routes
+  app.get("/api/admin/competitions", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const competitions = await storage.getAllCompetitions();
+      res.json(competitions);
+    } catch (error: any) {
+      console.error("Error fetching competitions:", error);
+      res.status(500).json({ message: "Error fetching competitions: " + error.message });
+    }
+  });
+
   app.post("/api/admin/competitions", async (req, res) => {
     try {
       const adminId = req.session?.adminId;

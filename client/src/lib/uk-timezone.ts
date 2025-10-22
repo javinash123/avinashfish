@@ -13,13 +13,18 @@ export function getUKNow(): Date {
 /**
  * Convert a date string and time string to UK timezone Date object
  * @param date - Date string in YYYY-MM-DD format
- * @param time - Optional time string in HH:MM format
- * @returns Date object in UK timezone
+ * @param time - Optional time string in HH:MM format (24-hour format)
+ * @returns Date object representing the UK time
  */
 export function toUKDateTime(date: string, time?: string): Date {
+  // Create the datetime string in ISO format
   const dateTimeString = time ? `${date}T${time}:00` : `${date}T00:00:00`;
-  // Parse as UK timezone and convert to Date
-  return fromZonedTime(dateTimeString, UK_TIMEZONE);
+  
+  // Create a date object treating the input as UK local time
+  // fromZonedTime creates a Date from a time value that is assumed to be in a given time zone
+  const ukDateTime = fromZonedTime(dateTimeString, UK_TIMEZONE);
+  
+  return ukDateTime;
 }
 
 /**
@@ -50,6 +55,23 @@ export function getCompetitionStatus(
     // No end date or time specified - use end of start day (23:59:59)
     endDateTime = toUKDateTime(competition.date, '23:59');
   }
+  
+  // Debug logging
+  console.log('[UK TIMEZONE DEBUG]', {
+    competitionName: competition.name,
+    storedDate: competition.date,
+    storedTime: competition.time,
+    storedEndDate: competition.endDate,
+    storedEndTime: competition.endTime,
+    ukNow: ukNow.toISOString(),
+    startDateTime: startDateTime.toISOString(),
+    endDateTime: endDateTime.toISOString(),
+    comparison: {
+      'ukNow < startDateTime': ukNow < startDateTime,
+      'ukNow >= startDateTime': ukNow >= startDateTime,
+      'ukNow <= endDateTime': ukNow <= endDateTime,
+    }
+  });
   
   // Determine status based on UK time
   if (ukNow < startDateTime) {

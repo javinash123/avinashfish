@@ -50,6 +50,7 @@ import AdminProfile from "./admin-profile";
 import AdminSlider from "./admin-slider";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 type AdminSection = "dashboard" | "competitions" | "anglers" | "sponsors" | "news" | "gallery" | "settings" | "profile" | "slider";
 
@@ -139,23 +140,6 @@ export default function AdminDashboard() {
     { id: "slider" as const, title: "Slider & Logo", icon: Images },
     // { id: "settings" as const, title: "Settings", icon: Settings },
   ];
-
-  // Helper function to compute competition status
-  const getCompetitionStatus = (comp: any): string => {
-    const now = new Date();
-    const compDateTime = new Date(`${comp.date}T${comp.time}`);
-    
-    if (compDateTime < now) {
-      return "completed";
-    }
-    
-    const hoursUntilComp = (compDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-    if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
-      return "live";
-    }
-    
-    return "upcoming";
-  };
 
   const liveCompetitions = allCompetitions
     .filter(comp => getCompetitionStatus(comp) === "live")
