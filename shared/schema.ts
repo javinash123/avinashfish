@@ -198,6 +198,7 @@ export const competitions = pgTable("competitions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),
   date: text("date").notNull(),
+  endDate: text("end_date"),
   time: text("time").notNull(),
   endTime: text("end_time"),
   venue: text("venue").notNull(),

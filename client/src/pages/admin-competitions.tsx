@@ -196,6 +196,7 @@ export default function AdminCompetitions() {
   const [formData, setFormData] = useState({
     name: "",
     date: "",
+    endDate: "",
     time: "",
     endTime: "",
     venue: "",
@@ -243,6 +244,7 @@ export default function AdminCompetitions() {
     setFormData({
       name: "",
       date: "",
+      endDate: "",
       time: "",
       endTime: "",
       venue: "",
@@ -277,6 +279,7 @@ export default function AdminCompetitions() {
     createMutation.mutate({
       name: formData.name,
       date: formData.date,
+      endDate: formData.endDate || null,
       time: formData.time,
       endTime: formData.endTime || null,
       venue: formData.venue,
@@ -317,6 +320,7 @@ export default function AdminCompetitions() {
       data: {
         name: formData.name,
         date: formData.date,
+        endDate: formData.endDate || null,
         time: formData.time,
         endTime: formData.endTime || null,
         venue: formData.venue,
@@ -342,6 +346,7 @@ export default function AdminCompetitions() {
     setFormData({
       name: competition.name,
       date: competition.date,
+      endDate: competition.endDate || "",
       time: competition.time,
       endTime: competition.endTime || "",
       venue: competition.venue,
@@ -719,15 +724,27 @@ export default function AdminCompetitions() {
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="date">Date</Label>
-              <Input
-                id="date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                data-testid="input-date"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="date">Start Date</Label>
+                <Input
+                  id="date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  data-testid="input-date"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="endDate">End Date (Optional)</Label>
+                <Input
+                  id="endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  data-testid="input-end-date"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
@@ -874,15 +891,27 @@ export default function AdminCompetitions() {
                 />
               </div>
             </div>
-            <div className="grid gap-2">
-              <Label htmlFor="edit-date">Date</Label>
-              <Input
-                id="edit-date"
-                type="date"
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                data-testid="input-edit-date"
-              />
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-date">Start Date</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={formData.date}
+                  onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                  data-testid="input-edit-date"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="edit-endDate">End Date (Optional)</Label>
+                <Input
+                  id="edit-endDate"
+                  type="date"
+                  value={formData.endDate}
+                  onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
+                  data-testid="input-edit-end-date"
+                />
+              </div>
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">

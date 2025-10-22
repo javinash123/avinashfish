@@ -41,6 +41,7 @@ export function Header() {
     { href: "/about", label: "About" },
   ];
 
+  // Close mobile menu when location changes
   useEffect(() => {
     setMobileMenuOpen(false);
   }, [location]);

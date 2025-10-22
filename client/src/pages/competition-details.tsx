@@ -186,7 +186,12 @@ export default function CompetitionDetails() {
                 </div>
                 <div>
                   <div className="text-sm text-muted-foreground">Date</div>
-                  <div className="font-medium" data-testid="text-date">{competition.date}</div>
+                  <div className="font-medium" data-testid="text-date">
+                    {competition.date}
+                    {competition.endDate && competition.endDate !== competition.date && (
+                      <> - {competition.endDate}</>
+                    )}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-3">
@@ -319,10 +324,31 @@ export default function CompetitionDetails() {
 
           <TabsContent value="leaderboard" className="mt-6">
             <LeaderboardTable 
-              entries={leaderboard.map(entry => ({
-                ...entry,
-                weight: entry.weight.replace(/\s*kg\s*/gi, '').replace(/\s*lbs\s*/gi, '').trim() + ' lbs',
-              }))} 
+              entries={leaderboard.map(entry => {
+                const weight = entry.weight.trim();
+                let convertedWeight = weight;
+                
+                // If already in lbs, keep as is
+                if (/lbs?$/i.test(weight)) {
+                  convertedWeight = weight;
+                }
+                // If in kg, convert to lbs
+                else if (/kg$/i.test(weight)) {
+                  const weightStr = weight.replace(/\s*kg\s*/gi, '').trim();
+                  const weightNum = parseFloat(weightStr);
+                  convertedWeight = !isNaN(weightNum) ? (weightNum * 2.20462).toFixed(2) + ' lbs' : weight;
+                }
+                // If no unit, assume kg and convert
+                else {
+                  const weightNum = parseFloat(weight);
+                  convertedWeight = !isNaN(weightNum) ? (weightNum * 2.20462).toFixed(2) + ' lbs' : weight;
+                }
+                
+                return {
+                  ...entry,
+                  weight: convertedWeight,
+                };
+              })} 
               isLive={true} 
             />
           </TabsContent>

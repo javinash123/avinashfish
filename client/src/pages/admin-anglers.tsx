@@ -43,6 +43,10 @@ interface Angler {
   username: string;
   email: string;
   club?: string;
+  bio?: string;
+  location?: string;
+  favouriteMethod?: string;
+  favouriteSpecies?: string;
   createdAt: string;
   status: "active" | "pending" | "blocked";
 }
@@ -395,6 +399,10 @@ export default function AdminAnglers() {
                   <p className="text-sm">{selectedAngler.club || "Not specified"}</p>
                 </div>
                 <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Location</h4>
+                  <p className="text-sm">{selectedAngler.location || "Not specified"}</p>
+                </div>
+                <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-1">Member Since</h4>
                   <p className="text-sm">{new Date(selectedAngler.createdAt).toLocaleDateString('en-GB', { 
                     day: 'numeric', 
@@ -404,10 +412,28 @@ export default function AdminAnglers() {
                   })}</p>
                 </div>
                 <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Favourite Method</h4>
+                  <p className="text-sm">{selectedAngler.favouriteMethod || "Not specified"}</p>
+                </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Favourite Species</h4>
+                  <p className="text-sm">{selectedAngler.favouriteSpecies || "Not specified"}</p>
+                </div>
+                <div>
                   <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
                   <p className="text-sm capitalize">{selectedAngler.status}</p>
                 </div>
               </div>
+
+              {selectedAngler.bio && (
+                <>
+                  <Separator />
+                  <div>
+                    <h4 className="text-sm font-medium text-muted-foreground mb-2">Bio</h4>
+                    <p className="text-sm">{selectedAngler.bio}</p>
+                  </div>
+                </>
+              )}
 
               <Separator />
 
@@ -428,7 +454,26 @@ export default function AdminAnglers() {
                   </Card>
                   <Card>
                     <CardContent className="pt-6">
-                      <div className="text-2xl font-bold">{anglerStats?.bestCatch ?? "-"}</div>
+                      <div className="text-2xl font-bold">
+                        {anglerStats?.bestCatch ? (() => {
+                          const weight = anglerStats.bestCatch.trim();
+                          // If already in lbs, return as is
+                          if (/lbs?$/i.test(weight)) {
+                            return weight;
+                          }
+                          // If in kg, convert to lbs
+                          if (/kg$/i.test(weight)) {
+                            const weightStr = weight.replace(/\s*kg\s*/gi, '').trim();
+                            const weightNum = parseFloat(weightStr);
+                            if (isNaN(weightNum)) return anglerStats.bestCatch;
+                            return (weightNum * 2.20462).toFixed(2) + ' lbs';
+                          }
+                          // If no unit, assume kg and convert
+                          const weightNum = parseFloat(weight);
+                          if (isNaN(weightNum)) return anglerStats.bestCatch;
+                          return (weightNum * 2.20462).toFixed(2) + ' lbs';
+                        })() : "-"}
+                      </div>
                       <p className="text-xs text-muted-foreground">Best Catch</p>
                     </CardContent>
                   </Card>
@@ -474,7 +519,24 @@ export default function AdminAnglers() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {participation.weight}
+                                {participation.weight ? (() => {
+                                  const weight = participation.weight.trim();
+                                  // If already in lbs, return as is
+                                  if (/lbs?$/i.test(weight)) {
+                                    return weight;
+                                  }
+                                  // If in kg, convert to lbs
+                                  if (/kg$/i.test(weight)) {
+                                    const weightStr = weight.replace(/\s*kg\s*/gi, '').trim();
+                                    const weightNum = parseFloat(weightStr);
+                                    if (isNaN(weightNum)) return '-';
+                                    return (weightNum * 2.20462).toFixed(2) + ' lbs';
+                                  }
+                                  // If no unit, assume kg and convert
+                                  const weightNum = parseFloat(weight);
+                                  if (isNaN(weightNum)) return '-';
+                                  return (weightNum * 2.20462).toFixed(2) + ' lbs';
+                                })() : '-'}
                               </TableCell>
                             </TableRow>
                           ))}
