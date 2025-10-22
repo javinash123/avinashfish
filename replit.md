@@ -38,9 +38,26 @@ Preferred communication style: Simple, everyday language.
 *   **Admin Angler Management:** View, search, filter, approve, block users; view profiles and send emails.
 *   **Competition Participation:** Anglers can join/leave competitions with peg assignment and capacity management.
 
+## Recent Changes
+
+### October 22, 2025 - UK Timezone Support & Weight Labels
+*   **Weight Display:** Added "(lbs)" suffix to all weight column headers in leaderboards and profile statistics for clarity.
+*   **UK Timezone Handling:** Implemented proper UK timezone (Europe/London) support using date-fns-tz for accurate competition status calculation.
+*   **Shared Timezone Utility:** Created `client/src/lib/uk-timezone.ts` with centralized functions:
+    - `getUKNow()`: Returns current date/time in UK timezone
+    - `toUKDateTime(date, time)`: Converts date/time strings to UK timezone Date objects
+    - `getCompetitionStatus(competition)`: Calculates competition status (upcoming/live/completed) based on UK time
+*   **Multi-Day Competition Support:** Fixed critical bug where multi-day competitions without explicit end times were ending prematurely. Now properly handles all edge cases:
+    - endDate + endTime: Uses specified end date and time
+    - endDate only: Uses end date at 23:59
+    - endTime only: Uses start date with end time
+    - Neither: Uses start date at 23:59
+*   **Code Consolidation:** Removed duplicate `getCompetitionStatus` functions from all pages (home, competitions, admin-competitions, profile) - all now use shared utility.
+
 ## External Dependencies
 
 *   **Payment Processing:** Stripe for ticketing and bookings (Payment Intents API, Stripe Elements).
 *   **Database:** PostgreSQL via Neon serverless driver, Drizzle ORM.
+*   **Timezone Support:** date-fns-tz for UK timezone handling (Europe/London).
 *   **UI Component Libraries:** Radix UI, Tailwind CSS, Lucide React, react-icons, date-fns.
 *   **Development Tools:** Vite, esbuild, TypeScript, Replit-specific plugins.

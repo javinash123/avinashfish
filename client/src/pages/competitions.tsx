@@ -13,6 +13,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
 import { format } from "date-fns";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function Competitions() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -21,36 +22,6 @@ export default function Competitions() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
   });
-
-  // Helper function to compute competition status based on date and time
-  const getCompetitionStatus = (comp: Competition): "upcoming" | "live" | "completed" => {
-    const now = new Date();
-    const compDate = new Date(comp.date);
-    const compStartTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : compDate;
-    
-    // If no end time specified, assume competition ends 8 hours after start or at end of day (whichever is earlier)
-    let compEndTime: Date;
-    if (comp.endTime) {
-      compEndTime = new Date(`${comp.date}T${comp.endTime}`);
-    } else {
-      // Set to end of day (23:59:59)
-      compEndTime = new Date(comp.date);
-      compEndTime.setHours(23, 59, 59, 999);
-    }
-    
-    // If current time is after end time, it's completed
-    if (now > compEndTime) {
-      return "completed";
-    }
-    
-    // If current time is between start and end time, it's live
-    if (now >= compStartTime && now <= compEndTime) {
-      return "live";
-    }
-    
-    // Otherwise, it's upcoming
-    return "upcoming";
-  };
 
   const competitions = competitionsData.map((comp) => ({
     id: comp.id,

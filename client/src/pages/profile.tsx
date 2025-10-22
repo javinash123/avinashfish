@@ -17,6 +17,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Competition, CompetitionParticipant, UserGalleryPhoto } from "@shared/schema";
 import { EditProfileDialog } from "@/components/edit-profile-dialog";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function Profile() {
   const [, params] = useRoute("/profile/:username");
@@ -191,43 +192,6 @@ export default function Profile() {
     return { variant: "outline" as const, color: "", label: `${position}th` };
   };
 
-  // Helper function to compute competition status based on UK timezone
-  const getCompetitionStatus = (comp: Competition): string => {
-    // Get current time in UK timezone
-    const now = new Date();
-    const ukNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    
-    // Parse competition start date/time as UK timezone
-    const startDateTime = new Date(`${comp.date}T${comp.time}`);
-    const ukStartDateTime = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    
-    // Handle end date and time
-    let ukEndDateTime: Date;
-    if (comp.endDate && comp.endTime) {
-      // Multi-day competition with specific end date and time
-      const endDateTime = new Date(`${comp.endDate}T${comp.endTime}`);
-      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    } else if (comp.endTime) {
-      // Same day competition with end time
-      const endDateTime = new Date(`${comp.date}T${comp.endTime}`);
-      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    } else {
-      // No end time specified - use end of day
-      ukEndDateTime = new Date(comp.date);
-      ukEndDateTime.setHours(23, 59, 59, 999);
-      ukEndDateTime = new Date(ukEndDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    }
-    
-    // Determine status based on UK time
-    if (ukNow < ukStartDateTime) {
-      return "upcoming";
-    } else if (ukNow >= ukStartDateTime && ukNow <= ukEndDateTime) {
-      return "live";
-    } else {
-      return "completed";
-    }
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -336,7 +300,7 @@ export default function Profile() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Best Catch</CardTitle>
+              <CardTitle className="text-sm font-medium">Best Catch (lbs)</CardTitle>
               <Fish className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -348,7 +312,7 @@ export default function Profile() {
 
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-1 space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">Average Weight</CardTitle>
+              <CardTitle className="text-sm font-medium">Average Weight (lbs)</CardTitle>
               <TrendingUp className="h-4 w-4 text-muted-foreground" />
             </CardHeader>
             <CardContent>
@@ -356,7 +320,7 @@ export default function Profile() {
                 {isOwnProfile && stats ? stats.averageWeight : "-"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total: {isOwnProfile && stats ? stats.totalWeight : "-"}
+                Total: {isOwnProfile && stats ? stats.totalWeight : "-"} lbs
               </p>
             </CardContent>
           </Card>

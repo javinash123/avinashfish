@@ -56,7 +56,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
               <TableHead className="w-20">Position</TableHead>
               <TableHead>Angler</TableHead>
               <TableHead className="text-center">Peg</TableHead>
-              <TableHead className="text-right">Weight</TableHead>
+              <TableHead className="text-right">Weight (lbs)</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>

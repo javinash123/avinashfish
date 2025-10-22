@@ -16,56 +16,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Card, CardContent } from "@/components/ui/card";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function Home() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
   });
 
-  // Helper function to compute competition status based on UK timezone
-  const getCompetitionStatus = (comp: Competition): "upcoming" | "live" | "completed" => {
-    // Get current time in UK timezone
-    const now = new Date();
-    const ukNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    
-    // Parse competition start date/time as UK timezone
-    const startDateTime = new Date(`${comp.date}T${comp.time}`);
-    const ukStartDateTime = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    
-    // Handle end date and time
-    let ukEndDateTime: Date;
-    if (comp.endDate && comp.endTime) {
-      // Multi-day competition with specific end date and time
-      const endDateTime = new Date(`${comp.endDate}T${comp.endTime}`);
-      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    } else if (comp.endTime) {
-      // Same day competition with end time
-      const endDateTime = new Date(`${comp.date}T${comp.endTime}`);
-      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    } else {
-      // No end time specified - use end of day
-      ukEndDateTime = new Date(comp.date);
-      ukEndDateTime.setHours(23, 59, 59, 999);
-      ukEndDateTime = new Date(ukEndDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
-    }
-    
-    // Determine status based on UK time
-    if (ukNow < ukStartDateTime) {
-      return "upcoming";
-    } else if (ukNow >= ukStartDateTime && ukNow <= ukEndDateTime) {
-      return "live";
-    } else {
-      return "completed";
-    }
-  };
-
-  // Filter upcoming competitions - only show if start time is in the future
+  // Filter upcoming competitions - only show if status is upcoming
   const upcomingCompetitions = competitionsData
-    .filter((comp) => {
-      const now = new Date();
-      const compStartTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : new Date(comp.date);
-      return now < compStartTime; // Only show competitions that haven't started yet
-    })
+    .filter((comp) => getCompetitionStatus(comp) === "upcoming")
     .slice(0, 3)
     .map((comp) => ({
       id: comp.id,

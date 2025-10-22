@@ -39,6 +39,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Competition } from "@shared/schema";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function AdminCompetitions() {
   const { toast } = useToast();
@@ -473,32 +474,6 @@ export default function AdminCompetitions() {
   const filteredCompetitions = competitions.filter(
     (comp) => filter === "all" || getCompetitionStatus(comp) === filter
   );
-
-  // Helper function to compute competition status based on date and time
-  const getCompetitionStatus = (comp: Competition): string => {
-    const now = new Date();
-    const compDate = new Date(comp.date);
-    const startDateTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : compDate;
-    
-    // If no end time specified, assume competition ends at end of day (23:59:59)
-    let endDateTime: Date;
-    if (comp.endTime) {
-      endDateTime = new Date(`${comp.date}T${comp.endTime}`);
-    } else {
-      // Set to end of day (23:59:59)
-      endDateTime = new Date(comp.date);
-      endDateTime.setHours(23, 59, 59, 999);
-    }
-    
-    // Compute status based on start and end times
-    if (now < startDateTime) {
-      return "upcoming";  // Before start time
-    } else if (now >= startDateTime && now <= endDateTime) {
-      return "live";  // Between start and end time
-    } else {
-      return "completed";  // After end time
-    }
-  };
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
