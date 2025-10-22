@@ -42,6 +42,7 @@ interface Angler {
   lastName: string;
   username: string;
   email: string;
+  avatar?: string;
   club?: string;
   bio?: string;
   location?: string;
@@ -374,6 +375,7 @@ export default function AdminAnglers() {
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <Avatar className="h-20 w-20">
+                  {selectedAngler.avatar && <AvatarImage src={selectedAngler.avatar} alt={`${selectedAngler.firstName} ${selectedAngler.lastName}`} />}
                   <AvatarFallback className="text-2xl">
                     {getInitials(selectedAngler.firstName, selectedAngler.lastName)}
                   </AvatarFallback>

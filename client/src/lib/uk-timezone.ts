@@ -1,30 +1,47 @@
-import { toZonedTime, fromZonedTime } from 'date-fns-tz';
+import { toZonedTime, fromZonedTime, format } from 'date-fns-tz';
 import type { Competition } from '@shared/schema';
 
 const UK_TIMEZONE = 'Europe/London';
 
 /**
  * Get the current date and time in UK timezone
+ * Returns a Date object representing the current moment, which can be compared with other Date objects
  */
 export function getUKNow(): Date {
-  return toZonedTime(new Date(), UK_TIMEZONE);
+  return new Date();
 }
 
 /**
- * Convert a date string and time string to UK timezone Date object
- * @param date - Date string in YYYY-MM-DD format
- * @param time - Optional time string in HH:MM format (24-hour format)
- * @returns Date object representing the UK time
+ * Convert a date string and time string (in UK timezone) to a UTC Date object
+ * @param date - Date string in YYYY-MM-DD format (interpreted as UK date)
+ * @param time - Time string in HH:MM format (24-hour, interpreted as UK time)
+ * @returns Date object in UTC that represents the given UK local time
  */
-export function toUKDateTime(date: string, time?: string): Date {
-  // Create the datetime string in ISO format
-  const dateTimeString = time ? `${date}T${time}:00` : `${date}T00:00:00`;
+export function toUKDateTime(date: string, time: string = '00:00'): Date {
+  // Ensure time is in HH:MM format
+  const timeParts = time.split(':');
+  if (timeParts.length !== 2) {
+    throw new Error(`Invalid time format: ${time}. Expected HH:MM`);
+  }
   
-  // Create a date object treating the input as UK local time
-  // fromZonedTime creates a Date from a time value that is assumed to be in a given time zone
-  const ukDateTime = fromZonedTime(dateTimeString, UK_TIMEZONE);
+  // Create a date string in ISO format (UK local time)
+  const dateTimeString = `${date}T${time}:00`;
   
-  return ukDateTime;
+  // Parse this as UK local time and convert to UTC
+  // fromZonedTime treats the input as being in the specified timezone
+  const utcDate = fromZonedTime(dateTimeString, UK_TIMEZONE);
+  
+  return utcDate;
+}
+
+/**
+ * Format a date for display in UK timezone
+ * @param date - Date object
+ * @param formatString - Format string (date-fns format)
+ * @returns Formatted date string in UK timezone
+ */
+export function formatUKDate(date: Date, formatString: string = 'yyyy-MM-dd HH:mm:ss'): string {
+  return format(toZonedTime(date, UK_TIMEZONE), formatString, { timeZone: UK_TIMEZONE });
 }
 
 /**
@@ -35,12 +52,13 @@ export function toUKDateTime(date: string, time?: string): Date {
 export function getCompetitionStatus(
   competition: Competition
 ): "upcoming" | "live" | "completed" {
-  const ukNow = getUKNow();
+  // Get current time (UTC)
+  const now = new Date();
   
-  // Parse start date and time in UK timezone
-  const startDateTime = toUKDateTime(competition.date, competition.time);
+  // Parse start date and time (stored as UK local time, convert to UTC)
+  const startDateTime = toUKDateTime(competition.date, competition.time || '00:00');
   
-  // Calculate end date and time
+  // Calculate end date and time (stored as UK local time, convert to UTC)
   let endDateTime: Date;
   if (competition.endDate && competition.endTime) {
     // Multi-day competition with specific end date and time
@@ -56,27 +74,33 @@ export function getCompetitionStatus(
     endDateTime = toUKDateTime(competition.date, '23:59');
   }
   
-  // Debug logging
+  // Debug logging with UK timezone formatting
   console.log('[UK TIMEZONE DEBUG]', {
     competitionName: competition.name,
     storedDate: competition.date,
     storedTime: competition.time,
     storedEndDate: competition.endDate,
     storedEndTime: competition.endTime,
-    ukNow: ukNow.toISOString(),
-    startDateTime: startDateTime.toISOString(),
-    endDateTime: endDateTime.toISOString(),
+    currentTimeUTC: now.toISOString(),
+    currentTimeUK: formatUKDate(now, 'yyyy-MM-dd HH:mm:ss'),
+    startDateTimeUTC: startDateTime.toISOString(),
+    startDateTimeUK: formatUKDate(startDateTime, 'yyyy-MM-dd HH:mm:ss'),
+    endDateTimeUTC: endDateTime.toISOString(),
+    endDateTimeUK: formatUKDate(endDateTime, 'yyyy-MM-dd HH:mm:ss'),
     comparison: {
-      'ukNow < startDateTime': ukNow < startDateTime,
-      'ukNow >= startDateTime': ukNow >= startDateTime,
-      'ukNow <= endDateTime': ukNow <= endDateTime,
-    }
+      'now < start': now < startDateTime,
+      'now >= start && now <= end': now >= startDateTime && now <= endDateTime,
+      'now > end': now > endDateTime,
+    },
+    nowMillis: now.getTime(),
+    startMillis: startDateTime.getTime(),
+    endMillis: endDateTime.getTime(),
   });
   
-  // Determine status based on UK time
-  if (ukNow < startDateTime) {
+  // Determine status based on UTC time comparison
+  if (now < startDateTime) {
     return "upcoming";
-  } else if (ukNow >= startDateTime && ukNow <= endDateTime) {
+  } else if (now >= startDateTime && now <= endDateTime) {
     return "live";
   } else {
     return "completed";

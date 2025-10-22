@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -8,8 +8,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   User as UserIcon, Trophy, Calendar, MapPin, Fish, TrendingUp, 
-  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon
+  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Link, useRoute, useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -28,6 +36,14 @@ export default function Profile() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [caption, setCaption] = useState("");
   const [isUploading, setIsUploading] = useState(false);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [passwordForm, setPasswordForm] = useState({
+    currentPassword: "",
+    newPassword: "",
+    confirmPassword: "",
+  });
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
   
   const viewingUsername = params?.username;
   const isOwnProfile = !viewingUsername || viewingUsername === loggedInUser?.username;
@@ -103,6 +119,28 @@ export default function Profile() {
     },
   });
 
+  const updatePasswordMutation = useMutation({
+    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+      const response = await apiRequest("PUT", "/api/user/password", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Password updated",
+        description: "Your password has been changed successfully.",
+      });
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      setSettingsOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update password",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -149,6 +187,93 @@ export default function Profile() {
     } finally {
       setIsUploading(false);
     }
+  };
+
+  const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    try {
+      setIsUploadingAvatar(true);
+      
+      // Upload the file first
+      const formData = new FormData();
+      formData.append('image', file);
+      formData.append('type', 'avatar');
+      
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      if (!uploadResponse.ok) {
+        const errorData = await uploadResponse.json();
+        throw new Error(errorData.message || 'Failed to upload image');
+      }
+
+      const uploadData = await uploadResponse.json();
+      
+      // Update user profile with new avatar
+      const updateResponse = await apiRequest("PUT", "/api/user/profile", { 
+        avatar: uploadData.url 
+      });
+
+      if (updateResponse.ok) {
+        queryClient.invalidateQueries({ queryKey: ["/api/user/me"] });
+        toast({
+          title: "Profile picture updated",
+          description: "Your profile picture has been changed successfully.",
+        });
+      }
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload profile picture",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      // Clear the input
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handlePasswordUpdate = (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "All fields are required",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
+      toast({
+        title: "Error",
+        description: "New passwords do not match",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (passwordForm.newPassword.length < 6) {
+      toast({
+        title: "Error",
+        description: "Password must be at least 6 characters long",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    updatePasswordMutation.mutate({
+      currentPassword: passwordForm.currentPassword,
+      newPassword: passwordForm.newPassword,
+    });
   };
 
   useEffect(() => {
@@ -199,11 +324,38 @@ export default function Profile() {
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center md:items-start">
-                <Avatar className="h-32 w-32 mb-4" data-testid="avatar-profile">
-                  <AvatarFallback className="text-3xl">
-                    {displayUser.firstName[0]}{displayUser.lastName[0]}
-                  </AvatarFallback>
-                </Avatar>
+                <div className="relative mb-4">
+                  <Avatar className="h-32 w-32" data-testid="avatar-profile">
+                    {displayUser.avatar && <AvatarImage src={displayUser.avatar} alt={`${displayUser.firstName} ${displayUser.lastName}`} />}
+                    <AvatarFallback className="text-3xl">
+                      {displayUser.firstName[0]}{displayUser.lastName[0]}
+                    </AvatarFallback>
+                  </Avatar>
+                  {isOwnProfile && (
+                    <Button
+                      size="icon"
+                      variant="default"
+                      className="absolute bottom-0 right-0 h-8 w-8 rounded-full"
+                      onClick={() => avatarInputRef.current?.click()}
+                      disabled={isUploadingAvatar}
+                      data-testid="button-upload-avatar"
+                    >
+                      {isUploadingAvatar ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Camera className="h-4 w-4" />
+                      )}
+                    </Button>
+                  )}
+                  <input
+                    ref={avatarInputRef}
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={handleAvatarUpload}
+                    data-testid="input-avatar"
+                  />
+                </div>
                 {isOwnProfile && (
                   <Button 
                     variant="outline" 
@@ -226,7 +378,12 @@ export default function Profile() {
                     <p className="text-muted-foreground">@{displayUser.username}</p>
                   </div>
                   {isOwnProfile && (
-                    <Button variant="outline" size="icon" data-testid="button-settings">
+                    <Button 
+                      variant="outline" 
+                      size="icon" 
+                      onClick={() => setSettingsOpen(true)}
+                      data-testid="button-settings"
+                    >
                       <Settings className="h-4 w-4" />
                     </Button>
                   )}
@@ -551,6 +708,75 @@ export default function Profile() {
           onOpenChange={setEditProfileOpen}
           user={loggedInUser}
         />
+      )}
+
+      {isOwnProfile && (
+        <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
+          <DialogContent data-testid="dialog-settings">
+            <DialogHeader>
+              <DialogTitle>Account Settings</DialogTitle>
+              <DialogDescription>
+                Update your password and security settings
+              </DialogDescription>
+            </DialogHeader>
+            <form onSubmit={handlePasswordUpdate} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Current Password</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={passwordForm.currentPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                  data-testid="input-current-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">New Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={passwordForm.newPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                  data-testid="input-new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={passwordForm.confirmPassword}
+                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                  data-testid="input-confirm-password"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setSettingsOpen(false)}
+                  data-testid="button-cancel-settings"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={updatePasswordMutation.isPending}
+                  data-testid="button-save-password"
+                >
+                  {updatePasswordMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Password"
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </DialogContent>
+        </Dialog>
       )}
     </div>
   );
