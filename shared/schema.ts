@@ -302,8 +302,19 @@ export const updateUserProfileSchema = z.object({
   location: z.string().optional(),
   favouriteMethod: z.string().optional(),
   favouriteSpecies: z.string().optional(),
+  avatar: z.string().optional(),
 }).refine(data => Object.values(data).some(val => val !== undefined), {
   message: "At least one field must be provided",
 });
 
+export const updateUserPasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your new password"),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
+export type UpdateUserPassword = z.infer<typeof updateUserPasswordSchema>;

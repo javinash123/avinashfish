@@ -48,7 +48,7 @@ export default function Leaderboard() {
     anglerName: entry.anglerName,
     username: entry.username,
     pegNumber: entry.pegNumber,
-    weight: entry.weight.replace(/\s*kg\s*/gi, '').replace(/\s*lbs\s*/gi, '').trim() + ' lbs',
+    weight: entry.weight,
     club: entry.club,
   }));
 

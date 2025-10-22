@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { registerUserSchema, loginUserSchema, updateUserProfileSchema, insertUserGalleryPhotoSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { registerUserSchema, loginUserSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -291,68 +291,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin angler management routes
-  app.get("/api/admin/anglers", async (req, res) => {
-    try {
-      const adminId = req.session?.adminId;
-      
-      if (!adminId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const anglers = await storage.getAllUsers();
-      
-      res.json(anglers.map(angler => ({
-        id: angler.id,
-        firstName: angler.firstName,
-        lastName: angler.lastName,
-        username: angler.username,
-        email: angler.email,
-        club: angler.club,
-        status: angler.status,
-        createdAt: angler.createdAt,
-      })));
-    } catch (error: any) {
-      console.error("Get anglers error:", error);
-      res.status(500).json({ message: "Error fetching anglers: " + error.message });
-    }
-  });
-
-  app.patch("/api/admin/anglers/:id/status", async (req, res) => {
-    try {
-      const adminId = req.session?.adminId;
-      
-      if (!adminId) {
-        return res.status(401).json({ message: "Not authenticated" });
-      }
-
-      const { id } = req.params;
-      const { status } = req.body;
-
-      if (!status || !["active", "pending", "blocked"].includes(status)) {
-        return res.status(400).json({ message: "Invalid status. Must be 'active', 'pending', or 'blocked'" });
-      }
-
-      const updatedUser = await storage.updateUserStatus(id, status as "active" | "pending" | "blocked");
-
-      if (!updatedUser) {
-        return res.status(404).json({ message: "Angler not found" });
-      }
-
-      res.json({
-        id: updatedUser.id,
-        firstName: updatedUser.firstName,
-        lastName: updatedUser.lastName,
-        username: updatedUser.username,
-        email: updatedUser.email,
-        status: updatedUser.status,
-      });
-    } catch (error: any) {
-      console.error("Update angler status error:", error);
-      res.status(500).json({ message: "Error updating angler status: " + error.message });
-    }
-  });
-
   // User/Angler authentication routes
   app.post("/api/user/register", async (req, res) => {
     try {
@@ -595,6 +533,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/user/password", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = updateUserPasswordSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid password data", errors: result.error.errors });
+      }
+
+      // Get all users and find the current user
+      const users = await storage.getAllUsers();
+      const user = users.find(u => u.id === userId);
+      
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      // Verify current password
+      if (user.password !== result.data.currentPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      // Update password
+      const updatedUser = await storage.updateUserProfile(userId, { password: result.data.newPassword } as any);
+      if (!updatedUser) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error: any) {
+      console.error("Update password error:", error);
+      res.status(500).json({ message: "Error updating password: " + error.message });
+    }
+  });
+
   app.get("/api/user/gallery", async (req, res) => {
     try {
       const userId = req.session?.userId;
@@ -784,31 +761,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const competitions = await storage.getAllCompetitions();
       const allParticipations = await storage.getAllParticipants();
       
-      // Helper function to compute competition status
+      // Helper function to compute competition status using UK timezone
+      // Competition dates/times are stored as strings without timezone info
+      // We treat them as UK local time and compare against UK current time
       const getCompetitionStatus = (comp: any): string => {
+        // Get current time and competition times as UTC timestamps for comparison
         const now = new Date();
-        const startDateTime = new Date(`${comp.date}T${comp.time}`);
-        const endDateTime = comp.endTime ? new Date(`${comp.date}T${comp.endTime}`) : null;
         
-        // If no end time is set, use old logic
-        if (!endDateTime) {
-          if (startDateTime < now) {
-            return "completed";
-          }
-          const hoursUntilComp = (startDateTime.getTime() - now.getTime()) / (1000 * 60 * 60);
-          if (hoursUntilComp <= 24 && hoursUntilComp >= 0) {
-            return "live";
-          }
-          return "upcoming";
+        // Parse competition times as UTC (append Z to treat as UTC)
+        const start = new Date(`${comp.date}T${comp.time}Z`);
+        
+        let end: Date;
+        if (comp.endDate && comp.endTime) {
+          end = new Date(`${comp.endDate}T${comp.endTime}Z`);
+        } else if (comp.endTime) {
+          end = new Date(`${comp.date}T${comp.endTime}Z`);
+        } else {
+          // End of day
+          end = new Date(`${comp.date}T23:59:59Z`);
         }
         
-        // New logic with end time
-        if (now < startDateTime) {
-          return "upcoming";  // Before start time
-        } else if (now >= startDateTime && now <= endDateTime) {
-          return "live";  // Between start and end time
+        // Note: This assumes competition times are stored in UTC
+        // For UK timezone handling, times should be entered by admin in UK local time
+        // and we store them as UTC
+        if (now < start) {
+          return "upcoming";
+        } else if (now >= start && now <= end) {
+          return "live";
         } else {
-          return "completed";  // After end time
+          return "completed";
         }
       };
 

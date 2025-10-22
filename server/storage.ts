@@ -420,7 +420,7 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
 
-  async updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined> {
+  async updateUserProfile(id: string, updates: UpdateUserProfile & { password?: string }): Promise<User | undefined> {
     const user = this.users.get(id);
     if (!user) return undefined;
 
@@ -431,6 +431,8 @@ export class MemStorage implements IStorage {
       location: updates.location !== undefined ? updates.location : user.location,
       favouriteMethod: updates.favouriteMethod !== undefined ? updates.favouriteMethod : user.favouriteMethod,
       favouriteSpecies: updates.favouriteSpecies !== undefined ? updates.favouriteSpecies : user.favouriteSpecies,
+      avatar: updates.avatar !== undefined ? updates.avatar : user.avatar,
+      password: (updates as any).password !== undefined ? (updates as any).password : user.password,
     };
 
     this.users.set(id, updatedUser);

@@ -455,24 +455,7 @@ export default function AdminAnglers() {
                   <Card>
                     <CardContent className="pt-6">
                       <div className="text-2xl font-bold">
-                        {anglerStats?.bestCatch ? (() => {
-                          const weight = anglerStats.bestCatch.trim();
-                          // If already in lbs, return as is
-                          if (/lbs?$/i.test(weight)) {
-                            return weight;
-                          }
-                          // If in kg, convert to lbs
-                          if (/kg$/i.test(weight)) {
-                            const weightStr = weight.replace(/\s*kg\s*/gi, '').trim();
-                            const weightNum = parseFloat(weightStr);
-                            if (isNaN(weightNum)) return anglerStats.bestCatch;
-                            return (weightNum * 2.20462).toFixed(2) + ' lbs';
-                          }
-                          // If no unit, assume kg and convert
-                          const weightNum = parseFloat(weight);
-                          if (isNaN(weightNum)) return anglerStats.bestCatch;
-                          return (weightNum * 2.20462).toFixed(2) + ' lbs';
-                        })() : "-"}
+                        {anglerStats?.bestCatch || "-"}
                       </div>
                       <p className="text-xs text-muted-foreground">Best Catch</p>
                     </CardContent>
@@ -519,24 +502,7 @@ export default function AdminAnglers() {
                                 )}
                               </TableCell>
                               <TableCell className="text-right font-mono">
-                                {participation.weight ? (() => {
-                                  const weight = participation.weight.trim();
-                                  // If already in lbs, return as is
-                                  if (/lbs?$/i.test(weight)) {
-                                    return weight;
-                                  }
-                                  // If in kg, convert to lbs
-                                  if (/kg$/i.test(weight)) {
-                                    const weightStr = weight.replace(/\s*kg\s*/gi, '').trim();
-                                    const weightNum = parseFloat(weightStr);
-                                    if (isNaN(weightNum)) return '-';
-                                    return (weightNum * 2.20462).toFixed(2) + ' lbs';
-                                  }
-                                  // If no unit, assume kg and convert
-                                  const weightNum = parseFloat(weight);
-                                  if (isNaN(weightNum)) return '-';
-                                  return (weightNum * 2.20462).toFixed(2) + ' lbs';
-                                })() : '-'}
+                                {participation.weight || '-'}
                               </TableCell>
                             </TableRow>
                           ))}

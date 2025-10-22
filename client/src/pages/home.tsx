@@ -22,34 +22,41 @@ export default function Home() {
     queryKey: ["/api/competitions"],
   });
 
-  // Helper function to compute competition status based on date and time
+  // Helper function to compute competition status based on UK timezone
   const getCompetitionStatus = (comp: Competition): "upcoming" | "live" | "completed" => {
+    // Get current time in UK timezone
     const now = new Date();
-    const compDate = new Date(comp.date);
-    const compStartTime = comp.time ? new Date(`${comp.date}T${comp.time}`) : compDate;
+    const ukNow = new Date(now.toLocaleString('en-US', { timeZone: 'Europe/London' }));
     
-    // If no end time specified, assume competition ends at end of day (23:59:59)
-    let compEndTime: Date;
-    if (comp.endTime) {
-      compEndTime = new Date(`${comp.date}T${comp.endTime}`);
+    // Parse competition start date/time as UK timezone
+    const startDateTime = new Date(`${comp.date}T${comp.time}`);
+    const ukStartDateTime = new Date(startDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
+    
+    // Handle end date and time
+    let ukEndDateTime: Date;
+    if (comp.endDate && comp.endTime) {
+      // Multi-day competition with specific end date and time
+      const endDateTime = new Date(`${comp.endDate}T${comp.endTime}`);
+      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
+    } else if (comp.endTime) {
+      // Same day competition with end time
+      const endDateTime = new Date(`${comp.date}T${comp.endTime}`);
+      ukEndDateTime = new Date(endDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
     } else {
-      // Set to end of day (23:59:59)
-      compEndTime = new Date(comp.date);
-      compEndTime.setHours(23, 59, 59, 999);
+      // No end time specified - use end of day
+      ukEndDateTime = new Date(comp.date);
+      ukEndDateTime.setHours(23, 59, 59, 999);
+      ukEndDateTime = new Date(ukEndDateTime.toLocaleString('en-US', { timeZone: 'Europe/London' }));
     }
     
-    // If current time is after end time, it's completed
-    if (now > compEndTime) {
+    // Determine status based on UK time
+    if (ukNow < ukStartDateTime) {
+      return "upcoming";
+    } else if (ukNow >= ukStartDateTime && ukNow <= ukEndDateTime) {
+      return "live";
+    } else {
       return "completed";
     }
-    
-    // If current time is between start and end time, it's live
-    if (now >= compStartTime && now <= compEndTime) {
-      return "live";
-    }
-    
-    // Otherwise, it's upcoming
-    return "upcoming";
   };
 
   // Filter upcoming competitions - only show if start time is in the future
@@ -110,7 +117,7 @@ export default function Home() {
     anglerName: entry.anglerName,
     username: entry.username,
     pegNumber: entry.pegNumber,
-    weight: entry.weight.replace(/\s*kg\s*/gi, '').replace(/\s*lbs\s*/gi, '').trim() + ' lbs',
+    weight: entry.weight,
     club: entry.club,
   }));
 
