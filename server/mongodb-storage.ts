@@ -645,14 +645,114 @@ export class MongoDBStorage implements IStorage {
     return await this.competitionParticipants.find({}).toArray();
   }
 
-  async joinCompetition(participant: InsertCompetitionParticipant): Promise<CompetitionParticipant> {
-    const newParticipant: CompetitionParticipant = {
-      id: randomUUID(),
-      ...participant,
-      joinedAt: new Date(),
-    };
-    await this.competitionParticipants.insertOne(newParticipant);
-    return newParticipant;
+  async joinCompetition(insertParticipant: InsertCompetitionParticipant): Promise<CompetitionParticipant> {
+    const { competitionId, userId } = insertParticipant;
+    
+    // Get the competition to ensure it exists
+    const competition = await this.getCompetition(competitionId);
+    if (!competition) {
+      throw new Error("Competition not found");
+    }
+    
+    // If a specific peg was requested, validate and try to assign it
+    if (insertParticipant.pegNumber !== undefined && insertParticipant.pegNumber !== null) {
+      if (insertParticipant.pegNumber < 1 || insertParticipant.pegNumber > competition.pegsTotal) {
+        throw new Error(`Peg ${insertParticipant.pegNumber} is not valid for this competition`);
+      }
+      
+      const newParticipant: CompetitionParticipant = {
+        id: randomUUID(),
+        competitionId,
+        userId,
+        pegNumber: insertParticipant.pegNumber,
+        joinedAt: new Date(),
+      };
+      
+      try {
+        await this.competitionParticipants.insertOne(newParticipant);
+        await this.competitions.updateOne(
+          { id: competitionId },
+          { $inc: { pegsBooked: 1 } }
+        );
+        return newParticipant;
+      } catch (error: any) {
+        if (error.code === 11000) {
+          throw new Error(`Peg ${insertParticipant.pegNumber} is already assigned to another angler`);
+        }
+        throw error;
+      }
+    }
+    
+    // For automatic assignment, use an optimistic loop with MongoDB's unique index
+    // to handle concurrent joins gracefully
+    let attempts = 0;
+    const maxTotalAttempts = competition.pegsTotal; // Try all pegs if necessary
+    
+    while (attempts < maxTotalAttempts) {
+      attempts++;
+      
+      // Get currently booked pegs
+      const participants = await this.getCompetitionParticipants(competitionId);
+      const bookedPegs = new Set(participants.map(p => p.pegNumber).filter(p => p !== null));
+      
+      // Check if competition is full
+      if (bookedPegs.size >= competition.pegsTotal) {
+        throw new Error("No available pegs - competition is full");
+      }
+      
+      // Find all available pegs
+      const availablePegs: number[] = [];
+      for (let i = 1; i <= competition.pegsTotal; i++) {
+        if (!bookedPegs.has(i)) {
+          availablePegs.push(i);
+        }
+      }
+      
+      if (availablePegs.length === 0) {
+        throw new Error("No available pegs - competition is full");
+      }
+      
+      // Pick a random available peg to reduce contention
+      const randomIndex = Math.floor(Math.random() * availablePegs.length);
+      const pegToTry = availablePegs[randomIndex];
+      
+      const newParticipant: CompetitionParticipant = {
+        id: randomUUID(),
+        competitionId,
+        userId,
+        pegNumber: pegToTry,
+        joinedAt: new Date(),
+      };
+      
+      try {
+        // Try to insert - MongoDB's unique index will prevent duplicates
+        await this.competitionParticipants.insertOne(newParticipant);
+        
+        // Success! Update the pegs booked count
+        await this.competitions.updateOne(
+          { id: competitionId },
+          { $inc: { pegsBooked: 1 } }
+        );
+        
+        return newParticipant;
+      } catch (error: any) {
+        // Duplicate key error means this peg was just taken by another request
+        // Loop again to try a different peg
+        if (error.code === 11000) {
+          // On the last attempt, give up and return a helpful error
+          if (attempts >= maxTotalAttempts) {
+            throw new Error("Unable to reserve a peg due to high demand. Please try again in a moment.");
+          }
+          // Otherwise, continue to next attempt
+          continue;
+        }
+        // For other errors, throw immediately
+        throw error;
+      }
+    }
+    
+    // Should not reach here, but just in case
+    throw new Error("Unable to assign a peg after multiple attempts. Please try again.");
   }
 
   async leaveCompetition(competitionId: string, userId: string): Promise<boolean> {

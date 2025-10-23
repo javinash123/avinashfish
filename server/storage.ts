@@ -727,23 +727,68 @@ export class MemStorage implements IStorage {
   }
 
   async joinCompetition(insertParticipant: InsertCompetitionParticipant): Promise<CompetitionParticipant> {
+    const { competitionId, userId } = insertParticipant;
+    
+    // Get the competition to ensure it exists
+    const competition = await this.getCompetition(competitionId);
+    if (!competition) {
+      throw new Error("Competition not found");
+    }
+    
+    // Atomically assign the next available peg
+    // Get current participants and find the next available peg
+    const participants = await this.getCompetitionParticipants(competitionId);
+    const bookedPegs = new Set(participants.map(p => p.pegNumber).filter(p => p !== null));
+    
+    let assignedPegNumber: number | null = null;
+    
+    // If a specific peg was requested, validate it
+    if (insertParticipant.pegNumber !== undefined && insertParticipant.pegNumber !== null) {
+      if (bookedPegs.has(insertParticipant.pegNumber)) {
+        throw new Error(`Peg ${insertParticipant.pegNumber} is already assigned to another angler`);
+      }
+      if (insertParticipant.pegNumber < 1 || insertParticipant.pegNumber > competition.pegsTotal) {
+        throw new Error(`Peg ${insertParticipant.pegNumber} is not valid for this competition`);
+      }
+      assignedPegNumber = insertParticipant.pegNumber;
+    } else {
+      // Find the first available peg
+      for (let i = 1; i <= competition.pegsTotal; i++) {
+        if (!bookedPegs.has(i)) {
+          assignedPegNumber = i;
+          break;
+        }
+      }
+      
+      if (assignedPegNumber === null) {
+        throw new Error("No available pegs");
+      }
+    }
+    
+    // Create the participant with the assigned peg
     const id = randomUUID();
     const participant: CompetitionParticipant = {
       id,
-      competitionId: insertParticipant.competitionId,
-      userId: insertParticipant.userId,
-      pegNumber: insertParticipant.pegNumber,
+      competitionId,
+      userId,
+      pegNumber: assignedPegNumber,
       joinedAt: new Date(),
     };
+    
+    // Double-check the peg is still available (race condition protection)
+    const currentParticipants = await this.getCompetitionParticipants(competitionId);
+    const currentBookedPegs = new Set(currentParticipants.map(p => p.pegNumber).filter(p => p !== null));
+    if (currentBookedPegs.has(assignedPegNumber)) {
+      throw new Error(`Peg ${assignedPegNumber} was just taken by another angler. Please try again.`);
+    }
+    
+    // Save the participant
     this.competitionParticipants.set(id, participant);
     
     // Update competition pegs booked count
-    const competition = await this.getCompetition(insertParticipant.competitionId);
-    if (competition) {
-      await this.updateCompetition(competition.id, {
-        pegsBooked: competition.pegsBooked + 1,
-      });
-    }
+    await this.updateCompetition(competition.id, {
+      pegsBooked: competition.pegsBooked + 1,
+    });
     
     return participant;
   }

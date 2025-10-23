@@ -1395,12 +1395,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const competitionId = req.params.id;
-      
-      // Check if competition exists
-      const competition = await storage.getCompetition(competitionId);
-      if (!competition) {
-        return res.status(404).json({ message: "Competition not found" });
-      }
 
       // Check if user is already in the competition
       const isAlreadyIn = await storage.isUserInCompetition(competitionId, userId);
@@ -1409,24 +1403,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already joined this competition" });
       }
 
-      // Check if there are available pegs
-      const availablePegs = await storage.getAvailablePegs(competitionId);
-      if (availablePegs.length === 0) {
-        return res.status(400).json({ message: "No available pegs" });
-      }
-
-      // Get peg number from request or assign first available
-      const pegNumber = req.body.pegNumber || availablePegs[0];
-      
-      // Validate peg number is available
-      if (!availablePegs.includes(pegNumber)) {
-        return res.status(400).json({ message: "Peg not available" });
-      }
-
+      // Let storage layer handle peg assignment atomically
+      // Pass optional pegNumber from request if user wants a specific peg
       const participant = await storage.joinCompetition({
         competitionId,
         userId,
-        pegNumber,
+        pegNumber: req.body.pegNumber || undefined,
       });
       
       console.log("[DEBUG join] Participant created:", { participantId: participant.id, userId: participant.userId, competitionId: participant.competitionId, pegNumber: participant.pegNumber });
@@ -1434,7 +1416,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(participant);
     } catch (error: any) {
       console.error("Error joining competition:", error);
-      res.status(500).json({ message: "Error joining competition: " + error.message });
+      res.status(500).json({ message: error.message || "Error joining competition" });
     }
   });
 
