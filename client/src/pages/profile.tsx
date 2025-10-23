@@ -54,8 +54,8 @@ export default function Profile() {
   });
 
   const { data: participations = [], isLoading: participationsLoading } = useQuery<Array<CompetitionParticipant & { competition: Competition }>>({
-    queryKey: ["/api/user/participations"],
-    enabled: isOwnProfile && isAuthenticated,
+    queryKey: isOwnProfile ? ["/api/user/participations"] : [`/api/users/${viewingUsername}/participations`],
+    enabled: isOwnProfile ? isAuthenticated : !!viewingUsername,
   });
 
   const { data: stats } = useQuery<{
@@ -66,13 +66,13 @@ export default function Profile() {
     totalWeight: string;
     totalCompetitions: number;
   }>({
-    queryKey: ["/api/user/stats"],
-    enabled: isOwnProfile && isAuthenticated,
+    queryKey: isOwnProfile ? ["/api/user/stats"] : [`/api/users/${viewingUsername}/stats`],
+    enabled: isOwnProfile ? isAuthenticated : !!viewingUsername,
   });
 
   const { data: galleryPhotos = [] } = useQuery<UserGalleryPhoto[]>({
-    queryKey: ["/api/user/gallery"],
-    enabled: isOwnProfile && isAuthenticated,
+    queryKey: isOwnProfile ? ["/api/user/gallery"] : [`/api/users/${viewingUsername}/gallery`],
+    enabled: isOwnProfile ? isAuthenticated : !!viewingUsername,
   });
 
   const addPhotoMutation = useMutation({
@@ -435,7 +435,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-total-matches">
-                {isOwnProfile ? participations.length : 0}
+                {participations.length}
               </div>
             </CardContent>
           </Card>
@@ -447,10 +447,10 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary" data-testid="text-stat-wins">
-                {isOwnProfile && stats ? stats.wins : 0}
+                {stats ? stats.wins : 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {isOwnProfile && stats ? stats.podiumFinishes : 0} podium finishes
+                {stats ? stats.podiumFinishes : 0} podium finishes
               </p>
             </CardContent>
           </Card>
@@ -462,7 +462,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-best-catch">
-                {isOwnProfile && stats ? stats.bestCatch : "-"}
+                {stats ? stats.bestCatch : "-"}
               </div>
             </CardContent>
           </Card>
@@ -474,10 +474,10 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-average">
-                {isOwnProfile && stats ? stats.averageWeight : "-"}
+                {stats ? stats.averageWeight : "-"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total: {isOwnProfile && stats ? stats.totalWeight : "-"} lbs
+                Total: {stats ? stats.totalWeight : "-"} lbs
               </p>
             </CardContent>
           </Card>
@@ -487,20 +487,16 @@ export default function Profile() {
           <TabsList data-testid="tabs-profile">
             <TabsTrigger value="history" data-testid="tab-history">
               <Trophy className="h-4 w-4 mr-2" />
-              Match History
+              Competition History
             </TabsTrigger>
-            {isOwnProfile && (
-              <TabsTrigger value="upcoming" data-testid="tab-upcoming">
-                <Calendar className="h-4 w-4 mr-2" />
-                Upcoming Events
-              </TabsTrigger>
-            )}
-            {isOwnProfile && (
-              <TabsTrigger value="gallery" data-testid="tab-gallery">
-                <ImageIcon className="h-4 w-4 mr-2" />
-                Gallery
-              </TabsTrigger>
-            )}
+            <TabsTrigger value="upcoming" data-testid="tab-upcoming">
+              <Calendar className="h-4 w-4 mr-2" />
+              Upcoming
+            </TabsTrigger>
+            <TabsTrigger value="gallery" data-testid="tab-gallery">
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Gallery
+            </TabsTrigger>
           </TabsList>
 
           <TabsContent value="history" className="space-y-4">
@@ -508,110 +504,161 @@ export default function Profile() {
               <CardHeader>
                 <CardTitle>Competition History</CardTitle>
                 <CardDescription>
-                  All completed matches and results
+                  Completed competitions
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <div className="text-center py-8">
-                  <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                  <p className="text-muted-foreground mb-4">
-                    No competition history yet
-                  </p>
-                  <Link href="/competitions">
-                    <Button data-testid="button-browse-competitions">
-                      Browse Competitions
-                    </Button>
-                  </Link>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          {isOwnProfile && (
-            <TabsContent value="upcoming" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>Upcoming Competitions</CardTitle>
-                  <CardDescription>
-                    Competitions you've entered
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  {participationsLoading ? (
-                    <div className="flex items-center justify-center py-8">
-                      <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                    </div>
-                  ) : participations.length === 0 ? (
-                    <div className="text-center py-8">
-                      <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        No upcoming competitions booked
-                      </p>
+                {participationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : participations.filter(p => getCompetitionStatus(p.competition) === "completed").length === 0 ? (
+                  <div className="text-center py-8">
+                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      No competition history yet
+                    </p>
+                    {isOwnProfile && (
                       <Link href="/competitions">
                         <Button data-testid="button-browse-competitions">
                           Browse Competitions
                         </Button>
                       </Link>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {participations.map((participation) => (
-                        <Card key={participation.id} className="hover-elevate" data-testid={`card-participation-${participation.id}`}>
-                          <CardContent className="p-4">
-                            <div className="flex items-center justify-between gap-4">
-                              <div className="flex-1">
-                                <div className="flex items-center gap-2 mb-1">
-                                  <h3 className="font-semibold">{participation.competition.name}</h3>
-                                  <Badge variant={getCompetitionStatus(participation.competition) === "upcoming" ? "default" : "secondary"}>
-                                    {getCompetitionStatus(participation.competition)}
-                                  </Badge>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {participations.filter(p => getCompetitionStatus(p.competition) === "completed").map((participation) => (
+                      <Card key={participation.id} className="hover-elevate" data-testid={`card-participation-${participation.id}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold">{participation.competition.name}</h3>
+                                <Badge variant="secondary">
+                                  {getCompetitionStatus(participation.competition)}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    timeZone: 'Europe/London'
+                                  })}</span>
                                 </div>
-                                <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                  <div className="flex items-center gap-1">
-                                    <Calendar className="h-3 w-3" />
-                                    <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
-                                      day: 'numeric',
-                                      month: 'short',
-                                      year: 'numeric',
-                                      timeZone: 'Europe/London'
-                                    })}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <MapPin className="h-3 w-3" />
-                                    <span>{participation.competition.venue}</span>
-                                  </div>
-                                  <div className="flex items-center gap-1">
-                                    <Target className="h-3 w-3" />
-                                    <span>Peg {participation.pegNumber}</span>
-                                  </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{participation.competition.venue}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Target className="h-3 w-3" />
+                                  <span>Peg {participation.pegNumber}</span>
                                 </div>
                               </div>
-                              <Link href={`/competition/${participation.competition.id}`}>
-                                <Button variant="outline" size="sm">
-                                  View Details
-                                </Button>
-                              </Link>
                             </div>
-                          </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
+                            <Link href={`/competition/${participation.competition.id}`}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
 
-          {isOwnProfile && (
-            <TabsContent value="gallery" className="space-y-4">
-              <Card>
-                <CardHeader>
-                  <CardTitle>My Gallery</CardTitle>
-                  <CardDescription>
-                    Upload and manage your fishing photos
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
+          <TabsContent value="upcoming" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Upcoming Competitions</CardTitle>
+                <CardDescription>
+                  Upcoming and live competitions
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {participationsLoading ? (
+                  <div className="flex items-center justify-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : participations.filter(p => ["upcoming", "live"].includes(getCompetitionStatus(p.competition))).length === 0 ? (
+                  <div className="text-center py-8">
+                    <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      No upcoming competitions
+                    </p>
+                    {isOwnProfile && (
+                      <Link href="/competitions">
+                        <Button data-testid="button-browse-competitions">
+                          Browse Competitions
+                        </Button>
+                      </Link>
+                    )}
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {participations.filter(p => ["upcoming", "live"].includes(getCompetitionStatus(p.competition))).map((participation) => (
+                      <Card key={participation.id} className="hover-elevate" data-testid={`card-participation-${participation.id}`}>
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between gap-4">
+                            <div className="flex-1">
+                              <div className="flex items-center gap-2 mb-1">
+                                <h3 className="font-semibold">{participation.competition.name}</h3>
+                                <Badge variant={getCompetitionStatus(participation.competition) === "live" ? "default" : "secondary"}>
+                                  {getCompetitionStatus(participation.competition)}
+                                </Badge>
+                              </div>
+                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-1">
+                                  <Calendar className="h-3 w-3" />
+                                  <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
+                                    day: 'numeric',
+                                    month: 'short',
+                                    year: 'numeric',
+                                    timeZone: 'Europe/London'
+                                  })}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <MapPin className="h-3 w-3" />
+                                  <span>{participation.competition.venue}</span>
+                                </div>
+                                <div className="flex items-center gap-1">
+                                  <Target className="h-3 w-3" />
+                                  <span>Peg {participation.pegNumber}</span>
+                                </div>
+                              </div>
+                            </div>
+                            <Link href={`/competition/${participation.competition.id}`}>
+                              <Button variant="outline" size="sm">
+                                View Details
+                              </Button>
+                            </Link>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="gallery" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>{isOwnProfile ? "My Gallery" : `${displayUser.firstName}'s Gallery`}</CardTitle>
+                <CardDescription>
+                  {isOwnProfile ? "Upload and manage your fishing photos" : "Fishing photos"}
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {isOwnProfile && (
                   <form onSubmit={handleAddPhoto} className="space-y-4 mb-6">
                     <div className="space-y-2">
                       <Label htmlFor="photoFile">Choose Photo</Label>
@@ -651,33 +698,37 @@ export default function Profile() {
                       {isUploading ? 'Uploading...' : 'Add Photo'}
                     </Button>
                   </form>
+                )}
 
-                  {galleryPhotos.length === 0 ? (
-                    <div className="text-center py-12">
-                      <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                      <p className="text-muted-foreground mb-4">
-                        No photos in your gallery yet
-                      </p>
+                {galleryPhotos.length === 0 ? (
+                  <div className="text-center py-12">
+                    <ImageIcon className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="text-muted-foreground mb-4">
+                      {isOwnProfile ? "No photos in your gallery yet" : "No photos in gallery yet"}
+                    </p>
+                    {isOwnProfile && (
                       <p className="text-sm text-muted-foreground">
                         Add your first photo to showcase your catches!
                       </p>
-                    </div>
-                  ) : (
-                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                      {galleryPhotos.map((photo) => (
-                        <Card key={photo.id} className="overflow-hidden" data-testid={`card-photo-${photo.id}`}>
-                          <div className="aspect-square relative bg-muted">
-                            <img
-                              src={photo.url}
-                              alt={photo.caption || "Gallery photo"}
-                              className="w-full h-full object-cover"
-                            />
-                          </div>
-                          {photo.caption && (
-                            <CardContent className="pt-3">
-                              <p className="text-sm">{photo.caption}</p>
-                            </CardContent>
-                          )}
+                    )}
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    {galleryPhotos.map((photo) => (
+                      <Card key={photo.id} className="overflow-hidden" data-testid={`card-photo-${photo.id}`}>
+                        <div className="aspect-square relative bg-muted">
+                          <img
+                            src={photo.url}
+                            alt={photo.caption || "Gallery photo"}
+                            className="w-full h-full object-cover"
+                          />
+                        </div>
+                        {photo.caption && (
+                          <CardContent className="pt-3">
+                            <p className="text-sm">{photo.caption}</p>
+                          </CardContent>
+                        )}
+                        {isOwnProfile && (
                           <CardContent className="pt-2 pb-3">
                             <Button
                               variant="destructive"
@@ -691,14 +742,14 @@ export default function Profile() {
                               Delete
                             </Button>
                           </CardContent>
-                        </Card>
-                      ))}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          )}
+                        )}
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
 

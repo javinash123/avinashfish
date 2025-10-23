@@ -440,6 +440,92 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/users/:username/stats", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const leaderboardEntries = await storage.getUserLeaderboardEntries(user.id);
+      
+      // Calculate statistics
+      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
+      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      
+      // Calculate best catch (highest weight)
+      const weights = leaderboardEntries
+        .map(entry => parseFloat(entry.weight))
+        .filter(weight => !isNaN(weight));
+      
+      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
+      const averageWeight = weights.length > 0 
+        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
+        : 0;
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+      res.json({
+        wins,
+        podiumFinishes,
+        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
+        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
+        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
+        totalCompetitions: leaderboardEntries.length,
+      });
+    } catch (error: any) {
+      console.error("Get user stats by username error:", error);
+      res.status(500).json({ message: "Error fetching user stats: " + error.message });
+    }
+  });
+
+  app.get("/api/users/:username/participations", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const participations = await storage.getUserParticipations(user.id);
+      
+      // Enrich with competition data
+      const enrichedParticipations = await Promise.all(
+        participations.map(async (participation) => {
+          const competition = await storage.getCompetition(participation.competitionId);
+          return {
+            ...participation,
+            competition,
+          };
+        })
+      );
+
+      res.json(enrichedParticipations);
+    } catch (error: any) {
+      console.error("Get user participations by username error:", error);
+      res.status(500).json({ message: "Error fetching user participations: " + error.message });
+    }
+  });
+
+  app.get("/api/users/:username/gallery", async (req, res) => {
+    try {
+      const { username } = req.params;
+      const user = await storage.getUserByUsername(username);
+
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const photos = await storage.getUserGalleryPhotos(user.id);
+      res.json(photos);
+    } catch (error: any) {
+      console.error("Get user gallery by username error:", error);
+      res.status(500).json({ message: "Error fetching user gallery: " + error.message });
+    }
+  });
+
   app.get("/api/user/participations", async (req, res) => {
     try {
       const userId = req.session?.userId;
