@@ -245,6 +245,8 @@ export class MemStorage implements IStorage {
         name: "Spring Championship 2025",
         date: liveCompDate.toISOString().split('T')[0],
         time: "08:00",
+        endDate: null,
+        endTime: null,
         venue: "Riverside Lake",
         description: "Our flagship spring competition featuring the best anglers from across the region",
         pegsTotal: 30,
@@ -254,6 +256,7 @@ export class MemStorage implements IStorage {
         status: "upcoming",
         type: "Championship",
         rules: ["Standard match rules apply", "Barbless hooks only", "Keep nets mandatory"],
+        imageUrl: null,
         createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
       },
       {
@@ -261,6 +264,8 @@ export class MemStorage implements IStorage {
         name: "Midweek Match",
         date: upcomingComp1Date.toISOString().split('T')[0],
         time: "07:00",
+        endDate: null,
+        endTime: null,
         venue: "Canal Section 5",
         description: "Relaxed midweek competition perfect for all skill levels",
         pegsTotal: 20,
@@ -270,6 +275,7 @@ export class MemStorage implements IStorage {
         status: "upcoming",
         type: "Open Match",
         rules: ["All methods allowed", "No bloodworm or joker"],
+        imageUrl: null,
         createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       },
       {
@@ -277,6 +283,8 @@ export class MemStorage implements IStorage {
         name: "Monthly Open",
         date: upcomingComp2Date.toISOString().split('T')[0],
         time: "06:30",
+        endDate: null,
+        endTime: null,
         venue: "Meadow Lakes",
         description: "Open competition with substantial prize fund",
         pegsTotal: 40,
@@ -286,6 +294,7 @@ export class MemStorage implements IStorage {
         status: "upcoming",
         type: "Open Match",
         rules: ["Barbless hooks only", "All pegs fishable"],
+        imageUrl: null,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       },
     ];
@@ -688,6 +697,9 @@ export class MemStorage implements IStorage {
       status: insertCompetition.status ?? "upcoming",
       pegsBooked: insertCompetition.pegsBooked ?? 0,
       rules: insertCompetition.rules ?? null,
+      imageUrl: insertCompetition.imageUrl ?? null,
+      endDate: insertCompetition.endDate ?? null,
+      endTime: insertCompetition.endTime ?? null,
       createdAt: new Date(),
     };
     this.competitions.set(id, competition);
@@ -970,22 +982,41 @@ export class MemStorage implements IStorage {
 
 import { MongoDBStorage } from "./mongodb-storage";
 
-// Initialize storage based on environment
-// If MONGODB_URI is available, use MongoDB; otherwise fall back to in-memory storage
+// Storage instance
 let storage: IStorage;
 
-if (process.env.MONGODB_URI) {
-  const mongoStorage = new MongoDBStorage(process.env.MONGODB_URI);
-  // Connect to MongoDB asynchronously
-  mongoStorage.connect().catch(err => {
-    console.error("Failed to connect to MongoDB:", err);
-    console.log("Falling back to in-memory storage");
+// Initialize storage based on environment
+// If MONGODB_URI is available, use MongoDB; otherwise fall back to in-memory storage
+export async function initializeStorage(): Promise<IStorage> {
+  if (process.env.MONGODB_URI) {
+    console.log("Attempting to connect to MongoDB...");
+    const mongoStorage = new MongoDBStorage(process.env.MONGODB_URI);
+    
+    try {
+      await mongoStorage.connect();
+      storage = mongoStorage;
+      console.log("✅ Using MongoDB storage");
+      return storage;
+    } catch (err) {
+      console.error("❌ Failed to connect to MongoDB:", err);
+      console.log("⚠️  Falling back to in-memory storage");
+      storage = new MemStorage();
+      return storage;
+    }
+  } else {
+    console.log("No MONGODB_URI found, using in-memory storage");
     storage = new MemStorage();
-  });
-  storage = mongoStorage;
-} else {
-  console.log("No MONGODB_URI found, using in-memory storage");
-  storage = new MemStorage();
+    return storage;
+  }
 }
 
+// Export storage getter (must be called after initializeStorage)
+export function getStorage(): IStorage {
+  if (!storage) {
+    throw new Error("Storage not initialized. Call initializeStorage() first.");
+  }
+  return storage;
+}
+
+// For backward compatibility, export storage directly (but it won't be initialized until initializeStorage is called)
 export { storage };

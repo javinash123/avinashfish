@@ -6,45 +6,40 @@ import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
    
 const app = express();
+
+// Trust proxy - required when behind AWS load balancer or reverse proxy
+app.set('trust proxy', 1);
+
 // Disable ETag generation to prevent HTTP 304 caching
 app.set('etag', false);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
- app.use(cors({
-      origin: 'http://98.84.197.204:7118', // Or an array of allowed origins
-      credentials: true // Crucial for sending cookies
-    }));
+
+app.use(cors({
+  origin: 'http://98.84.197.204:7118',
+  credentials: true
+}));
+
 // Session configuration
 const MemoryStore = createMemoryStore(session);
 const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
-// app.use(
-//   session({
-//     secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-//     resave: false,
-//     saveUninitialized: true,
-//     store: new MemoryStore({
-//       checkPeriod: 86400000, // prune expired entries every 24h
-//     }),
-//     cookie: {
-//       path: EXPRESS_BASE_PATH || '/',
-//       maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-//       httpOnly: false,
-//       secure: process.env.NODE_ENV === "production",
-//       sameSite: "lax",
-//     },
-//   })
-// );
+
 app.use(session({
-      secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-      resave: false,
-      saveUninitialized: true,
-      cookie: {
-         secure: false, // ⚠️ temporary fix until you use HTTPS
-  sameSite: "lax",
-  httpOnly: true,
-      },
-      proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
-    }));
+  secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: true,
+  store: new MemoryStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
+  cookie: {
+    path: EXPRESS_BASE_PATH || '/',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    sameSite: "lax",
+  },
+  proxy: true
+}));
 // Disable caching for API routes to ensure real-time data updates
 app.use((req, res, next) => {
   const apiPath = EXPRESS_BASE_PATH ? `${EXPRESS_BASE_PATH}/api` : '/api';
@@ -88,10 +83,14 @@ app.use((req, res, next) => {
 });
 
 (async () => {
-  // Serve uploaded files statically
+  // Initialize storage first (MongoDB or in-memory fallback)
+  const { initializeStorage } = await import("./storage");
+  await initializeStorage();
+  
+  // Serve uploaded files statically (must exist on production server)
   app.use('/assets', express.static('attached_assets'));
   
-  // Instead of using Router, just pass `app` directly
+  // Register routes after storage is ready
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {

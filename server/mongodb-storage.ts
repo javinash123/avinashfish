@@ -220,6 +220,7 @@ export class MongoDBStorage implements IStorage {
           name: "Spring Championship 2025",
           date: liveCompDate.toISOString().split('T')[0],
           time: "08:00",
+          endDate: null,
           endTime: "16:00",
           venue: "Riverside Lake",
           description: "Our flagship spring competition featuring the best anglers from across the region",
@@ -238,6 +239,7 @@ export class MongoDBStorage implements IStorage {
           name: "Midweek Match",
           date: upcomingComp1Date.toISOString().split('T')[0],
           time: "07:00",
+          endDate: null,
           endTime: "15:00",
           venue: "Canal Section 5",
           description: "Relaxed midweek competition perfect for all skill levels",
@@ -256,6 +258,7 @@ export class MongoDBStorage implements IStorage {
           name: "Monthly Open",
           date: upcomingComp2Date.toISOString().split('T')[0],
           time: "06:30",
+          endDate: null,
           endTime: "14:30",
           venue: "Meadow Lakes",
           description: "Open competition with substantial prize fund",
@@ -413,7 +416,8 @@ export class MongoDBStorage implements IStorage {
     const newPhoto: UserGalleryPhoto = {
       id: randomUUID(),
       ...photo,
-      uploadedAt: new Date(),
+      caption: photo.caption ?? null,
+      createdAt: new Date(),
     };
     await this.userGalleryPhotos.insertOne(newPhoto);
     return newPhoto;
@@ -641,6 +645,7 @@ export class MongoDBStorage implements IStorage {
       status: competition.status ?? "upcoming",
       pegsBooked: competition.pegsBooked ?? 0,
       rules: competition.rules ?? null,
+      endDate: competition.endDate ?? null,
       endTime: competition.endTime ?? null,
       imageUrl: competition.imageUrl ?? null,
       createdAt: new Date(),
