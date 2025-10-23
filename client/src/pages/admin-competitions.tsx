@@ -53,6 +53,7 @@ export default function AdminCompetitions() {
   // Weigh-in state
   const [weighInEntries, setWeighInEntries] = useState<Record<string, { peg: number; weight: number; angler: string; time: string }[]>>({});
   const [weighInForm, setWeighInForm] = useState({ pegNumber: "", weight: "" });
+  const [selectedPegForView, setSelectedPegForView] = useState<number | null>(null);
 
   const { data: competitions = [], isLoading } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
@@ -70,6 +71,24 @@ export default function AdminCompetitions() {
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition?.id}/participants`],
     enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen),
+  });
+
+  // Get userId from selected peg
+  const selectedParticipant = selectedPegForView 
+    ? participants.find(p => p.pegNumber === selectedPegForView)
+    : null;
+
+  // Fetch weight entries for selected participant
+  const { data: participantEntries } = useQuery<{
+    entries: Array<{
+      id: string;
+      weight: string;
+      createdAt: string;
+    }>;
+    totalWeight: string;
+  }>({
+    queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/participants/${selectedParticipant?.userId}/entries`],
+    enabled: !!selectedCompetition && !!selectedParticipant,
   });
 
   const createMutation = useMutation({
@@ -161,6 +180,12 @@ export default function AdminCompetitions() {
     onSuccess: (data, variables) => {
       if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
+        // Invalidate participant entries if they are viewing the same participant
+        if (selectedParticipant && selectedParticipant.userId === variables.userId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${variables.userId}/entries`] 
+          });
+        }
       }
       const participant = participants.find(p => p.pegNumber === variables.pegNumber);
       const anglerName = participant?.name || `Peg ${variables.pegNumber}`;
@@ -1095,43 +1120,115 @@ export default function AdminCompetitions() {
                 </Button>
               </div>
             </div>
-            <Card>
-              <CardHeader>
-                <CardTitle>Recent Entries</CardTitle>
-              </CardHeader>
-              <CardContent>
-                {selectedCompetition && weighInEntries[selectedCompetition.id]?.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Time</TableHead>
-                        <TableHead>Peg</TableHead>
-                        <TableHead>Angler</TableHead>
-                        <TableHead>Weight</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {weighInEntries[selectedCompetition.id].map((entry, index) => (
-                        <TableRow key={index}>
-                          <TableCell className="text-muted-foreground">{entry.time}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline" className="font-mono">
-                              {entry.peg}
-                            </Badge>
-                          </TableCell>
-                          <TableCell>{entry.angler}</TableCell>
-                          <TableCell className="font-semibold">{entry.weight} lbs</TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                ) : (
-                  <div className="text-sm text-muted-foreground">
-                    No weights entered yet
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Card>
+                <CardHeader>
+                  <CardTitle>View Participant Entries</CardTitle>
+                  <DialogDescription>
+                    Select a peg to view all weight entries for that participant
+                  </DialogDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid gap-2">
+                      <Label htmlFor="view-peg">Select Peg</Label>
+                      <select
+                        id="view-peg"
+                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        value={selectedPegForView || ""}
+                        onChange={(e) => setSelectedPegForView(e.target.value ? parseInt(e.target.value) : null)}
+                        data-testid="select-view-peg"
+                      >
+                        <option value="">-- Select Peg --</option>
+                        {participants
+                          .filter(p => p.pegNumber > 0)
+                          .sort((a, b) => a.pegNumber - b.pegNumber)
+                          .map((p) => (
+                            <option key={p.id} value={p.pegNumber}>
+                              Peg {p.pegNumber} - {p.name}
+                            </option>
+                          ))}
+                      </select>
+                    </div>
+
+                    {selectedPegForView && selectedParticipant && (
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between p-3 bg-muted rounded-md">
+                          <div>
+                            <p className="font-semibold">{selectedParticipant.name}</p>
+                            <p className="text-sm text-muted-foreground">Peg {selectedPegForView}</p>
+                          </div>
+                          {participantEntries && (
+                            <div className="text-right">
+                              <p className="text-sm text-muted-foreground">Total Weight</p>
+                              <p className="text-2xl font-bold">{parseFloat(participantEntries.totalWeight).toFixed(2)} lbs</p>
+                            </div>
+                          )}
+                        </div>
+
+                        {participantEntries && participantEntries.entries.length > 0 ? (
+                          <div className="space-y-2">
+                            <p className="text-sm font-medium">Individual Entries ({participantEntries.entries.length})</p>
+                            <div className="space-y-1">
+                              {participantEntries.entries.map((entry, index) => (
+                                <div key={entry.id} className="flex items-center justify-between p-2 border rounded-md">
+                                  <span className="text-sm text-muted-foreground">
+                                    Entry #{participantEntries.entries.length - index}
+                                  </span>
+                                  <span className="font-semibold">{parseFloat(entry.weight).toFixed(2)} lbs</span>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-sm text-muted-foreground p-3 text-center border rounded-md">
+                            No weights entered for this participant yet
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
-                )}
-              </CardContent>
-            </Card>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle>Recent Entries</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  {selectedCompetition && weighInEntries[selectedCompetition.id]?.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Time</TableHead>
+                          <TableHead>Peg</TableHead>
+                          <TableHead>Angler</TableHead>
+                          <TableHead>Weight</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {weighInEntries[selectedCompetition.id].slice(0, 10).map((entry, index) => (
+                          <TableRow key={index}>
+                            <TableCell className="text-muted-foreground">{entry.time}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="font-mono">
+                                {entry.peg}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>{entry.angler}</TableCell>
+                            <TableCell className="font-semibold">{entry.weight} lbs</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-sm text-muted-foreground">
+                      No weights entered yet
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
           </div>
           <DialogFooter>
             <Button onClick={() => setIsWeighInOpen(false)} data-testid="button-close-weigh-in">

@@ -77,6 +77,7 @@ export interface IStorage {
   // Leaderboard methods
   getLeaderboard(competitionId: string): Promise<LeaderboardEntry[]>;
   getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]>;
+  getParticipantLeaderboardEntries(competitionId: string, userId: string): Promise<LeaderboardEntry[]>;
   createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry>;
   updateLeaderboardEntry(id: string, updates: UpdateLeaderboardEntry): Promise<LeaderboardEntry | undefined>;
   deleteLeaderboardEntry(id: string): Promise<boolean>;
@@ -866,8 +867,41 @@ export class MemStorage implements IStorage {
     const entries = Array.from(this.leaderboardEntries.values())
       .filter((entry) => entry.competitionId === competitionId);
     
-    // Sort by weight (highest first) to calculate positions
-    const sortedEntries = entries.sort((a, b) => {
+    // Group entries by userId and aggregate total weight
+    const participantMap = new Map<string, { 
+      entries: LeaderboardEntry[], 
+      totalWeight: number,
+      pegNumber: number 
+    }>();
+    
+    entries.forEach((entry) => {
+      const weight = parseFloat(entry.weight.toString().replace(/[^\d.-]/g, ''));
+      
+      if (participantMap.has(entry.userId)) {
+        const participant = participantMap.get(entry.userId)!;
+        participant.entries.push(entry);
+        participant.totalWeight += weight;
+      } else {
+        participantMap.set(entry.userId, {
+          entries: [entry],
+          totalWeight: weight,
+          pegNumber: entry.pegNumber,
+        });
+      }
+    });
+    
+    // Create aggregated entries with total weight
+    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([userId, data]) => {
+      // Use the most recent entry as the base
+      const latestEntry = data.entries[data.entries.length - 1];
+      return {
+        ...latestEntry,
+        weight: data.totalWeight.toString(), // Store total weight
+      };
+    });
+    
+    // Sort by total weight (highest first) to calculate positions
+    const sortedEntries = aggregatedEntries.sort((a, b) => {
       const weightA = parseFloat(a.weight.toString().replace(/[^\d.-]/g, ''));
       const weightB = parseFloat(b.weight.toString().replace(/[^\d.-]/g, ''));
       return weightB - weightA; // Descending order (highest weight first)
@@ -889,6 +923,16 @@ export class MemStorage implements IStorage {
       const weightA = parseFloat(a.weight.toString().replace(/[^\d.-]/g, ''));
       const weightB = parseFloat(b.weight.toString().replace(/[^\d.-]/g, ''));
       return weightB - weightA;
+    });
+  }
+
+  async getParticipantLeaderboardEntries(competitionId: string, userId: string): Promise<LeaderboardEntry[]> {
+    const entries = Array.from(this.leaderboardEntries.values())
+      .filter((entry) => entry.competitionId === competitionId && entry.userId === userId);
+    
+    // Sort by creation time (most recent first)
+    return entries.sort((a, b) => {
+      return b.createdAt.getTime() - a.createdAt.getTime();
     });
   }
 

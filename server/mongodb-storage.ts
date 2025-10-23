@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -16,6 +16,7 @@ export class MongoDBStorage implements IStorage {
   private competitions!: Collection<Competition>;
   private competitionParticipants!: Collection<CompetitionParticipant>;
   private leaderboardEntries!: Collection<LeaderboardEntry>;
+  private userGalleryPhotos!: Collection<UserGalleryPhoto>;
 
   constructor(uri: string) {
     this.client = new MongoClient(uri);
@@ -37,6 +38,7 @@ export class MongoDBStorage implements IStorage {
       this.competitions = this.db.collection<Competition>("competitions");
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
       this.leaderboardEntries = this.db.collection<LeaderboardEntry>("leaderboard_entries");
+      this.userGalleryPhotos = this.db.collection<UserGalleryPhoto>("user_gallery_photos");
 
       // Create indexes
       await this.createIndexes();
@@ -391,6 +393,35 @@ export class MongoDBStorage implements IStorage {
       { returnDocument: "after" }
     );
     return result || undefined;
+  }
+
+  async updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined> {
+    const result = await this.users.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  // User gallery methods
+  async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
+    return await this.userGalleryPhotos.find({ userId }).toArray();
+  }
+
+  async createUserGalleryPhoto(photo: InsertUserGalleryPhoto): Promise<UserGalleryPhoto> {
+    const newPhoto: UserGalleryPhoto = {
+      id: randomUUID(),
+      ...photo,
+      uploadedAt: new Date(),
+    };
+    await this.userGalleryPhotos.insertOne(newPhoto);
+    return newPhoto;
+  }
+
+  async deleteUserGalleryPhoto(id: string, userId: string): Promise<boolean> {
+    const result = await this.userGalleryPhotos.deleteOne({ id, userId });
+    return result.deletedCount === 1;
   }
 
   // Admin methods
@@ -801,12 +832,47 @@ export class MongoDBStorage implements IStorage {
       .find({ competitionId })
       .toArray();
     
-    const sortedEntries = entries.sort((a, b) => {
-      const weightA = parseFloat(a.weight.toString().replace(/[^\d.-]/g, ''));
-      const weightB = parseFloat(b.weight.toString().replace(/[^\d.-]/g, ''));
-      return weightB - weightA;
+    // Group entries by userId and aggregate total weight
+    const participantMap = new Map<string, { 
+      entries: LeaderboardEntry[], 
+      totalWeight: number,
+      pegNumber: number 
+    }>();
+    
+    entries.forEach((entry) => {
+      const weight = parseFloat(entry.weight.toString().replace(/[^\d.-]/g, ''));
+      
+      if (participantMap.has(entry.userId)) {
+        const participant = participantMap.get(entry.userId)!;
+        participant.entries.push(entry);
+        participant.totalWeight += weight;
+      } else {
+        participantMap.set(entry.userId, {
+          entries: [entry],
+          totalWeight: weight,
+          pegNumber: entry.pegNumber,
+        });
+      }
     });
     
+    // Create aggregated entries with total weight
+    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([userId, data]) => {
+      // Use the most recent entry as the base
+      const latestEntry = data.entries[data.entries.length - 1];
+      return {
+        ...latestEntry,
+        weight: data.totalWeight.toString(), // Store total weight
+      };
+    });
+    
+    // Sort by total weight (highest first) to calculate positions
+    const sortedEntries = aggregatedEntries.sort((a, b) => {
+      const weightA = parseFloat(a.weight.toString().replace(/[^\d.-]/g, ''));
+      const weightB = parseFloat(b.weight.toString().replace(/[^\d.-]/g, ''));
+      return weightB - weightA; // Descending order (highest weight first)
+    });
+    
+    // Assign positions based on sorted order
     return sortedEntries.map((entry, index) => ({
       ...entry,
       position: index + 1,
@@ -815,6 +881,14 @@ export class MongoDBStorage implements IStorage {
 
   async getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]> {
     return await this.leaderboardEntries.find({ userId }).toArray();
+  }
+
+  async getParticipantLeaderboardEntries(competitionId: string, userId: string): Promise<LeaderboardEntry[]> {
+    const entries = await this.leaderboardEntries
+      .find({ competitionId, userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    return entries;
   }
 
   async createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry> {
