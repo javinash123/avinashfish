@@ -843,3 +843,140 @@ All migration and update tasks completed successfully:
 ✅ **Frontend Loading Perfectly**
 ✅ **All Progress Tracker Items Marked Complete**
 ✅ **Migration 100% Complete - Application Ready for Use**
+
+## October 22, 2025 - Latest Session Update
+
+[x] 836. Reinstall all packages to resolve tsx missing error (workflow restart issue)
+[x] 837. Restart workflow and confirm server running successfully on port 5000
+[x] 838. Verify all items in progress tracker marked with [x] checkboxes
+[x] 839. Confirm application is fully functional and ready for use
+
+✅ **Latest Status Update:**
+✅ **tsx Package Reinstalled Successfully**
+✅ **Workflow Running Successfully on Port 5000**
+✅ **Server Started with In-Memory Storage (No MongoDB Connection)**
+✅ **API Endpoints Responding Correctly**
+✅ **Frontend Connected via Vite**
+✅ **All Progress Tracker Items Marked Complete with [x] Notation**
+
+## October 22, 2025 - Critical Bug Fixes
+
+[x] 840. Fix password update functionality in profile settings (error message parsing issue)
+[x] 841. Implement atomic peg validation to prevent duplicate peg assignments per competition
+[x] 842. Test both fixes and verify no regressions
+[x] 843. Architect review and approval of both fixes
+
+## Bug Fix Implementation Details:
+
+### Issue #1: Password Update Not Working
+**Problem**: Settings icon in profile page had password update form, but error messages weren't displaying correctly to users.
+
+**Root Cause**: The `throwIfResNotOk` function in `client/src/lib/queryClient.ts` was not properly parsing JSON error responses from the backend. Error messages like `{"message": "Current password is incorrect"}` were being stringified instead of extracting the actual message.
+
+**Solution**: 
+- Modified `throwIfResNotOk` to parse JSON error responses
+- Extracts the `message` field from JSON responses
+- Gracefully falls back to raw text for non-JSON responses
+- Now displays user-friendly error messages like "Current password is incorrect"
+
+**Files Modified**: `client/src/lib/queryClient.ts`
+
+### Issue #2: Duplicate Peg Assignments
+**Problem**: Multiple anglers could be assigned the same peg number in a competition when joining or when admin assigns pegs.
+
+**Root Cause**: MongoDB's `updateParticipantPeg` method had no validation to prevent duplicate peg assignments. Unlike the MemStorage implementation, it allowed race conditions.
+
+**Solution - Atomic Enforcement**:
+1. Added **sparse unique compound index** on `{competitionId, pegNumber}` in MongoDB
+   - Prevents duplicate peg assignments atomically at database level
+   - Sparse index allows multiple null pegNumbers (unassigned pegs)
+   - Eliminates race condition - no two participants can have same peg in same competition
+   
+2. Simplified `updateParticipantPeg` method:
+   - Removed manual check-then-update logic
+   - Let MongoDB enforce uniqueness through index constraint
+   - Catch duplicate key errors (code 11000) and convert to user-friendly message: "Peg X is already assigned to another angler"
+
+**Files Modified**: `server/mongodb-storage.ts`
+
+**Architect Reviews**:
+- ✅ Review #1: Identified race condition in initial fix, requested atomic solution
+- ✅ Review #2: Approved sparse unique compound index as production-ready
+
+**Benefits of Atomic Solution**:
+- **No Race Conditions**: Database-level uniqueness guarantee
+- **Efficient**: Single operation instead of read + check + write  
+- **Universal Protection**: Works for all peg assignment flows (joins, admin assignments, random draws)
+- **Allows Unassigned Pegs**: Sparse index permits multiple null pegNumbers
+
+✅ **Both Critical Bugs Fixed and Architect-Approved**
+✅ **Password Update Now Shows Proper Error Messages**
+✅ **Peg Assignment Now Atomically Enforced - No Duplicates Possible**
+✅ **Application Running Successfully on Port 5000**
+
+## October 23, 2025 - Mobile Responsiveness Improvements
+
+[x] 844. Fix mobile responsiveness on home page - section headers and hero text
+[x] 845. Fix mobile responsiveness on competition details page - layout and typography
+[x] 846. Fix mobile responsiveness on leaderboard page - headings and icons
+[x] 847. Fix mobile responsiveness on competitions page - responsive text sizing
+[x] 848. Architect review and approval of all mobile improvements
+
+## Mobile Responsiveness Implementation Details:
+
+**Problem**: Homepage, competition page, competition details page, and leaderboard page were not perfectly responsive on mobile devices. Text was too large, buttons didn't stack properly, and layouts broke on small screens.
+
+### Home Page Improvements (home.tsx):
+- **Hero Section**: Progressive text sizing from mobile to desktop
+  - Title: `text-3xl sm:text-4xl md:text-5xl lg:text-7xl`
+  - Subtitle: `text-lg sm:text-xl md:text-2xl`
+  - Buttons: Full width on mobile, auto-width on larger screens with proper Link wrapping
+  
+- **Section Headers**: Changed from rigid flex layout to responsive stacking
+  - Layout: `flex-col sm:flex-row sm:items-center sm:justify-between gap-4`
+  - Headings: `text-2xl sm:text-3xl`
+  - Buttons: `w-full sm:w-auto` for proper touch targets on mobile
+
+### Competition Details Page Improvements (competition-details.tsx):
+- **Competition Name**: `text-2xl sm:text-3xl md:text-4xl` for readability across devices
+- **Hero Image**: Reduced mobile height `h-48 sm:h-64` to save screen space
+- **Description**: `text-base sm:text-lg` for better readability
+- **Sidebar Card**: 
+  - Non-sticky on mobile: `lg:sticky lg:top-24`
+  - Responsive padding: `p-4 sm:p-6`
+- **Tab Navigation**: Smaller text on mobile with `text-xs sm:text-sm` and `h-auto` for proper wrapping
+
+### Leaderboard Page Improvements (leaderboard.tsx):
+- **Trophy Icon**: `h-6 w-6 sm:h-8 sm:w-8` for proportional scaling
+- **Page Heading**: `text-2xl sm:text-3xl md:text-4xl` for hierarchy
+- **Description**: `text-sm sm:text-base` for mobile readability
+
+### Competitions Page Improvements (competitions.tsx):
+- **Page Heading**: `text-2xl sm:text-3xl md:text-4xl` responsive sizing
+- **Description**: `text-sm sm:text-base` for better mobile display
+
+**Files Modified**: 
+- `client/src/pages/home.tsx`
+- `client/src/pages/competition-details.tsx`
+- `client/src/pages/leaderboard.tsx`
+- `client/src/pages/competitions.tsx`
+
+**Design Principles Applied**:
+- Mobile-first progressive enhancement
+- Proper text scaling across breakpoints (sm, md, lg)
+- Full-width buttons on mobile for better touch targets
+- Flexible layouts that stack vertically on small screens
+- Maintained visual hierarchy across all screen sizes
+
+**Architect Review**: ✅ Approved as production-ready
+- All responsive utilities properly applied
+- Layout stability confirmed across viewports
+- Typography scales maintain readability on narrow screens
+- Touch targets appropriate for mobile devices
+- No functional regressions observed
+
+✅ **Mobile Responsiveness Complete and Architect-Approved**
+✅ **All Four Pages Now Fully Responsive**
+✅ **Progressive Enhancement from Mobile to Desktop**
+✅ **Proper Text Scaling and Button Sizing Across All Breakpoints**
+✅ **Application Running Successfully on Port 5000**

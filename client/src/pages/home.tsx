@@ -87,28 +87,28 @@ export default function Home() {
         <HeroSlider />
         
         <div className="relative z-10 container mx-auto px-4 lg:px-8 text-center">
-          <h1 className="text-5xl md:text-7xl font-bold text-white mb-6" data-testid="text-hero-title">
+          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold text-white mb-4 sm:mb-6" data-testid="text-hero-title">
             UK's Premier Fishing Competitions
           </h1>
-          <p className="text-xl md:text-2xl text-white/90 mb-8 max-w-2xl mx-auto">
+          <p className="text-lg sm:text-xl md:text-2xl text-white/90 mb-6 sm:mb-8 max-w-2xl mx-auto">
             Join the action. Book your peg. Compete for glory.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Link href="/competitions">
+            <Link href="/competitions" className="w-full sm:w-auto">
               <Button
                 size="lg"
-                className="bg-white text-primary hover:bg-white/90 border-white"
+                className="bg-white text-primary hover:bg-white/90 border-white w-full"
                 data-testid="button-hero-book-peg"
               >
                 Book a Peg
                 <ArrowRight className="ml-2 h-5 w-5" />
               </Button>
             </Link>
-            <Link href="/leaderboard">
+            <Link href="/leaderboard" className="w-full sm:w-auto">
               <Button
                 size="lg"
                 variant="outline"
-                className="backdrop-blur-sm bg-white/20 border-white/40 text-white hover:bg-white/30"
+                className="backdrop-blur-sm bg-white/20 border-white/40 text-white hover:bg-white/30 w-full"
                 data-testid="button-hero-leaderboard"
               >
                 View Leaderboards
@@ -119,15 +119,15 @@ export default function Home() {
       </section>
 
       <section className="py-16 container mx-auto px-4 lg:px-8">
-        <div className="flex items-center justify-between mb-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
-            <h2 className="text-3xl font-bold mb-2">Upcoming Competitions</h2>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
             <p className="text-muted-foreground">
               Book your spot in the next big match
             </p>
           </div>
           <Link href="/competitions">
-            <Button variant="outline" data-testid="button-view-all-competitions">
+            <Button variant="outline" data-testid="button-view-all-competitions" className="w-full sm:w-auto">
               View All
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
@@ -142,15 +142,15 @@ export default function Home() {
 
       <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
-              <h2 className="text-3xl font-bold mb-2">Live Leaderboard</h2>
+              <h2 className="text-2xl sm:text-3xl font-bold mb-2">Live Leaderboard</h2>
               <p className="text-muted-foreground">
                 Current standings from today's competitions
               </p>
             </div>
             <Link href="/leaderboard">
-              <Button variant="outline" data-testid="button-view-full-leaderboard">
+              <Button variant="outline" data-testid="button-view-full-leaderboard" className="w-full sm:w-auto">
                 View Full Results
                 <ArrowRight className="ml-2 h-4 w-4" />
               </Button>

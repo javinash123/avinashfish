@@ -49,8 +49,8 @@ export default function Competitions() {
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 lg:px-8">
         <div className="mb-8">
-          <h1 className="text-4xl font-bold mb-2">Competitions</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2">Competitions</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Browse and book upcoming fishing competitions
           </p>
         </div>

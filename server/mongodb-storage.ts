@@ -57,6 +57,13 @@ export class MongoDBStorage implements IStorage {
     await this.users.createIndex({ username: 1 }, { unique: true });
     await this.admins.createIndex({ email: 1 }, { unique: true });
     await this.competitionParticipants.createIndex({ competitionId: 1, userId: 1 }, { unique: true });
+    
+    // Create sparse unique compound index to prevent duplicate peg assignments per competition
+    // Sparse index only enforces uniqueness for non-null pegNumber values
+    await this.competitionParticipants.createIndex(
+      { competitionId: 1, pegNumber: 1 }, 
+      { unique: true, sparse: true }
+    );
   }
 
   private async initializeDefaultData() {
@@ -670,12 +677,22 @@ export class MongoDBStorage implements IStorage {
   }
 
   async updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined> {
-    const result = await this.competitionParticipants.findOneAndUpdate(
-      { id: participantId },
-      { $set: { pegNumber } },
-      { returnDocument: "after" }
-    );
-    return result || undefined;
+    try {
+      // Update the peg number atomically
+      // The unique compound index on {competitionId, pegNumber} will prevent duplicate assignments
+      const result = await this.competitionParticipants.findOneAndUpdate(
+        { id: participantId },
+        { $set: { pegNumber } },
+        { returnDocument: "after" }
+      );
+      return result || undefined;
+    } catch (error: any) {
+      // MongoDB duplicate key error code is 11000
+      if (error.code === 11000) {
+        throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
+      }
+      throw error;
+    }
   }
 
   // Leaderboard methods

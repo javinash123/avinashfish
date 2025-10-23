@@ -148,7 +148,7 @@ export default function CompetitionDetails() {
 
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           <div className="lg:col-span-2">
-            <div className="relative h-64 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
+            <div className="relative h-48 sm:h-64 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
               {competition.imageUrl ? (
                 <img
                   src={competition.imageUrl}
@@ -172,10 +172,10 @@ export default function CompetitionDetails() {
               </div>
             </div>
 
-            <h1 className="text-4xl font-bold mb-4" data-testid="text-competition-name">
+            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4" data-testid="text-competition-name">
               {competition.name}
             </h1>
-            <p className="text-muted-foreground text-lg mb-6">
+            <p className="text-muted-foreground text-base sm:text-lg mb-6">
               {competition.description}
             </p>
 
@@ -229,8 +229,8 @@ export default function CompetitionDetails() {
           </div>
 
           <div className="lg:col-span-1">
-            <Card className="sticky top-24">
-              <CardContent className="p-6">
+            <Card className="lg:sticky lg:top-24">
+              <CardContent className="p-4 sm:p-6">
                 <div className="space-y-4">
                   <div>
                     <div className="text-sm text-muted-foreground mb-1">
@@ -305,10 +305,10 @@ export default function CompetitionDetails() {
         </div>
 
         <Tabs defaultValue="leaderboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3" data-testid="tabs-competition">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="leaderboard">Leaderboard</TabsTrigger>
-            <TabsTrigger value="participants">Participants</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-3 h-auto" data-testid="tabs-competition">
+            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm">Leaderboard</TabsTrigger>
+            <TabsTrigger value="participants" className="text-xs sm:text-sm">Participants</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">
