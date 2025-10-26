@@ -77,7 +77,7 @@ export default function Gallery() {
                     <img
                       src={image.url}
                       alt={image.title}
-                      className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                      className="w-full h-full object-cover"
                     />
                     <div className="absolute top-2 right-2">
                       <Badge variant={image.category === "catch" ? "default" : "secondary"}>

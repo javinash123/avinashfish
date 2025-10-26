@@ -306,7 +306,7 @@ export default function AdminGallery() {
               <img
                 src={image.url}
                 alt={image.title}
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
               <div className="absolute top-2 right-2">
                 <Badge variant={image.category === "catch" ? "default" : "secondary"}>

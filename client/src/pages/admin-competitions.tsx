@@ -831,7 +831,7 @@ export default function AdminCompetitions() {
                 data-testid="input-image-file"
               />
               {imagePreview && (
-                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md" />
+                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-contain rounded-md" />
               )}
             </div>
           </div>
@@ -994,7 +994,7 @@ export default function AdminCompetitions() {
                 data-testid="input-edit-image-file"
               />
               {imagePreview && (
-                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-cover rounded-md" />
+                <img src={imagePreview} alt="Preview" className="mt-2 h-32 w-full object-contain rounded-md" />
               )}
             </div>
           </div>

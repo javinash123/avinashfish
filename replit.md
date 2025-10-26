@@ -40,6 +40,15 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 26, 2025 - Image Display Optimization
+*   **Website Image Display:** All images on website pages now use `object-cover` CSS to fill available canvas space while maintaining aspect ratio:
+    - Homepage hero slider fills entire viewport width and height
+    - News article cards and detail views fill container completely
+    - Gallery photo cards and detail views fill container completely
+    - Competition cards and detail images fill container completely
+*   **Admin Panel Images:** Admin panel image previews use `object-contain` CSS to show complete images without cropping (useful for preview/verification purposes)
+*   **Implementation Details:** Changed from `object-contain` (which shows full image with letterboxing) to `object-cover` (which fills space by cropping edges as needed) for all public-facing website images to provide better visual presentation
+
 ### October 22, 2025 - UK Timezone Support & Weight Labels
 *   **Weight Display:** Added "(lbs)" suffix to all weight column headers in leaderboards and profile statistics for clarity.
 *   **UK Timezone Handling:** Implemented proper UK timezone (Europe/London) support using date-fns-tz for accurate competition status calculation.

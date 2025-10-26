@@ -320,7 +320,7 @@ export default function AdminSponsors() {
                       <img
                         src={sponsor.logo}
                         alt={sponsor.name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                     ) : (
                       <ImageIcon className="h-8 w-8 text-muted-foreground" />
