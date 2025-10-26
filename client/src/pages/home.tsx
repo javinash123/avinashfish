@@ -159,22 +159,20 @@ export default function Home() {
           
           {liveCompetitions.length > 0 ? (
             <>
-              {liveCompetitions.length > 1 && (
-                <div className="mb-6">
-                  <Select value={selectedCompetitionId} onValueChange={setSelectedCompetitionId}>
-                    <SelectTrigger className="w-full md:w-[400px]" data-testid="select-live-competition">
-                      <SelectValue placeholder="Select a live competition" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {liveCompetitions.map((comp) => (
-                        <SelectItem key={comp.id} value={comp.id}>
-                          {comp.name} - {comp.venue}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-              )}
+              <div className="mb-6">
+                <Select value={selectedCompetitionId} onValueChange={setSelectedCompetitionId}>
+                  <SelectTrigger className="w-full md:w-[400px]" data-testid="select-live-competition">
+                    <SelectValue placeholder="Select a live competition" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {liveCompetitions.map((comp) => (
+                      <SelectItem key={comp.id} value={comp.id}>
+                        {comp.name} - {comp.venue}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
               <LeaderboardTable entries={liveLeaderboard} isLive={true} />
             </>
           ) : (

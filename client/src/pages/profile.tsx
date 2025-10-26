@@ -120,7 +120,7 @@ export default function Profile() {
   });
 
   const updatePasswordMutation = useMutation({
-    mutationFn: async (data: { currentPassword: string; newPassword: string }) => {
+    mutationFn: async (data: { currentPassword: string; newPassword: string; confirmPassword: string }) => {
       const response = await apiRequest("PUT", "/api/user/password", data);
       return response.json();
     },
@@ -273,6 +273,7 @@ export default function Profile() {
     updatePasswordMutation.mutate({
       currentPassword: passwordForm.currentPassword,
       newPassword: passwordForm.newPassword,
+      confirmPassword: passwordForm.confirmPassword,
     });
   };
 
