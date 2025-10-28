@@ -72,6 +72,7 @@ export interface IStorage {
   getAllParticipants(): Promise<CompetitionParticipant[]>;
   joinCompetition(participant: InsertCompetitionParticipant): Promise<CompetitionParticipant>;
   leaveCompetition(competitionId: string, userId: string): Promise<boolean>;
+  deleteParticipant(participantId: string): Promise<boolean>;
   isUserInCompetition(competitionId: string, userId: string): Promise<boolean>;
   getAvailablePegs(competitionId: string): Promise<number[]>;
   updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined>;
@@ -871,6 +872,24 @@ export class MemStorage implements IStorage {
       }
     }
     
+    return deleted;
+  }
+
+  async deleteParticipant(participantId: string): Promise<boolean> {
+    const participant = this.competitionParticipants.get(participantId);
+    if (!participant) return false;
+
+    const deleted = this.competitionParticipants.delete(participantId);
+
+    if (deleted) {
+      const competition = await this.getCompetition(participant.competitionId);
+      if (competition && competition.pegsBooked > 0) {
+        await this.updateCompetition(competition.id, {
+          pegsBooked: competition.pegsBooked - 1,
+        });
+      }
+    }
+
     return deleted;
   }
 

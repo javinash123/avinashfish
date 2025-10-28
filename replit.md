@@ -40,6 +40,18 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 28, 2025 - Competition Angler Management
+*   **Admin Competition Anglers:** Added "Anglers" button to each competition in admin panel for comprehensive participant management.
+*   **Participant Dialog:** New dialog displays all anglers enrolled in a competition with details (name, club, peg assignment, join date).
+*   **Add Participants:** Admin can add any existing angler to a competition via dropdown selector (filters out already-participating anglers).
+*   **Remove Participants:** Admin can remove anglers from competitions with confirmation dialog and proper pegsBooked decrement.
+*   **Backend API Routes:** 
+    - POST /api/admin/competitions/:id/participants - Add participant with validation
+    - DELETE /api/admin/participants/:id - Remove participant with proper cleanup
+*   **Storage Layer:** Added deleteParticipant method to IStorage interface and MemStorage implementation.
+*   **Cache Management:** Proper React Query cache invalidation ensures real-time UI updates across all admin pages.
+*   **Files Modified:** server/routes.ts, server/storage.ts, client/src/pages/admin-competitions.tsx
+
 ### October 28, 2025 - Brand Color Update, Weight Precision & Mobile Enhancements
 *   **Primary Color Update:** Changed primary brand color from light green (hsl(165 75% 45%)) to dark green (hsl(152 60% 30%)) to better match logo branding and provide a more professional appearance across all buttons, badges, and interactive elements.
 *   **Weight Input Precision:** Enhanced admin panel weigh-in functionality to accept weights with up to 3 decimal places (step="0.001") for more accurate competition results (e.g., 12.345 lbs).

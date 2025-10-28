@@ -47,8 +47,10 @@ export default function AdminCompetitions() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPegAssignmentOpen, setIsPegAssignmentOpen] = useState(false);
   const [isWeighInOpen, setIsWeighInOpen] = useState(false);
+  const [isAnglersOpen, setIsAnglersOpen] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
+  const [selectedUserId, setSelectedUserId] = useState<string>("");
   
   // Weigh-in state
   const [weighInEntries, setWeighInEntries] = useState<Record<string, { peg: number; weight: number; angler: string; time: string }[]>>({});
@@ -74,7 +76,20 @@ export default function AdminCompetitions() {
     joinedAt: string;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition?.id}/participants`],
-    enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen),
+    enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
+  });
+
+  // Fetch all users for adding to competition
+  const { data: allUsers = [] } = useQuery<Array<{
+    id: string;
+    firstName: string;
+    lastName: string;
+    username: string;
+    email: string;
+    club?: string;
+  }>>({
+    queryKey: ["/api/admin/anglers"],
+    enabled: isAnglersOpen,
   });
 
   // Get userId from selected peg
@@ -297,6 +312,53 @@ export default function AdminCompetitions() {
     },
   });
 
+  const addParticipantMutation = useMutation({
+    mutationFn: async ({ competitionId, userId }: { competitionId: string; userId: string }) => {
+      return await apiRequest("POST", `/api/admin/competitions/${competitionId}/participants`, { userId });
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      }
+      setSelectedUserId("");
+      toast({
+        title: "Participant added",
+        description: "The angler has been added to the competition successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeParticipantMutation = useMutation({
+    mutationFn: async (participantId: string) => {
+      return await apiRequest("DELETE", `/api/admin/participants/${participantId}`);
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      }
+      toast({
+        title: "Participant removed",
+        description: "The angler has been removed from the competition.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove participant",
+        variant: "destructive",
+      });
+    },
+  });
+
   const [formData, setFormData] = useState({
     name: "",
     date: "",
@@ -473,6 +535,33 @@ export default function AdminCompetitions() {
   const openWeighIn = (competition: Competition) => {
     setSelectedCompetition(competition);
     setIsWeighInOpen(true);
+  };
+
+  const openAnglersDialog = (competition: Competition) => {
+    setSelectedCompetition(competition);
+    setIsAnglersOpen(true);
+  };
+
+  const handleAddParticipant = () => {
+    if (!selectedCompetition || !selectedUserId) {
+      toast({
+        title: "Error",
+        description: "Please select an angler to add",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    addParticipantMutation.mutate({
+      competitionId: selectedCompetition.id,
+      userId: selectedUserId,
+    });
+  };
+
+  const handleRemoveParticipant = (participantId: string, participantName: string) => {
+    if (window.confirm(`Are you sure you want to remove ${participantName} from this competition?`)) {
+      removeParticipantMutation.mutate(participantId);
+    }
   };
 
   const handleAutoAssignPegs = () => {
@@ -747,6 +836,15 @@ export default function AdminCompetitions() {
                           Weigh-in
                         </Button>
                       )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAnglersDialog(competition)}
+                        data-testid={`button-anglers-${competition.id}`}
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        Anglers
+                      </Button>
                       <Button
                         variant="outline"
                         size="sm"
@@ -1464,6 +1562,124 @@ export default function AdminCompetitions() {
           </div>
           <DialogFooter>
             <Button onClick={() => setIsWeighInOpen(false)} data-testid="button-close-weigh-in">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAnglersOpen} onOpenChange={setIsAnglersOpen}>
+        <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Manage Competition Anglers</DialogTitle>
+            <DialogDescription>
+              {selectedCompetition?.name} - Add or remove anglers from this competition
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Add Angler</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex gap-2">
+                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                    <SelectTrigger className="flex-1" data-testid="select-angler">
+                      <SelectValue placeholder="Select an angler to add..." />
+                    </SelectTrigger>
+                    <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
+                      {allUsers
+                        .filter(user => !participants.some(p => p.userId === user.id))
+                        .map(user => (
+                          <SelectItem key={user.id} value={user.id}>
+                            {user.firstName} {user.lastName} (@{user.username}) {user.club && `- ${user.club}`}
+                          </SelectItem>
+                        ))}
+                    </SelectContent>
+                  </Select>
+                  <Button
+                    onClick={handleAddParticipant}
+                    disabled={!selectedUserId || addParticipantMutation.isPending}
+                    data-testid="button-add-participant"
+                  >
+                    {addParticipantMutation.isPending ? (
+                      <>Adding...</>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-1" />
+                        Add
+                      </>
+                    )}
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Current Participants ({participants.length})</CardTitle>
+              </CardHeader>
+              <CardContent>
+                {participants.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Angler</TableHead>
+                        <TableHead>Club</TableHead>
+                        <TableHead>Peg</TableHead>
+                        <TableHead>Joined</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {participants.map(participant => (
+                        <TableRow key={participant.id}>
+                          <TableCell>
+                            <div className="font-medium">{participant.name}</div>
+                          </TableCell>
+                          <TableCell>{participant.club || "-"}</TableCell>
+                          <TableCell>
+                            {participant.pegNumber ? (
+                              <Badge variant="outline" className="font-mono">
+                                {participant.pegNumber}
+                              </Badge>
+                            ) : (
+                              <span className="text-muted-foreground">Not assigned</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {new Date(participant.joinedAt).toLocaleDateString('en-GB', { 
+                              timeZone: 'Europe/London' 
+                            })}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <Button
+                              variant="destructive"
+                              size="sm"
+                              onClick={() => handleRemoveParticipant(participant.id, participant.name)}
+                              disabled={removeParticipantMutation.isPending}
+                              data-testid={`button-remove-participant-${participant.id}`}
+                            >
+                              <Trash2 className="h-3 w-3 mr-1" />
+                              Remove
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="text-center py-8 text-muted-foreground">
+                    No participants yet. Add anglers using the form above.
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setIsAnglersOpen(false)} data-testid="button-close-anglers">
               Close
             </Button>
           </DialogFooter>

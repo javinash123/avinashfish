@@ -1651,6 +1651,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Admin participant management routes
+  app.post("/api/admin/competitions/:id/participants", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { userId, pegNumber } = req.body;
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const competitionId = req.params.id;
+
+      const isAlreadyIn = await storage.isUserInCompetition(competitionId, userId);
+      if (isAlreadyIn) {
+        return res.status(400).json({ message: "User is already in this competition" });
+      }
+
+      const participant = await storage.joinCompetition({
+        competitionId,
+        userId,
+        pegNumber: pegNumber || undefined,
+      });
+
+      res.json(participant);
+    } catch (error: any) {
+      console.error("Error adding participant:", error);
+      res.status(500).json({ message: error.message || "Error adding participant" });
+    }
+  });
+
+  app.delete("/api/admin/participants/:id", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const success = await storage.deleteParticipant(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+
+      res.json({ message: "Participant removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing participant:", error);
+      res.status(500).json({ message: "Error removing participant: " + error.message });
+    }
+  });
+
   // Leaderboard routes
   app.get("/api/competitions/:id/leaderboard", async (req, res) => {
     try {
