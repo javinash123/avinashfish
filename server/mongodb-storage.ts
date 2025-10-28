@@ -72,14 +72,20 @@ export class MongoDBStorage implements IStorage {
     // Check if admin exists
     const adminCount = await this.admins.countDocuments();
     if (adminCount === 0) {
-      const defaultAdminId = randomUUID();
-      await this.admins.insertOne({
-        id: defaultAdminId,
-        email: "admin@pegslam.co.uk",
-        password: "admin123",
-        name: "Admin User",
-      });
-      console.log("✅ Default admin created");
+      // SECURITY: Only create default admin in development mode
+      // In production, admin accounts must be created manually with secure passwords
+      if (process.env.NODE_ENV !== 'production') {
+        const defaultAdminId = randomUUID();
+        await this.admins.insertOne({
+          id: defaultAdminId,
+          email: "admin@pegslam.co.uk",
+          password: "admin123",
+          name: "Admin User",
+        });
+        console.log("✅ Default admin created (development only)");
+      } else {
+        console.log("⚠️  No admin accounts found. Create an admin account manually in production.");
+      }
     }
 
     // Check if site settings exist
@@ -108,9 +114,9 @@ export class MongoDBStorage implements IStorage {
       console.log("✅ Default slider image created");
     }
 
-    // Check if users exist (create sample users)
+    // Check if users exist (create sample users in development only)
     const userCount = await this.users.countDocuments();
-    if (userCount === 0) {
+    if (userCount === 0 && process.env.NODE_ENV !== 'production') {
       const sampleUsers = [
         {
           id: randomUUID(),
@@ -199,7 +205,13 @@ export class MongoDBStorage implements IStorage {
         },
       ];
       await this.users.insertMany(sampleUsers);
-      console.log("✅ Sample users created");
+      console.log("✅ Sample users created (development only)");
+
+      // SECURITY: Only create sample competitions in development
+      if (process.env.NODE_ENV === 'production') {
+        console.log("⚠️  Production mode: No sample data created. Add your own users and competitions.");
+        return;
+      }
 
       // Create sample competitions
       const now = new Date();
@@ -407,6 +419,27 @@ export class MongoDBStorage implements IStorage {
     return result || undefined;
   }
 
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const result = await this.users.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const user = await this.users.findOne({ id });
+    if (!user) return false;
+
+    await this.competitionParticipants.deleteMany({ userId: id });
+    await this.leaderboardEntries.deleteMany({ userId: id });
+    await this.userGalleryPhotos.deleteMany({ userId: id });
+    
+    const result = await this.users.deleteOne({ id });
+    return result.deletedCount === 1;
+  }
+
   // User gallery methods
   async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
     return await this.userGalleryPhotos.find({ userId }).toArray();
@@ -455,6 +488,56 @@ export class MongoDBStorage implements IStorage {
       { returnDocument: "after" }
     );
     return result || undefined;
+  }
+
+  // Staff methods
+  async getAllStaff(): Promise<any[]> {
+    return await this.db.collection("staff").find({}).toArray();
+  }
+
+  async getStaff(id: string): Promise<any | undefined> {
+    const staff = await this.db.collection("staff").findOne({ id });
+    return staff || undefined;
+  }
+
+  async getStaffByEmail(email: string): Promise<any | undefined> {
+    const staff = await this.db.collection("staff").findOne({ email });
+    return staff || undefined;
+  }
+
+  async createStaff(staff: any): Promise<any> {
+    const newStaff = {
+      id: randomUUID(),
+      ...staff,
+      role: staff.role ?? 'manager',
+      isActive: staff.isActive ?? true,
+      createdAt: new Date(),
+    };
+    await this.db.collection("staff").insertOne(newStaff);
+    return newStaff;
+  }
+
+  async updateStaff(id: string, updates: any): Promise<any | undefined> {
+    const result = await this.db.collection("staff").findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async updateStaffPassword(id: string, newPassword: string): Promise<any | undefined> {
+    const result = await this.db.collection("staff").findOneAndUpdate(
+      { id },
+      { $set: { password: newPassword } },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async deleteStaff(id: string): Promise<boolean> {
+    const result = await this.db.collection("staff").deleteOne({ id });
+    return result.deletedCount === 1;
   }
 
   // Slider images methods
@@ -793,6 +876,11 @@ export class MongoDBStorage implements IStorage {
 
   async leaveCompetition(competitionId: string, userId: string): Promise<boolean> {
     const result = await this.competitionParticipants.deleteOne({ competitionId, userId });
+    return result.deletedCount === 1;
+  }
+
+  async deleteParticipant(participantId: string): Promise<boolean> {
+    const result = await this.competitionParticipants.deleteOne({ id: participantId });
     return result.deletedCount === 1;
   }
 

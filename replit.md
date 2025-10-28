@@ -40,6 +40,27 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 28, 2025 - Production Deployment Security Fixes (AWS EC2 / MongoDB Atlas)
+*   **Security Hardening:** Fixed critical security vulnerabilities for production deployment on AWS EC2 with MongoDB Atlas.
+*   **No Default Credentials in Production:** Default admin account (admin@pegslam.co.uk / admin123) and sample users are now only created in development mode (NODE_ENV !== 'production'). Production requires manual admin account creation with strong passwords.
+*   **No Sample Data in Production:** Sample competitions, participants, sponsors, and all seed data are only created in development to prevent test data pollution in production databases.
+*   **Secure CORS Configuration:** Changed from hardcoded IP to environment-based CORS using ALLOWED_ORIGINS variable:
+    - Development: Allows all origins for easy testing
+    - Production: Only allows explicitly configured origins, rejects cross-origin requests if ALLOWED_ORIGINS is not set
+*   **Production Environment Validation:** Added startup warnings for missing critical environment variables (SESSION_SECRET, MONGODB_URI).
+*   **MongoDB Storage Completeness:** Added 10 missing IStorage methods to MongoDBStorage implementation:
+    - User management: updateUser, deleteUser
+    - Staff management: getAllStaff, getStaff, createStaff, updateStaff, updateStaffPassword, deleteStaff
+    - Participant management: deleteParticipant
+    - Site settings: updateSiteSettings
+*   **Production Deployment Checklist:**
+    - Set SESSION_SECRET to a cryptographically secure random string
+    - Set MONGODB_URI to your MongoDB Atlas connection string
+    - Set ALLOWED_ORIGINS to comma-separated list of allowed frontend URLs (e.g., "https://yourdomain.com,https://www.yourdomain.com")
+    - Create admin accounts manually with strong passwords after deployment
+    - Monitor startup logs to confirm no sample data is created
+*   **Files Modified:** server/mongodb-storage.ts, server/index.ts
+
 ### October 28, 2025 - Staff Management System with Role-Based Permissions
 *   **Staff Schema:** Created comprehensive staff table with Admin/Manager roles replacing legacy admin table.
 *   **Role-Based Permissions:** Implemented requireStaffAuth and requireAdminRole middleware for route protection.

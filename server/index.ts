@@ -4,6 +4,28 @@ import createMemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
+
+// Production environment validation
+if (process.env.NODE_ENV === 'production') {
+  const warnings: string[] = [];
+  
+  // Warn if using default session secret
+  if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'dev-secret-key-change-in-production') {
+    warnings.push('⚠️  WARNING: Using default SESSION_SECRET. Generate a secure secret for production!');
+  }
+  
+  // Warn if MongoDB is not configured
+  if (!process.env.MONGODB_URI) {
+    warnings.push('⚠️  WARNING: MONGODB_URI not set. Using in-memory storage (data will be lost on restart).');
+  }
+  
+  // Log all warnings
+  if (warnings.length > 0) {
+    console.log('\n========== PRODUCTION CONFIGURATION WARNINGS ==========');
+    warnings.forEach(warning => console.log(warning));
+    console.log('========================================================\n');
+  }
+}
    
 const app = express();
 
@@ -15,8 +37,37 @@ app.set('etag', false);
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
+// Configure CORS based on environment
+const allowedOrigins = process.env.ALLOWED_ORIGINS 
+  ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim())
+  : [];
+
 app.use(cors({
-  origin: 'http://98.84.197.204:7118',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps, Postman, or same-origin)
+    if (!origin) return callback(null, true);
+    
+    // In development, allow any origin
+    if (process.env.NODE_ENV === 'development') {
+      return callback(null, true);
+    }
+    
+    // In production, check against allowed origins
+    if (allowedOrigins.length > 0 && allowedOrigins.includes(origin)) {
+      return callback(null, true);
+    }
+    
+    // SECURITY: In production with no ALLOWED_ORIGINS configured,
+    // reject all cross-origin requests for security
+    // The frontend served from the same server will still work (no origin header)
+    if (allowedOrigins.length === 0) {
+      console.log(`⚠️  CORS: Rejected cross-origin request from ${origin} (no ALLOWED_ORIGINS configured)`);
+      return callback(new Error('Not allowed by CORS'));
+    }
+    
+    // Reject the request if origin not allowed
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
