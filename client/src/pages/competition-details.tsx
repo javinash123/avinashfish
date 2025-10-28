@@ -306,9 +306,9 @@ export default function CompetitionDetails() {
 
         <Tabs defaultValue="leaderboard" className="w-full">
           <TabsList className="grid w-full grid-cols-3 h-auto" data-testid="tabs-competition">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm">Overview</TabsTrigger>
-            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm">Leaderboard</TabsTrigger>
-            <TabsTrigger value="participants" className="text-xs sm:text-sm">Participants</TabsTrigger>
+            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-4">Overview</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-4">Leaderboard</TabsTrigger>
+            <TabsTrigger value="participants" className="text-xs sm:text-sm px-2 sm:px-4">Participants</TabsTrigger>
           </TabsList>
 
           <TabsContent value="overview" className="mt-6">

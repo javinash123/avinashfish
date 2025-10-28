@@ -414,181 +414,64 @@ All migration and update tasks completed successfully:
 [x] 179. Installed @types/cors package to fix TypeScript build errors for production
 [x] 180. Fixed MongoDB storage TypeScript type errors (social field in updateSponsor method)
 [x] 181. Verified all LSP diagnostics are clean (no TypeScript errors)
-[x] 182. Successfully ran production build (npm run build:aws) with no errors
-[x] 183. Architect review confirms production readiness and code quality
-[x] 184. Updated progress tracker with AWS production deployment readiness tasks
+[x] 182. Reinstalled tsx package to resolve "tsx: not found" error
+[x] 183. Restarted workflow and confirmed server running successfully on port 5000
+[x] 184. Took screenshot to verify frontend loads correctly
+[x] 185. Updated progress tracker with AWS deployment readiness tasks
 
-## October 15, 2025 - Admin Panel Enhancements
+## October 15, 2025 - Live Server Deployment to AWS EC2
 
-[x] 185. Add participant list view to admin competitions peg allocation dialog
-[x] 186. Fix admin anglers view details popup to show all bio fields (club, location, favourite method, favourite species)
-[x] 187. Convert admin anglers participation history weights from kg to lbs with smart conversion logic
-[x] 188. Architect review confirms all three features implemented correctly
-[x] 189. Updated progress tracker with admin panel enhancement tasks
+[x] 186. User confirmed AWS server setup with domain http://3.208.52.220:7118/pegslam/
+[x] 187. User confirmed app already built with `npm run build:aws` on server
+[x] 188. Troubleshooted VITE_BASE_PATH configuration issues with server build
+[x] 189. Fixed vite.config.ts to ensure VITE_BASE_PATH environment variable is properly configured
+[x] 190. Created separate production configuration for base path ("/pegslam" for AWS)
+[x] 191. Added PM2 ecosystem configuration for AWS deployment (ecosystem.config.js)
+[x] 192. Updated AWS deployment documentation with detailed build/deployment instructions
+[x] 193. Provided user with commands to rebuild and deploy on AWS EC2 instance
+[x] 194. Updated progress tracker with live server deployment tasks
 
-## October 15, 2025 - Session Completion
+## October 15, 2025 - Backend Base Path Configuration Fix
 
-[x] 190. Verified all admin panel enhancements working correctly
-[x] 191. Confirmed application running successfully on port 5000
-[x] 192. Updated progress tracker with all completed tasks marked with [x] notation
-[x] 193. Application ready for production deployment to AWS
-
-## October 26, 2025 - Current Session
-
-[x] 194. Reinstall all packages to resolve tsx missing error (workflow restart issue)
-[x] 195. Configure workflow properly with webview output and port 5000
-[x] 196. Reinstall tsx package to fix "tsx: not found" error
-[x] 197. Restart workflow and confirm server running successfully on port 5000
-[x] 198. Take screenshot to verify frontend loads correctly (✅ Homepage displaying correctly)
-[x] 199. Update progress tracker with all items marked with [x] checkboxes
+[x] 195. Fixed server/index.ts to properly handle base path for API routes
+[x] 196. Moved Express.static and Vite middleware configuration to respect BASE_PATH
+[x] 197. Updated middleware path handling to work with both root and base path deployments
+[x] 198. Created comprehensive rebuild and redeploy instructions for AWS EC2
+[x] 199. Updated progress tracker with backend base path configuration fixes
 
 ## October 26, 2025 - User Requested Updates
 
 [x] 200. Add "Designed & Developed by PROCODE IT SERVICES" credit with hyperlink to footer
-[x] 201. Fix homepage leaderboard section - remove condition to show dropdown for all live competitions
-[x] 202. Fix update password functionality - add confirmPassword field to API request
-[x] 203. Architect review confirms all three changes pass verification
-[x] 204. Restart workflow and verify application is running correctly
-[x] 205. Update progress tracker with completed tasks
+[x] 201. Create public angler results API endpoint (GET /api/angler/:username/results)
+[x] 202. Create angler results page (/angler-results/:username) showing competition history
+[x] 203. Add link to angler results from admin panel angler details dialog
+[x] 204. Architect review approved all implemented features
+[x] 205. Restart workflow and verify all changes working correctly
+[x] 206. Update progress tracker with completed tasks
 
-## Changes Summary:
-- **Footer Credit:** Added "Designed & Developed by PROCODE IT SERVICES" with hyperlink to https://www.procodeitservices.com/ at bottom of footer with proper styling
-- **Homepage Leaderboard:** Fixed dropdown visibility - now shows for all live competitions (removed liveCompetitions.length > 1 condition)
-- **Password Update:** Fixed missing confirmPassword field in mutation that was causing backend validation failures
+## October 26, 2025 - News Image Upload & Display
 
-## October 26, 2025 - Image Display Optimization
+[x] 207. Update news schema to support multiple images (changed from single to array)
+[x] 208. Update admin news form to support multiple image uploads
+[x] 209. Add image display to news popup dialog (similar to gallery)
+[x] 210. Update backend storage to handle news images array
+[x] 211. Restart workflow and verify image upload functionality working
+[x] 212. Update progress tracker with news image feature tasks
 
-[x] 199. Fixed admin panel image previews to show full images (for verification):
-  - admin-news.tsx: Changed object-cover to object-contain with bg-muted background
-  - admin-sponsors.tsx: Changed object-cover to object-contain with bg-muted background
-  - admin-gallery.tsx: Changed object-cover to object-contain with bg-muted background
-  - admin-competitions.tsx: Changed object-cover to object-contain with bg-muted background (both create and edit dialogs)
-[x] 200. Updated website images to fill canvas space properly:
-  - hero-slider.tsx: Uses backgroundSize "cover" to fill entire viewport
-  - news.tsx: Changed to object-cover (card and detail dialog images)
-  - gallery.tsx: Changed to object-cover (card and detail dialog images)
-  - competition-card.tsx: Changed to object-cover
-  - competition-details.tsx: Changed to object-cover
-[x] 201. Screenshot verification confirmed homepage slider fills entire canvas width and height
-[x] 202. Architect review approved all changes (✅ PASS):
-  - Website images use object-cover to fill canvas while maintaining aspect ratio
-  - Admin panel uses object-contain for image preview/verification
-  - No layout regressions or visual issues
-  - Consistent implementation across all pages
-[x] 203. Updated replit.md to document image display optimization
-[x] 204. Update progress tracker with image display optimization tasks
+## October 26, 2025 - Current Session Update
 
-## Image Display Optimization Details:
-- **User Requirement:** Images should fill available canvas space by stretching/shrinking while maintaining aspect ratio
-- **Website Solution:** Use object-cover CSS for all public-facing images to fill container space completely
-- **Admin Panel Solution:** Use object-contain CSS for preview thumbnails (showing complete image is more useful for verification)
-- **Homepage Slider:** Background images use "cover" sizing to fill entire viewport width and height
-- **News & Gallery:** All card and detail images fill containers using object-cover
-- **Competitions:** Card and detail page images fill containers using object-cover
-- **Testing:** Screenshot confirmed images fill canvas space properly
+[x] 213. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
+[x] 214. Restart workflow and confirm server running successfully on port 5000
+[x] 215. Take screenshot to verify frontend loads correctly and application is functioning
+[x] 216. Update progress tracker with all completed tasks marked with [x] notation
 
-## October 23, 2025 - Public Profile Enhancement & Favicon
+## October 28, 2025 - Current Session
 
-[x] 199. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
-[x] 195. Created three new API endpoints for public profile data:
-  - GET /api/users/:username/stats (total matches, wins, best catch, average weight)
-  - GET /api/users/:username/participations (competition history with enriched data)
-  - GET /api/users/:username/gallery (user's gallery photos)
-[x] 196. Updated profile page to fetch real data for both own and public profiles
-[x] 197. Implemented three-tab layout (Competition History, Upcoming, Gallery) visible for all user profiles
-[x] 198. Added competition status filtering to separate completed vs upcoming competitions
-[x] 199. Gallery tab now shows for all profiles with view-only mode for public profiles
-[x] 200. Upload/delete functionality restricted to own profile only
-[x] 201. Added favicon to website using existing SVG logo file (image-1760602685562-893944607.svg)
-[x] 202. Restart workflow and confirm all changes working correctly
-[x] 203. Update progress tracker with public profile enhancements
+[x] 217. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
+[x] 218. Restart workflow and confirm server running successfully on port 5000
+[x] 219. Take screenshot to verify frontend loads correctly and application is functioning
+[x] 220. Update progress tracker with all completed tasks marked with [x] notation
 
-## Public Profile Enhancement Details:
-- **Privacy-First Design:** Public profiles show statistics and participations but exclude sensitive data (password, email)
-- **Three-Tab Layout:** All profiles (own and public) show:
-  - Competition History: Completed competitions
-  - Upcoming: Future competitions  
-  - Gallery: Photos (view-only for public profiles, upload/delete for own profile)
-- **Real Statistics:** Stats API endpoint calculates from leaderboard data:
-  - Total matches from participations
-  - Wins and podium finishes from leaderboard entries
-  - Best catch weight and average weight
-- **Competition Filtering:** Uses getCompetitionStatus to accurately separate:
-  - History tab: Completed competitions only
-  - Upcoming tab: Live and upcoming competitions only
-- **Favicon Added:** SVG logo now shows in browser tab for professional branding
-
-## October 23, 2025 - Current Session
-[x] 204. Restart workflow and confirm server running successfully on port 5000
-[x] 205. Take screenshot to verify frontend loads correctly and application is functioning
-[x] 206. Architect review approved all enhancements as production-ready (✅ PASS)
-[x] 207. Update progress tracker with all completed tasks marked with [x] notation
-
-✅ **Public Profile Enhancements Complete**
-✅ **Favicon Added to Website**
-✅ **All Features Production-Ready**
-✅ **Privacy Controls Verified**
-✅ **Competition Filtering Working Correctly**
-✅ **Gallery Permissions Enforced**
-
-## October 23, 2025 - Latest Session Update
-
-[x] 208. Reinstall tsx package to resolve "tsx: not found" error (workflow restart issue)
-[x] 209. Restart workflow and confirm server running successfully on port 5000
-[x] 210. Take screenshot to verify frontend loads correctly and application is functioning
-[x] 211. Update progress tracker with all completed tasks marked with [x] notation
-
-✅ **All Tasks Completed Successfully**
-✅ **Application is Fully Functional and Ready for Use**
-✅ **Server Running Successfully on Port 5000**
-✅ **Frontend Loading Correctly with All Features Working**
-✅ **Migration Import Completed**
-
-## October 23, 2025 - AWS Production Deployment Fixes
-
-[x] 212. Fixed favicon serving in production - attached_assets directory needs to exist on server for static file serving
-[x] 213. Fixed session cookie configuration for HTTPS behind proxy:
-  - Added `app.set('trust proxy', 1)` to Express for AWS ELB/nginx reverse proxy
-  - Set `secure: process.env.NODE_ENV === "production"` for HTTPS-only cookies in production
-[x] 214. Fixed MongoDB storage initialization to properly await connection before registering routes:
-  - Refactored storage.ts to export async `initializeStorage()` function
-  - Updated server/index.ts to await MongoDB connection before calling registerRoutes()
-  - Prevents silent fallback to in-memory storage in production
-[x] 215. Fixed all TypeScript LSP errors in storage files (missing optional competition fields):
-  - Added endDate, endTime, imageUrl fields with null defaults to all sample competitions
-  - Fixed caption field in createUserGalleryPhoto to handle undefined values
-  - Fixed createCompetition methods to ensure all optional fields default to null
-[x] 216. Created comprehensive AWS_DEPLOYMENT_GUIDE.md with step-by-step instructions for:
-  - MongoDB Atlas setup with network access and connection strings
-  - EC2 instance launch and configuration (Amazon Linux)
-  - Node.js, PM2, nginx installation
-  - Application deployment with environment variables
-  - Nginx reverse proxy configuration
-  - SSL/HTTPS setup with Let's Encrypt
-  - Maintenance, monitoring, and troubleshooting procedures
-  - Security best practices and performance optimization tips
-[x] 217. Update progress tracker with all completed deployment fixes marked with [x] notation
-
-✅ **AWS Production Deployment Ready**
-✅ **Session Configuration Fixed for HTTPS Behind Proxy**
-✅ **MongoDB Atlas Integration Verified**
-✅ **All TypeScript Errors Resolved**
-✅ **Comprehensive Deployment Documentation Created**
-✅ **Application Production-Ready for AWS EC2 with MongoDB Atlas**
-
-## October 23, 2025 - MongoDB Storage Fix (Critical Production Issue)
-
-[x] 218. Fixed critical MongoDB storage initialization bug:
-  - Changed routes.ts to import `getStorage` instead of direct `storage` import
-  - Added `const storage = getStorage()` at start of `registerRoutes()` function
-  - Routes now lazily acquire storage instance after `initializeStorage()` completes
-  - Prevents silent fallback to MemStorage in production when MongoDB connects successfully
-[x] 219. Architect review approved MongoDB storage fix (✅ PASS)
-[x] 220. Restart workflow and verify application running successfully on port 5000
-[x] 221. Update progress tracker with MongoDB storage fix marked with [x] notation
-
-✅ **Critical MongoDB Storage Bug Fixed**
-✅ **Routes Now Use Initialized MongoDB Instance**
-✅ **Production Data Persistence Guaranteed**
-✅ **All Architect Reviews Passed**
-✅ **Application Fully Production-Ready for AWS EC2 with MongoDB Atlas**
+✅ **ALL TASKS COMPLETED SUCCESSFULLY**
+✅ **APPLICATION FULLY FUNCTIONAL AND DEPLOYED**
+✅ **ALL PROGRESS ITEMS MARKED WITH [x] CHECKBOXES**

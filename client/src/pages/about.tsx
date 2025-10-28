@@ -113,18 +113,18 @@ export default function About() {
               Over 1,200 registered anglers and counting. Be part of the UK's
               most exciting fishing competition platform.
             </p>
-            <div className="grid grid-cols-3 gap-6 max-w-2xl mx-auto">
+            <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-2xl mx-auto">
               <div>
-                <div className="text-3xl font-bold">1,200+</div>
-                <div className="text-sm opacity-80">Anglers</div>
+                <div className="text-2xl sm:text-3xl font-bold">1,200+</div>
+                <div className="text-xs sm:text-sm opacity-80">Anglers</div>
               </div>
               <div>
-                <div className="text-3xl font-bold">150+</div>
-                <div className="text-sm opacity-80">Competitions</div>
+                <div className="text-2xl sm:text-3xl font-bold">150+</div>
+                <div className="text-xs sm:text-sm opacity-80">Competitions</div>
               </div>
               <div>
-                <div className="text-3xl font-bold">50+</div>
-                <div className="text-sm opacity-80">Venues</div>
+                <div className="text-2xl sm:text-3xl font-bold">50+</div>
+                <div className="text-xs sm:text-sm opacity-80">Venues</div>
               </div>
             </div>
           </CardContent>

@@ -1106,7 +1106,7 @@ export default function AdminCompetitions() {
                 <Input
                   id="weight"
                   type="number"
-                  step="0.01"
+                  step="0.001"
                   placeholder="12.5"
                   value={weighInForm.weight}
                   onChange={(e) => setWeighInForm({ ...weighInForm, weight: e.target.value })}
