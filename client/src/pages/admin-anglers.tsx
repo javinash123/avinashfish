@@ -30,11 +30,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Search, MoreVertical, UserCheck, UserX, Mail, Eye, Loader2 } from "lucide-react";
+import { Search, MoreVertical, UserCheck, UserX, Mail, Eye, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Separator } from "@/components/ui/separator";
+import { AnglerFormDialog } from "@/components/angler-form-dialog";
 
 interface Angler {
   id: string;
@@ -57,9 +58,80 @@ export default function AdminAnglers() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "blocked">("all");
   const [selectedAngler, setSelectedAngler] = useState<Angler | null>(null);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [anglerToEdit, setAnglerToEdit] = useState<Angler | null>(null);
+  const [anglerToDelete, setAnglerToDelete] = useState<Angler | null>(null);
 
   const { data: anglers = [], isLoading } = useQuery<Angler[]>({
     queryKey: ["/api/admin/anglers"],
+  });
+
+  const createMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", "/api/admin/anglers", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/anglers"] });
+      setIsCreateOpen(false);
+      toast({
+        title: "Angler created",
+        description: "The angler has been created successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to create angler",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PUT", `/api/admin/anglers/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/anglers"] });
+      setIsEditOpen(false);
+      setAnglerToEdit(null);
+      toast({
+        title: "Angler updated",
+        description: "The angler has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update angler",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/admin/anglers/${id}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/anglers"] });
+      setAnglerToDelete(null);
+      toast({
+        title: "Angler deleted",
+        description: "The angler has been deleted successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to delete angler",
+        variant: "destructive",
+      });
+    },
   });
 
   const updateStatusMutation = useMutation({
@@ -208,13 +280,30 @@ export default function AdminAnglers() {
     return `${firstName[0]}${lastName[0]}`.toUpperCase();
   };
 
+  const handleEdit = (angler: Angler) => {
+    setAnglerToEdit(angler);
+    setIsEditOpen(true);
+  };
+
+  const handleDelete = (angler: Angler) => {
+    if (window.confirm(`Are you sure you want to delete ${angler.firstName} ${angler.lastName}? This will remove all their competition data.`)) {
+      deleteMutation.mutate(angler.id);
+    }
+  };
+
   return (
     <div className="space-y-6">
-      <div>
-        <h2 className="text-2xl font-bold">Angler Management</h2>
-        <p className="text-muted-foreground">
-          Manage registered anglers and their access
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-2xl font-bold">Angler Management</h2>
+          <p className="text-muted-foreground">
+            Manage registered anglers and their access
+          </p>
+        </div>
+        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-angler">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Angler
+        </Button>
       </div>
 
       <div className="flex flex-col sm:flex-row gap-4">
@@ -323,6 +412,10 @@ export default function AdminAnglers() {
                           <Eye className="h-4 w-4 mr-2" />
                           View Profile
                         </DropdownMenuItem>
+                        <DropdownMenuItem onClick={() => handleEdit(angler)} data-testid={`action-edit-${angler.id}`}>
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => handleSendEmail(angler.email, angler.firstName, angler.lastName)} data-testid={`action-send-email-${angler.id}`}>
                           <Mail className="h-4 w-4 mr-2" />
                           Send Email
@@ -346,6 +439,15 @@ export default function AdminAnglers() {
                             Unblock
                           </DropdownMenuItem>
                         )}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(angler)} 
+                          data-testid={`action-delete-${angler.id}`}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -522,6 +624,21 @@ export default function AdminAnglers() {
           )}
         </DialogContent>
       </Dialog>
+
+      <AnglerFormDialog
+        open={isCreateOpen}
+        onOpenChange={setIsCreateOpen}
+        onSubmit={(data) => createMutation.mutate(data)}
+        isSubmitting={createMutation.isPending}
+      />
+
+      <AnglerFormDialog
+        open={isEditOpen}
+        onOpenChange={setIsEditOpen}
+        angler={anglerToEdit}
+        onSubmit={(data) => anglerToEdit && updateMutation.mutate({ id: anglerToEdit.id, data })}
+        isSubmitting={updateMutation.isPending}
+      />
     </div>
   );
 }

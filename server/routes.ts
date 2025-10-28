@@ -838,6 +838,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/admin/anglers", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = insertUserSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid angler data", errors: result.error.errors });
+      }
+
+      const existingEmail = await storage.getUserByEmail(result.data.email);
+      if (existingEmail) {
+        return res.status(400).json({ message: "Email already exists" });
+      }
+
+      const existingUsername = await storage.getUserByUsername(result.data.username);
+      if (existingUsername) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+
+      const user = await storage.createUser(result.data);
+      const { password, ...userWithoutPassword } = user;
+      res.status(201).json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Error creating angler:", error);
+      res.status(500).json({ message: "Error creating angler: " + error.message });
+    }
+  });
+
+  app.put("/api/admin/anglers/:id", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const user = await storage.updateUser(req.params.id, req.body);
+      if (!user) {
+        return res.status(404).json({ message: "Angler not found" });
+      }
+
+      const { password, ...userWithoutPassword } = user;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Error updating angler:", error);
+      res.status(500).json({ message: "Error updating angler: " + error.message });
+    }
+  });
+
+  app.delete("/api/admin/anglers/:id", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const deleted = await storage.deleteUser(req.params.id);
+      if (!deleted) {
+        return res.status(404).json({ message: "Angler not found" });
+      }
+
+      res.json({ message: "Angler deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting angler:", error);
+      res.status(500).json({ message: "Error deleting angler: " + error.message });
+    }
+  });
+
   // Admin dashboard stats
   app.get("/api/admin/dashboard/stats", async (req, res) => {
     try {

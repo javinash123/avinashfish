@@ -484,8 +484,12 @@ export default function Profile() {
           </Card>
         </div>
 
-        <Tabs defaultValue="history" className="space-y-4">
+        <Tabs defaultValue="gallery" className="space-y-4">
           <TabsList data-testid="tabs-profile">
+            <TabsTrigger value="gallery" data-testid="tab-gallery">
+              <ImageIcon className="h-4 w-4 mr-2" />
+              Gallery
+            </TabsTrigger>
             <TabsTrigger value="history" data-testid="tab-history">
               <Trophy className="h-4 w-4 mr-2" />
               Competition History
@@ -493,10 +497,6 @@ export default function Profile() {
             <TabsTrigger value="upcoming" data-testid="tab-upcoming">
               <Calendar className="h-4 w-4 mr-2" />
               Upcoming
-            </TabsTrigger>
-            <TabsTrigger value="gallery" data-testid="tab-gallery">
-              <ImageIcon className="h-4 w-4 mr-2" />
-              Gallery
             </TabsTrigger>
           </TabsList>
 

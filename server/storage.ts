@@ -11,8 +11,10 @@ export interface IStorage {
   getUserByUsername(username: string): Promise<User | undefined>;
   getAllUsers(): Promise<User[]>;
   createUser(user: InsertUser): Promise<User>;
+  updateUser(id: string, updates: Partial<User>): Promise<User | undefined>;
   updateUserStatus(id: string, status: string): Promise<User | undefined>;
   updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined>;
+  deleteUser(id: string): Promise<boolean>;
   
   // User gallery methods
   getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]>;
@@ -447,6 +449,46 @@ export class MemStorage implements IStorage {
 
     this.users.set(id, updatedUser);
     return updatedUser;
+  }
+
+  async updateUser(id: string, updates: Partial<User>): Promise<User | undefined> {
+    const user = this.users.get(id);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      ...updates,
+      id: user.id,
+      createdAt: user.createdAt,
+    };
+
+    this.users.set(id, updatedUser);
+    return updatedUser;
+  }
+
+  async deleteUser(id: string): Promise<boolean> {
+    const user = this.users.get(id);
+    if (!user) return false;
+
+    this.competitionParticipants.forEach((participant, participantId) => {
+      if (participant.userId === id) {
+        this.competitionParticipants.delete(participantId);
+      }
+    });
+
+    this.leaderboardEntries.forEach((entry, entryId) => {
+      if (entry.userId === id) {
+        this.leaderboardEntries.delete(entryId);
+      }
+    });
+
+    this.userGalleryPhotos.forEach((photo, photoId) => {
+      if (photo.userId === id) {
+        this.userGalleryPhotos.delete(photoId);
+      }
+    });
+
+    return this.users.delete(id);
   }
 
   async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {

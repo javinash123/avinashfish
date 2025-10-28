@@ -155,47 +155,47 @@ export default function Gallery() {
                   />
                   {selectedImage.urls.length > 1 && (
                     <>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white border-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      <button
+                        type="button"
+                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-md z-10 h-10 w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+                        onClick={() => {
                           setCurrentImageIndex((prev) => 
                             prev === 0 ? selectedImage.urls.length - 1 : prev - 1
                           );
                         }}
                         data-testid="button-prev-image"
+                        aria-label="Previous image"
                       >
                         <ChevronLeft className="h-6 w-6" />
-                      </Button>
-                      <Button
-                        variant="secondary"
-                        size="icon"
-                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white border-0"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                      </button>
+                      <button
+                        type="button"
+                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-md z-10 h-10 w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer"
+                        onClick={() => {
                           setCurrentImageIndex((prev) => 
                             prev === selectedImage.urls.length - 1 ? 0 : prev + 1
                           );
                         }}
                         data-testid="button-next-image"
+                        aria-label="Next image"
                       >
                         <ChevronRight className="h-6 w-6" />
-                      </Button>
-                      <div className="absolute bottom-2 right-2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                      </button>
+                      <div className="absolute bottom-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
                         {currentImageIndex + 1} / {selectedImage.urls.length}
                       </div>
-                      <div className="absolute bottom-2 left-2 flex gap-1">
+                      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
                         {selectedImage.urls.map((_, index) => (
                           <button
                             key={index}
+                            type="button"
                             onClick={() => setCurrentImageIndex(index)}
-                            className={`h-2 rounded-full transition-all ${
+                            className={`h-2.5 rounded-full transition-all shadow-md cursor-pointer ${
                               index === currentImageIndex 
                                 ? 'w-8 bg-white' 
-                                : 'w-2 bg-white/50 hover:bg-white/75'
+                                : 'w-2.5 bg-white/60 hover:bg-white/90'
                             }`}
+                            aria-label={`Go to image ${index + 1}`}
                           />
                         ))}
                       </div>
