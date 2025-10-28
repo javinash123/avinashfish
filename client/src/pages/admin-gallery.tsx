@@ -35,12 +35,13 @@ export default function AdminGallery() {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<"all" | "event" | "catch">("all");
-  const [imageFile, setImageFile] = useState<File | null>(null);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [formData, setFormData] = useState({
-    url: "",
+    urls: [] as string[],
     title: "",
     description: "",
     category: "",
@@ -136,17 +137,63 @@ export default function AdminGallery() {
     return data.url;
   };
 
+  const handleFileSelect = (files: FileList | null) => {
+    if (!files) return;
+    const newFiles = Array.from(files).filter(file => file.type.startsWith('image/'));
+    setImageFiles(prev => [...prev, ...newFiles]);
+  };
+
+  const handleDrag = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (e.type === "dragenter" || e.type === "dragover") {
+      setDragActive(true);
+    } else if (e.type === "dragleave") {
+      setDragActive(false);
+    }
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setDragActive(false);
+    handleFileSelect(e.dataTransfer.files);
+  };
+
+  const removeImageFile = (index: number) => {
+    setImageFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const removeUploadedUrl = (index: number) => {
+    setFormData(prev => ({
+      ...prev,
+      urls: prev.urls.filter((_, i) => i !== index)
+    }));
+  };
+
   const handleCreate = async () => {
     try {
-      let imageUrl = formData.url;
+      const imageUrls: string[] = [...formData.urls];
       
-      if (imageFile) {
+      if (imageFiles.length > 0) {
         setUploadingImage(true);
-        imageUrl = await uploadFile(imageFile);
+        for (const file of imageFiles) {
+          const url = await uploadFile(file);
+          imageUrls.push(url);
+        }
+      }
+
+      if (imageUrls.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please upload at least one image",
+          variant: "destructive",
+        });
+        return;
       }
 
       const imageData = {
-        url: imageUrl,
+        urls: imageUrls,
         title: formData.title,
         description: formData.description,
         category: formData.category,
@@ -157,12 +204,12 @@ export default function AdminGallery() {
       };
 
       createMutation.mutate(imageData);
-      setImageFile(null);
+      setImageFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: "Failed to upload images",
         variant: "destructive",
       });
     } finally {
@@ -174,15 +221,27 @@ export default function AdminGallery() {
     if (!selectedImage) return;
 
     try {
-      let imageUrl = formData.url;
+      const imageUrls: string[] = [...formData.urls];
       
-      if (imageFile) {
+      if (imageFiles.length > 0) {
         setUploadingImage(true);
-        imageUrl = await uploadFile(imageFile);
+        for (const file of imageFiles) {
+          const url = await uploadFile(file);
+          imageUrls.push(url);
+        }
+      }
+
+      if (imageUrls.length === 0) {
+        toast({
+          title: "Error",
+          description: "Please keep at least one image",
+          variant: "destructive",
+        });
+        return;
       }
 
       const imageData = {
-        url: imageUrl,
+        urls: imageUrls,
         title: formData.title,
         description: formData.description,
         category: formData.category,
@@ -193,12 +252,12 @@ export default function AdminGallery() {
       };
 
       updateMutation.mutate({ id: selectedImage.id, data: imageData });
-      setImageFile(null);
+      setImageFiles([]);
       if (fileInputRef.current) fileInputRef.current.value = '';
     } catch (error) {
       toast({
         title: "Error",
-        description: "Failed to upload image",
+        description: "Failed to upload images",
         variant: "destructive",
       });
     } finally {
@@ -217,7 +276,7 @@ export default function AdminGallery() {
   const openEditDialog = (image: GalleryImage) => {
     setSelectedImage(image);
     setFormData({
-      url: image.url,
+      urls: image.urls,
       title: image.title,
       description: image.description,
       category: image.category,
@@ -226,12 +285,13 @@ export default function AdminGallery() {
       angler: image.angler || "",
       weight: image.weight || "",
     });
+    setImageFiles([]);
     setIsEditOpen(true);
   };
 
   const resetForm = () => {
     setFormData({
-      url: "",
+      urls: [],
       title: "",
       description: "",
       category: "",
@@ -240,6 +300,7 @@ export default function AdminGallery() {
       angler: "",
       weight: "",
     });
+    setImageFiles([]);
   };
 
   const filteredImages = images.filter((image) => {
@@ -304,10 +365,18 @@ export default function AdminGallery() {
           <Card key={image.id} className="overflow-hidden">
             <div className="relative aspect-[4/3] overflow-hidden bg-muted">
               <img
-                src={image.url}
+                src={image.urls[0]}
                 alt={image.title}
                 className="w-full h-full object-contain"
               />
+              {image.urls.length > 1 && (
+                <div className="absolute bottom-2 left-2">
+                  <Badge variant="secondary" className="bg-black/70 text-white">
+                    <ImageIcon className="h-3 w-3 mr-1" />
+                    {image.urls.length} images
+                  </Badge>
+                </div>
+              )}
               <div className="absolute top-2 right-2">
                 <Badge variant={image.category === "catch" ? "default" : "secondary"}>
                   {image.category === "catch" ? (
@@ -376,17 +445,63 @@ export default function AdminGallery() {
               Add a new image to the gallery
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
             <div className="grid gap-2">
-              <Label htmlFor="url">Upload Image</Label>
-              <Input
-                id="url"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                ref={fileInputRef}
-                data-testid="input-url"
-              />
+              <Label>Upload Images</Label>
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-8 text-center transition-colors ${
+                  dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                }`}
+              >
+                <Upload className="h-10 w-10 mx-auto mb-4 text-muted-foreground" />
+                <p className="text-sm text-muted-foreground mb-2">
+                  Drag and drop images here, or click to select
+                </p>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  ref={fileInputRef}
+                  className="hidden"
+                  data-testid="input-url"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Select Images
+                </Button>
+              </div>
+              {imageFiles.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {imageFiles.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-24 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImageFile(index)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <p className="text-xs text-center mt-1 truncate">{file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="title">Title</Label>
@@ -490,17 +605,88 @@ export default function AdminGallery() {
               Update image details
             </DialogDescription>
           </DialogHeader>
-          <div className="grid gap-4 py-4">
+          <div className="grid gap-4 py-4 max-h-[70vh] overflow-y-auto">
             <div className="grid gap-2">
-              <Label htmlFor="edit-url">Upload New Image (optional)</Label>
-              <Input
-                id="edit-url"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setImageFile(e.target.files?.[0] || null)}
-                ref={fileInputRef}
-                data-testid="input-edit-url"
-              />
+              <Label>Existing Images</Label>
+              {formData.urls.length > 0 && (
+                <div className="grid grid-cols-3 gap-2">
+                  {formData.urls.map((url, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={url}
+                        alt={`Existing ${index + 1}`}
+                        className="w-full h-24 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeUploadedUrl(index)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+            <div className="grid gap-2">
+              <Label>Add More Images</Label>
+              <div
+                onDragEnter={handleDrag}
+                onDragLeave={handleDrag}
+                onDragOver={handleDrag}
+                onDrop={handleDrop}
+                className={`border-2 border-dashed rounded-lg p-6 text-center transition-colors ${
+                  dragActive ? "border-primary bg-primary/5" : "border-muted-foreground/25"
+                }`}
+              >
+                <Upload className="h-8 w-8 mx-auto mb-2 text-muted-foreground" />
+                <p className="text-xs text-muted-foreground mb-2">
+                  Drag and drop images here, or click to select
+                </p>
+                <Input
+                  type="file"
+                  accept="image/*"
+                  multiple
+                  onChange={(e) => handleFileSelect(e.target.files)}
+                  ref={fileInputRef}
+                  className="hidden"
+                  data-testid="input-edit-url"
+                />
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => fileInputRef.current?.click()}
+                >
+                  Select Images
+                </Button>
+              </div>
+              {imageFiles.length > 0 && (
+                <div className="grid grid-cols-3 gap-2 mt-2">
+                  {imageFiles.map((file, index) => (
+                    <div key={index} className="relative group">
+                      <img
+                        src={URL.createObjectURL(file)}
+                        alt={file.name}
+                        className="w-full h-24 object-cover rounded border"
+                      />
+                      <Button
+                        type="button"
+                        variant="destructive"
+                        size="sm"
+                        className="absolute top-1 right-1 h-6 w-6 p-0 opacity-0 group-hover:opacity-100 transition-opacity"
+                        onClick={() => removeImageFile(index)}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                      <p className="text-xs text-center mt-1 truncate">{file.name}</p>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-title">Title</Label>

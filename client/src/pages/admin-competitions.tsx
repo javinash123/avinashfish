@@ -1170,9 +1170,21 @@ export default function AdminCompetitions() {
                                   <Button
                                     size="sm"
                                     onClick={() => {
+                                      const pegNum = parseInt(editPegNumber);
+                                      const maxPegs = selectedCompetition?.pegsTotal || 0;
+                                      
+                                      if (isNaN(pegNum) || pegNum < 1 || pegNum > maxPegs) {
+                                        toast({
+                                          title: "Invalid peg number",
+                                          description: `Please enter a number between 1 and ${maxPegs}`,
+                                          variant: "destructive",
+                                        });
+                                        return;
+                                      }
+                                      
                                       updatePegMutation.mutate({ 
                                         participantId: participant.id, 
-                                        pegNumber: parseInt(editPegNumber) 
+                                        pegNumber: pegNum 
                                       });
                                       setEditingPegParticipantId(null);
                                       setEditPegNumber("");

@@ -4,12 +4,14 @@ import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Image, Trophy, Fish, Calendar } from "lucide-react";
+import { Image, Trophy, Fish, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import type { GalleryImage } from "@shared/schema";
 
 export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [activeTab, setActiveTab] = useState<"all" | "event" | "catch">("all");
 
   const { data: galleryImages = [], isLoading } = useQuery<GalleryImage[]>({
@@ -70,15 +72,26 @@ export default function Gallery() {
                 <Card
                   key={image.id}
                   className="group overflow-hidden cursor-pointer hover-elevate active-elevate-2"
-                  onClick={() => setSelectedImage(image)}
+                  onClick={() => {
+                    setSelectedImage(image);
+                    setCurrentImageIndex(0);
+                  }}
                   data-testid={`card-gallery-${image.id}`}
                 >
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <img
-                      src={image.url}
+                      src={image.urls[0]}
                       alt={image.title}
                       className="w-full h-full object-cover"
                     />
+                    {image.urls.length > 1 && (
+                      <div className="absolute bottom-2 left-2">
+                        <Badge variant="secondary" className="bg-black/70 text-white">
+                          <Image className="h-3 w-3 mr-1" />
+                          {image.urls.length} images
+                        </Badge>
+                      </div>
+                    )}
                     <div className="absolute top-2 right-2">
                       <Badge variant={image.category === "catch" ? "default" : "secondary"}>
                         {image.category === "catch" ? (
@@ -123,7 +136,10 @@ export default function Gallery() {
         )}
       </div>
 
-      <Dialog open={!!selectedImage} onOpenChange={() => setSelectedImage(null)}>
+      <Dialog open={!!selectedImage} onOpenChange={() => {
+        setSelectedImage(null);
+        setCurrentImageIndex(0);
+      }}>
         <DialogContent className="max-w-4xl" data-testid="dialog-gallery-detail">
           {selectedImage && (
             <>
@@ -131,12 +147,60 @@ export default function Gallery() {
                 <DialogTitle data-testid="text-dialog-title">{selectedImage.title}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="relative aspect-video overflow-hidden rounded-md">
+                <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
                   <img
-                    src={selectedImage.url}
-                    alt={selectedImage.title}
-                    className="w-full h-full object-cover"
+                    src={selectedImage.urls[currentImageIndex]}
+                    alt={`${selectedImage.title} - Image ${currentImageIndex + 1}`}
+                    className="w-full h-full object-contain"
                   />
+                  {selectedImage.urls.length > 1 && (
+                    <>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white border-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => 
+                            prev === 0 ? selectedImage.urls.length - 1 : prev - 1
+                          );
+                        }}
+                        data-testid="button-prev-image"
+                      >
+                        <ChevronLeft className="h-6 w-6" />
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        size="icon"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/70 hover:bg-black/90 text-white border-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setCurrentImageIndex((prev) => 
+                            prev === selectedImage.urls.length - 1 ? 0 : prev + 1
+                          );
+                        }}
+                        data-testid="button-next-image"
+                      >
+                        <ChevronRight className="h-6 w-6" />
+                      </Button>
+                      <div className="absolute bottom-2 right-2 bg-black/70 text-white px-3 py-1 rounded-full text-sm">
+                        {currentImageIndex + 1} / {selectedImage.urls.length}
+                      </div>
+                      <div className="absolute bottom-2 left-2 flex gap-1">
+                        {selectedImage.urls.map((_, index) => (
+                          <button
+                            key={index}
+                            onClick={() => setCurrentImageIndex(index)}
+                            className={`h-2 rounded-full transition-all ${
+                              index === currentImageIndex 
+                                ? 'w-8 bg-white' 
+                                : 'w-2 bg-white/50 hover:bg-white/75'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                    </>
+                  )}
                 </div>
                 <div className="space-y-3">
                   <p className="text-muted-foreground">{selectedImage.description}</p>

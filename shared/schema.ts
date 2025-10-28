@@ -170,7 +170,7 @@ export type News = typeof news.$inferSelect;
 
 export const galleryImages = pgTable("gallery_images", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  url: text("url").notNull(),
+  urls: text("urls").array().notNull(),
   title: text("title").notNull(),
   description: text("description").notNull(),
   category: text("category").notNull(),
