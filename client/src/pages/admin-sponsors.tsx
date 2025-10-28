@@ -54,6 +54,7 @@ export default function AdminSponsors() {
     tier: "",
     logo: "",
     website: "",
+    shortDescription: "",
     description: "",
     facebook: "",
     twitter: "",
@@ -160,6 +161,7 @@ export default function AdminSponsors() {
         tier: formData.tier,
         logo: logoUrl,
         website: formData.website || undefined,
+        shortDescription: formData.shortDescription,
         description: formData.description,
         social: {
           facebook: formData.facebook || undefined,
@@ -198,6 +200,7 @@ export default function AdminSponsors() {
         tier: formData.tier,
         logo: logoUrl,
         website: formData.website || undefined,
+        shortDescription: formData.shortDescription,
         description: formData.description,
         social: {
           facebook: formData.facebook || undefined,
@@ -235,6 +238,7 @@ export default function AdminSponsors() {
       tier: sponsor.tier,
       logo: sponsor.logo,
       website: sponsor.website || "",
+      shortDescription: sponsor.shortDescription || "",
       description: sponsor.description,
       facebook: sponsor.social?.facebook || "",
       twitter: sponsor.social?.twitter || "",
@@ -249,6 +253,7 @@ export default function AdminSponsors() {
       tier: "",
       logo: "",
       website: "",
+      shortDescription: "",
       description: "",
       facebook: "",
       twitter: "",
@@ -442,14 +447,28 @@ export default function AdminSponsors() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="description">Description</Label>
+              <Label htmlFor="shortDescription">Short Description</Label>
+              <Textarea
+                id="shortDescription"
+                value={formData.shortDescription}
+                onChange={(e) =>
+                  setFormData({ ...formData, shortDescription: e.target.value })
+                }
+                placeholder="Brief description shown on sponsor cards..."
+                rows={2}
+                data-testid="input-short-description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="description">Full Description</Label>
               <Textarea
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Brief description of the sponsor..."
+                placeholder="Detailed description shown in popup dialog..."
+                rows={4}
                 data-testid="input-description"
               />
             </div>
@@ -546,13 +565,26 @@ export default function AdminSponsors() {
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="edit-description">Description</Label>
+              <Label htmlFor="edit-shortDescription">Short Description</Label>
+              <Textarea
+                id="edit-shortDescription"
+                value={formData.shortDescription}
+                onChange={(e) =>
+                  setFormData({ ...formData, shortDescription: e.target.value })
+                }
+                rows={2}
+                data-testid="input-edit-short-description"
+              />
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-description">Full Description</Label>
               <Textarea
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                rows={4}
                 data-testid="input-edit-description"
               />
             </div>

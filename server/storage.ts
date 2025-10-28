@@ -765,17 +765,21 @@ export class MemStorage implements IStorage {
       }
       assignedPegNumber = insertParticipant.pegNumber;
     } else {
-      // Find the first available peg
+      // Find a random available peg
+      const availablePegs: number[] = [];
       for (let i = 1; i <= competition.pegsTotal; i++) {
         if (!bookedPegs.has(i)) {
-          assignedPegNumber = i;
-          break;
+          availablePegs.push(i);
         }
       }
       
-      if (assignedPegNumber === null) {
+      if (availablePegs.length === 0) {
         throw new Error("No available pegs");
       }
+      
+      // Randomly assign one of the available pegs
+      const randomIndex = Math.floor(Math.random() * availablePegs.length);
+      assignedPegNumber = availablePegs[randomIndex];
     }
     
     // Create the participant with the assigned peg

@@ -120,6 +120,7 @@ export const sponsors = pgTable("sponsors", {
   tier: text("tier").notNull(),
   logo: text("logo").notNull(),
   website: text("website"),
+  shortDescription: text("short_description").notNull(),
   description: text("description").notNull(),
   social: json("social").$type<{ facebook?: string; twitter?: string; instagram?: string; }>(),
   createdAt: timestamp("created_at").notNull().defaultNow(),

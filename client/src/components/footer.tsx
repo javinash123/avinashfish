@@ -14,12 +14,12 @@ export function Footer() {
 
   const navigationLinks = [
     { href: "/", label: "Home" },
+    { href: "/about", label: "About" },
     { href: "/competitions", label: "Competitions" },
     { href: "/leaderboard", label: "Leaderboard" },
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
     { href: "/sponsors", label: "Sponsors" },
-    { href: "/about", label: "About" },
   ];
 
   const socialLinks = [

@@ -1,16 +1,32 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { ExternalLink, Star, Award, Handshake } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX } from "react-icons/si";
 import type { Sponsor } from "@shared/schema";
 
 export default function Sponsors() {
+  const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+
   const { data: sponsors = [], isLoading } = useQuery<Sponsor[]>({
     queryKey: ["/api/sponsors"],
   });
+
+  const handleReadMore = (sponsor: Sponsor) => {
+    setSelectedSponsor(sponsor);
+    setIsDialogOpen(true);
+  };
 
   const getTierInfo = (tier: string) => {
     switch (tier) {
@@ -144,10 +160,17 @@ export default function Sponsors() {
                       <CardTitle className="text-2xl" data-testid={`text-sponsor-name-${sponsor.id}`}>
                         {sponsor.name}
                       </CardTitle>
-                      <CardDescription className="text-base">{sponsor.description}</CardDescription>
+                      <CardDescription className="text-base">{sponsor.shortDescription || sponsor.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
                       <div className="flex flex-wrap items-center gap-3">
+                        <Button 
+                          variant="secondary"
+                          onClick={() => handleReadMore(sponsor)}
+                          data-testid={`button-read-more-${sponsor.id}`}
+                        >
+                          Read More
+                        </Button>
                         {sponsor.website && (
                           <Button asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
                             <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
@@ -218,17 +241,27 @@ export default function Sponsors() {
                         </Badge>
                       </div>
                       <CardTitle data-testid={`text-sponsor-name-${sponsor.id}`}>{sponsor.name}</CardTitle>
-                      <CardDescription>{sponsor.description}</CardDescription>
+                      <CardDescription>{sponsor.shortDescription || sponsor.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {sponsor.website && (
-                        <Button variant="outline" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
-                          <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
-                            Visit Website
-                            <ExternalLink className="ml-2 h-4 w-4" />
-                          </a>
+                      <div className="flex flex-col gap-2">
+                        <Button 
+                          variant="secondary"
+                          className="w-full"
+                          onClick={() => handleReadMore(sponsor)}
+                          data-testid={`button-read-more-${sponsor.id}`}
+                        >
+                          Read More
                         </Button>
-                      )}
+                        {sponsor.website && (
+                          <Button variant="outline" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
+                            <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
+                              Visit Website
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -265,17 +298,27 @@ export default function Sponsors() {
                         </Badge>
                       </div>
                       <CardTitle data-testid={`text-sponsor-name-${sponsor.id}`}>{sponsor.name}</CardTitle>
-                      <CardDescription>{sponsor.description}</CardDescription>
+                      <CardDescription>{sponsor.shortDescription || sponsor.description}</CardDescription>
                     </CardHeader>
                     <CardContent>
-                      {sponsor.website && (
-                        <Button variant="outline" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
-                          <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
-                            Visit Website
-                            <ExternalLink className="ml-2 h-4 w-4" />
-                          </a>
+                      <div className="flex flex-col gap-2">
+                        <Button 
+                          variant="secondary"
+                          className="w-full"
+                          onClick={() => handleReadMore(sponsor)}
+                          data-testid={`button-read-more-${sponsor.id}`}
+                        >
+                          Read More
                         </Button>
-                      )}
+                        {sponsor.website && (
+                          <Button variant="outline" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
+                            <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
+                              Visit Website
+                              <ExternalLink className="ml-2 h-4 w-4" />
+                            </a>
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 );
@@ -304,17 +347,27 @@ export default function Sponsors() {
                     <CardTitle className="text-lg" data-testid={`text-sponsor-name-${sponsor.id}`}>
                       {sponsor.name}
                     </CardTitle>
-                    <CardDescription className="text-sm">{sponsor.description}</CardDescription>
+                    <CardDescription className="text-sm">{sponsor.shortDescription || sponsor.description}</CardDescription>
                   </CardHeader>
                   <CardContent>
-                    {sponsor.website && (
-                      <Button variant="ghost" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
-                        <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
-                          Learn More
-                          <ExternalLink className="ml-2 h-4 w-4" />
-                        </a>
+                    <div className="flex flex-col gap-2">
+                      <Button 
+                        variant="secondary"
+                        className="w-full"
+                        onClick={() => handleReadMore(sponsor)}
+                        data-testid={`button-read-more-${sponsor.id}`}
+                      >
+                        Read More
                       </Button>
-                    )}
+                      {sponsor.website && (
+                        <Button variant="ghost" className="w-full" asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
+                          <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
+                            Learn More
+                            <ExternalLink className="ml-2 h-4 w-4" />
+                          </a>
+                        </Button>
+                      )}
+                    </div>
                   </CardContent>
                 </Card>
               ))}
@@ -322,6 +375,111 @@ export default function Sponsors() {
           </div>
         )}
       </div>
+
+      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">
+          {selectedSponsor && (
+            <>
+              <DialogHeader>
+                <div className="flex items-start justify-between gap-4 mb-4">
+                  <div className="h-20 w-40 bg-muted rounded flex items-center justify-center">
+                    {selectedSponsor.logo ? (
+                      <img 
+                        src={selectedSponsor.logo} 
+                        alt={selectedSponsor.name} 
+                        className="h-full w-full object-contain p-2" 
+                      />
+                    ) : (
+                      <span className="text-3xl font-bold text-muted-foreground">{selectedSponsor.name[0]}</span>
+                    )}
+                  </div>
+                  <Badge className={getTierInfo(selectedSponsor.tier).color}>
+                    {(() => {
+                      const tierInfo = getTierInfo(selectedSponsor.tier);
+                      const TierIcon = tierInfo.icon;
+                      return (
+                        <>
+                          <TierIcon className="h-3 w-3 mr-1" />
+                          {tierInfo.label}
+                        </>
+                      );
+                    })()}
+                  </Badge>
+                </div>
+                <DialogTitle className="text-3xl" data-testid="dialog-sponsor-title">
+                  {selectedSponsor.name}
+                </DialogTitle>
+                {selectedSponsor.website && (
+                  <DialogDescription asChild>
+                    <a 
+                      href={selectedSponsor.website} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline flex items-center gap-1"
+                      data-testid="dialog-sponsor-website"
+                    >
+                      {selectedSponsor.website}
+                      <ExternalLink className="h-3 w-3" />
+                    </a>
+                  </DialogDescription>
+                )}
+              </DialogHeader>
+
+              <div className="space-y-4 py-4">
+                <div>
+                  <h4 className="font-semibold text-lg mb-2">About</h4>
+                  <p className="text-muted-foreground whitespace-pre-wrap">
+                    {selectedSponsor.description}
+                  </p>
+                </div>
+
+                {selectedSponsor.social && (
+                  <div>
+                    <h4 className="font-semibold text-lg mb-3">Connect with {selectedSponsor.name}</h4>
+                    <div className="flex gap-3">
+                      {selectedSponsor.social.facebook && (
+                        <Button variant="outline" size="lg" asChild>
+                          <a href={selectedSponsor.social.facebook} target="_blank" rel="noopener noreferrer">
+                            <SiFacebook className="h-5 w-5 mr-2" />
+                            Facebook
+                          </a>
+                        </Button>
+                      )}
+                      {selectedSponsor.social.twitter && (
+                        <Button variant="outline" size="lg" asChild>
+                          <a href={selectedSponsor.social.twitter} target="_blank" rel="noopener noreferrer">
+                            <SiX className="h-5 w-5 mr-2" />
+                            Twitter
+                          </a>
+                        </Button>
+                      )}
+                      {selectedSponsor.social.instagram && (
+                        <Button variant="outline" size="lg" asChild>
+                          <a href={selectedSponsor.social.instagram} target="_blank" rel="noopener noreferrer">
+                            <SiInstagram className="h-5 w-5 mr-2" />
+                            Instagram
+                          </a>
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {selectedSponsor.website && (
+                  <div className="pt-4 border-t">
+                    <Button className="w-full" size="lg" asChild>
+                      <a href={selectedSponsor.website} target="_blank" rel="noopener noreferrer">
+                        Visit {selectedSponsor.name} Website
+                        <ExternalLink className="ml-2 h-4 w-4" />
+                      </a>
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -1538,6 +1538,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.put("/api/admin/participants/:id/peg", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { pegNumber } = req.body;
+      if (typeof pegNumber !== 'number' || pegNumber < 1) {
+        return res.status(400).json({ message: "Invalid peg number" });
+      }
+
+      const participant = await storage.updateParticipantPeg(req.params.id, pegNumber);
+      if (!participant) {
+        return res.status(404).json({ message: "Participant not found" });
+      }
+
+      res.json(participant);
+    } catch (error: any) {
+      console.error("Error updating participant peg:", error);
+      res.status(500).json({ message: "Error updating participant peg: " + error.message });
+    }
+  });
+
   app.get("/api/competitions/:id/is-joined", async (req, res) => {
     try {
       const userId = req.session?.userId;
