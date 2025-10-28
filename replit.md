@@ -40,6 +40,30 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### October 28, 2025 - Staff Management System with Role-Based Permissions
+*   **Staff Schema:** Created comprehensive staff table with Admin/Manager roles replacing legacy admin table.
+*   **Role-Based Permissions:** Implemented requireStaffAuth and requireAdminRole middleware for route protection.
+*   **Staff API Routes:** Added complete CRUD API (GET/POST/PUT/DELETE /api/admin/staff) with role-based access control.
+*   **Admin Panel Integration:** Added Staff Management page accessible only to admin role (managers cannot access).
+*   **Permission Levels:**
+    - **Admin:** Full access to all features including staff management, can create/edit/delete staff, manage all content
+    - **Manager:** Access to competitions, anglers, sponsors, news, gallery, slider - cannot manage staff
+*   **Authentication Updates:** Updated admin login to support staff authentication with backward compatibility for legacy admin accounts.
+*   **Session Management:** Enhanced session types to include staffId and staff object with role information.
+*   **Security Features:**
+    - Admins cannot delete their own account
+    - Admins cannot change their own role
+    - Password validation and hashing support (in production should use bcrypt)
+    - Email uniqueness validation
+    - Active/inactive account status management
+*   **Files Modified:**
+    - shared/schema.ts - Added staff table, roles enum, and validation schemas
+    - server/storage.ts - Added staff CRUD methods to IStorage and MemStorage
+    - server/routes.ts - Added staff management routes and permission middleware
+    - server/types.ts - Enhanced session and request types
+    - client/src/pages/admin-staff.tsx - New comprehensive staff management UI
+    - client/src/pages/admin-dashboard.tsx - Integrated staff management with role-based menu visibility
+
 ### October 28, 2025 - Competition Angler Management
 *   **Admin Competition Anglers:** Added "Anglers" button to each competition in admin panel for comprehensive participant management.
 *   **Participant Dialog:** New dialog displays all anglers enrolled in a competition with details (name, club, peg assignment, join date).

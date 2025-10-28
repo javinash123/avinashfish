@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -28,6 +28,20 @@ interface AnglerFormDialogProps {
   isSubmitting: boolean;
 }
 
+const getInitialFormData = (angler?: any) => ({
+  firstName: angler?.firstName || "",
+  lastName: angler?.lastName || "",
+  email: angler?.email || "",
+  username: angler?.username || "",
+  password: "",
+  club: angler?.club || "",
+  bio: angler?.bio || "",
+  location: angler?.location || "",
+  favouriteMethod: angler?.favouriteMethod || "",
+  favouriteSpecies: angler?.favouriteSpecies || "",
+  status: angler?.status || "active",
+});
+
 export function AnglerFormDialog({
   open,
   onOpenChange,
@@ -35,23 +49,28 @@ export function AnglerFormDialog({
   onSubmit,
   isSubmitting,
 }: AnglerFormDialogProps) {
-  const [formData, setFormData] = useState({
-    firstName: angler?.firstName || "",
-    lastName: angler?.lastName || "",
-    email: angler?.email || "",
-    username: angler?.username || "",
-    password: "",
-    club: angler?.club || "",
-    bio: angler?.bio || "",
-    location: angler?.location || "",
-    favouriteMethod: angler?.favouriteMethod || "",
-    favouriteSpecies: angler?.favouriteSpecies || "",
-    status: angler?.status || "active",
-  });
+  const [formData, setFormData] = useState(getInitialFormData(angler));
+
+  useEffect(() => {
+    if (open) {
+      setFormData(getInitialFormData(angler));
+    }
+  }, [open, angler]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    onSubmit(formData);
+    
+    let submitData: any;
+    
+    if (!angler) {
+      const { status, ...dataWithoutStatus } = formData;
+      submitData = dataWithoutStatus;
+    } else {
+      const { password, ...dataWithoutPassword } = formData;
+      submitData = formData.password ? formData : dataWithoutPassword;
+    }
+    
+    onSubmit(submitData);
   };
 
   const isEdit = !!angler;

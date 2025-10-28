@@ -48,6 +48,57 @@ export type RegisterUser = z.infer<typeof registerUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
 export type User = typeof users.$inferSelect;
 
+// Staff roles enum
+export const staffRoles = ['admin', 'manager'] as const;
+export type StaffRole = typeof staffRoles[number];
+
+export const staff = pgTable("staff", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  email: text("email").notNull().unique(),
+  password: text("password").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  role: text("role").notNull().$type<StaffRole>().default('manager'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  role: z.enum(['admin', 'manager']),
+});
+
+export const updateStaffSchema = createInsertSchema(staff).omit({
+  id: true,
+  createdAt: true,
+  password: true,
+}).extend({
+  role: z.enum(['admin', 'manager']).optional(),
+}).partial();
+
+export const updateStaffPasswordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password is required"),
+  newPassword: z.string().min(6, "New password must be at least 6 characters"),
+  confirmPassword: z.string().min(1, "Please confirm your new password"),
+}).refine(data => data.newPassword === data.confirmPassword, {
+  message: "Passwords don't match",
+  path: ["confirmPassword"],
+});
+
+export const staffLoginSchema = z.object({
+  email: z.string().email(),
+  password: z.string().min(1),
+});
+
+export type InsertStaff = z.infer<typeof insertStaffSchema>;
+export type UpdateStaff = z.infer<typeof updateStaffSchema>;
+export type UpdateStaffPassword = z.infer<typeof updateStaffPasswordSchema>;
+export type StaffLogin = z.infer<typeof staffLoginSchema>;
+export type Staff = typeof staff.$inferSelect;
+
+// Legacy admins table - keeping for backward compatibility during migration
 export const admins = pgTable("admins", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: text("email").notNull().unique(),

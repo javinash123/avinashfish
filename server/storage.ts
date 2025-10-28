@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -21,11 +21,20 @@ export interface IStorage {
   createUserGalleryPhoto(photo: InsertUserGalleryPhoto): Promise<UserGalleryPhoto>;
   deleteUserGalleryPhoto(id: string, userId: string): Promise<boolean>;
   
-  // Admin methods
+  // Admin methods (legacy)
   getAdmin(id: string): Promise<Admin | undefined>;
   getAdminByEmail(email: string): Promise<Admin | undefined>;
   createAdmin(admin: InsertAdmin): Promise<Admin>;
   updateAdmin(id: string, updates: UpdateAdmin): Promise<Admin | undefined>;
+  
+  // Staff methods
+  getAllStaff(): Promise<Staff[]>;
+  getStaff(id: string): Promise<Staff | undefined>;
+  getStaffByEmail(email: string): Promise<Staff | undefined>;
+  createStaff(staff: InsertStaff): Promise<Staff>;
+  updateStaff(id: string, updates: UpdateStaff): Promise<Staff | undefined>;
+  updateStaffPassword(id: string, newPassword: string): Promise<Staff | undefined>;
+  deleteStaff(id: string): Promise<boolean>;
   
   // Slider images methods
   getAllSliderImages(): Promise<SliderImage[]>;
@@ -89,6 +98,7 @@ export interface IStorage {
 export class MemStorage implements IStorage {
   private users: Map<string, User>;
   private admins: Map<string, Admin>;
+  private staff: Map<string, Staff>;
   private sliderImages: Map<string, SliderImage>;
   private siteSettings: SiteSettings | undefined;
   private sponsors: Map<string, Sponsor>;
@@ -102,6 +112,7 @@ export class MemStorage implements IStorage {
   constructor() {
     this.users = new Map();
     this.admins = new Map();
+    this.staff = new Map();
     this.sliderImages = new Map();
     this.sponsors = new Map();
     this.news = new Map();
@@ -111,13 +122,26 @@ export class MemStorage implements IStorage {
     this.leaderboardEntries = new Map();
     this.userGalleryPhotos = new Map();
     
-    // Create default admin account (password: admin123)
+    // Create default admin account (password: admin123) - Legacy support
     const defaultAdminId = randomUUID();
     this.admins.set(defaultAdminId, {
       id: defaultAdminId,
       email: "admin@pegslam.co.uk",
       password: "admin123", // In production, this should be hashed
       name: "Admin User",
+    });
+    
+    // Create default staff admin account (password: admin123)
+    const defaultStaffId = randomUUID();
+    this.staff.set(defaultStaffId, {
+      id: defaultStaffId,
+      email: "admin@pegslam.co.uk",
+      password: "admin123", // In production, this should be hashed
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+      isActive: true,
+      createdAt: new Date(),
     });
     
     // Create default slider image
@@ -547,6 +571,67 @@ export class MemStorage implements IStorage {
 
     this.admins.set(id, updatedAdmin);
     return updatedAdmin;
+  }
+
+  async getAllStaff(): Promise<Staff[]> {
+    return Array.from(this.staff.values())
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getStaff(id: string): Promise<Staff | undefined> {
+    return this.staff.get(id);
+  }
+
+  async getStaffByEmail(email: string): Promise<Staff | undefined> {
+    return Array.from(this.staff.values()).find(
+      (s) => s.email === email,
+    );
+  }
+
+  async createStaff(insertStaff: InsertStaff): Promise<Staff> {
+    const id = randomUUID();
+    const staff: Staff = {
+      id,
+      email: insertStaff.email,
+      password: insertStaff.password, // In production, this should be hashed
+      firstName: insertStaff.firstName,
+      lastName: insertStaff.lastName,
+      role: insertStaff.role ?? 'manager',
+      isActive: insertStaff.isActive ?? true,
+      createdAt: new Date(),
+    };
+    this.staff.set(id, staff);
+    return staff;
+  }
+
+  async updateStaff(id: string, updates: UpdateStaff): Promise<Staff | undefined> {
+    const staff = this.staff.get(id);
+    if (!staff) return undefined;
+
+    const updatedStaff: Staff = {
+      ...staff,
+      ...updates,
+    };
+
+    this.staff.set(id, updatedStaff);
+    return updatedStaff;
+  }
+
+  async updateStaffPassword(id: string, newPassword: string): Promise<Staff | undefined> {
+    const staff = this.staff.get(id);
+    if (!staff) return undefined;
+
+    const updatedStaff: Staff = {
+      ...staff,
+      password: newPassword, // In production, this should be hashed
+    };
+
+    this.staff.set(id, updatedStaff);
+    return updatedStaff;
+  }
+
+  async deleteStaff(id: string): Promise<boolean> {
+    return this.staff.delete(id);
   }
 
   async getAllSliderImages(): Promise<SliderImage[]> {

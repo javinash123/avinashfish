@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { getStorage } from "./storage";
-import { registerUserSchema, loginUserSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -65,6 +65,58 @@ export async function registerRoutes(app: Express): Promise<Server> {
       fileSize: 5 * 1024 * 1024 // 5MB limit
     }
   });
+
+  // Staff authentication and permission middleware
+  const requireStaffAuth = async (req: any, res: any, next: any) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId; // Support legacy adminId
+      
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Try to get staff member
+      const staff = await storage.getStaff(staffId);
+      if (staff) {
+        req.staff = staff;
+        return next();
+      }
+
+      // Fallback to legacy admin for backward compatibility
+      const admin = await storage.getAdmin(staffId);
+      if (admin) {
+        // Convert admin to staff format for compatibility
+        req.staff = {
+          id: admin.id,
+          email: admin.email,
+          firstName: admin.name.split(' ')[0] || 'Admin',
+          lastName: admin.name.split(' ').slice(1).join(' ') || 'User',
+          role: 'admin',
+          isActive: true,
+          password: admin.password,
+          createdAt: new Date(),
+        };
+        return next();
+      }
+
+      return res.status(401).json({ message: "Not authenticated" });
+    } catch (error: any) {
+      console.error("Auth middleware error:", error);
+      return res.status(500).json({ message: "Authentication error" });
+    }
+  };
+
+  const requireAdminRole = (req: any, res: any, next: any) => {
+    if (!req.staff) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    if (req.staff.role !== 'admin') {
+      return res.status(403).json({ message: "Access denied. Admin role required." });
+    }
+
+    next();
+  };
 
   // File upload endpoint
   app.post("/api/upload", upload.single('image'), (req, res) => {
@@ -177,24 +229,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Admin authentication routes
+  // Staff/Admin authentication routes
   app.post("/api/admin/login", async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const result = staffLoginSchema.safeParse(req.body);
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email and password are required" });
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid login data",
+          errors: result.error.errors 
+        });
       }
 
-      const admin = await storage.getAdminByEmail(email);
+      const { email, password } = result.data;
       
-      if (!admin || admin.password !== password) {
+      // Try to find staff member
+      let staff = await storage.getStaffByEmail(email);
+      
+      // Fallback to legacy admin for backward compatibility
+      if (!staff) {
+        const admin = await storage.getAdminByEmail(email);
+        if (admin && admin.password === password) {
+          // Convert admin to staff format
+          staff = {
+            id: admin.id,
+            email: admin.email,
+            firstName: admin.name.split(' ')[0] || 'Admin',
+            lastName: admin.name.split(' ').slice(1).join(' ') || 'User',
+            role: 'admin',
+            isActive: true,
+            password: admin.password,
+            createdAt: new Date(),
+          };
+        }
+      }
+      
+      if (!staff || staff.password !== password) {
         return res.status(401).json({ message: "Invalid email or password" });
       }
 
-      // In production, use proper session management or JWT
-      // For now, we'll store admin ID in session
-      req.session.adminId = admin.id;
+      if (!staff.isActive) {
+        return res.status(403).json({ message: "Account is inactive" });
+      }
+
+      // Store staff ID in session
+      req.session.staffId = staff.id;
+      req.session.adminId = staff.id; // Keep for backward compatibility
       
       // Explicitly save the session before sending response
       req.session.save((err) => {
@@ -204,9 +284,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
         
         res.json({
-          id: admin.id,
-          email: admin.email,
-          name: admin.name,
+          id: staff.id,
+          email: staff.email,
+          firstName: staff.firstName,
+          lastName: staff.lastName,
+          role: staff.role,
         });
       });
     } catch (error: any) {
@@ -228,26 +310,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get("/api/admin/me", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const staffId = req.session?.staffId || req.session?.adminId;
       
-      if (!adminId) {
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const admin = await storage.getAdmin(adminId);
+      // Try to get staff member
+      let staff = await storage.getStaff(staffId);
       
-      if (!admin) {
-        return res.status(404).json({ message: "Admin not found" });
+      // Fallback to legacy admin
+      if (!staff) {
+        const admin = await storage.getAdmin(staffId);
+        if (admin) {
+          staff = {
+            id: admin.id,
+            email: admin.email,
+            firstName: admin.name.split(' ')[0] || 'Admin',
+            lastName: admin.name.split(' ').slice(1).join(' ') || 'User',
+            role: 'admin',
+            isActive: true,
+            password: admin.password,
+            createdAt: new Date(),
+          };
+        }
+      }
+      
+      if (!staff) {
+        return res.status(404).json({ message: "Staff member not found" });
       }
 
       res.json({
-        id: admin.id,
-        email: admin.email,
-        name: admin.name,
+        id: staff.id,
+        email: staff.email,
+        firstName: staff.firstName,
+        lastName: staff.lastName,
+        role: staff.role,
       });
     } catch (error: any) {
-      console.error("Get admin error:", error);
-      res.status(500).json({ message: "Error fetching admin: " + error.message });
+      console.error("Get staff error:", error);
+      res.status(500).json({ message: "Error fetching staff data: " + error.message });
     }
   });
 
@@ -291,6 +393,175 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Update admin profile error:", error);
       res.status(500).json({ message: "Error updating profile: " + error.message });
+    }
+  });
+
+  // Staff Management Routes (Admin Only)
+  app.get("/api/admin/staff", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const staffMembers = await storage.getAllStaff();
+      
+      // Remove password from response
+      const sanitizedStaff = staffMembers.map(s => ({
+        id: s.id,
+        email: s.email,
+        firstName: s.firstName,
+        lastName: s.lastName,
+        role: s.role,
+        isActive: s.isActive,
+        createdAt: s.createdAt,
+      }));
+      
+      res.json(sanitizedStaff);
+    } catch (error: any) {
+      console.error("Get staff error:", error);
+      res.status(500).json({ message: "Error fetching staff: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/staff", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const result = insertStaffSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid staff data",
+          errors: result.error.errors 
+        });
+      }
+
+      // Check if email already exists
+      const existingStaff = await storage.getStaffByEmail(result.data.email);
+      if (existingStaff) {
+        return res.status(400).json({ message: "Email already registered" });
+      }
+
+      const newStaff = await storage.createStaff(result.data);
+      
+      // Remove password from response
+      res.status(201).json({
+        id: newStaff.id,
+        email: newStaff.email,
+        firstName: newStaff.firstName,
+        lastName: newStaff.lastName,
+        role: newStaff.role,
+        isActive: newStaff.isActive,
+        createdAt: newStaff.createdAt,
+      });
+    } catch (error: any) {
+      console.error("Create staff error:", error);
+      res.status(500).json({ message: "Error creating staff: " + error.message });
+    }
+  });
+
+  app.put("/api/admin/staff/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      const result = updateStaffSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid update data",
+          errors: result.error.errors 
+        });
+      }
+
+      // Prevent staff from changing their own role
+      if (id === req.staff.id && result.data.role && result.data.role !== req.staff.role) {
+        return res.status(403).json({ message: "Cannot change your own role" });
+      }
+
+      // Check if email is being changed and already exists
+      if (result.data.email) {
+        const existingStaff = await storage.getStaffByEmail(result.data.email);
+        if (existingStaff && existingStaff.id !== id) {
+          return res.status(400).json({ message: "Email already in use" });
+        }
+      }
+
+      const updatedStaff = await storage.updateStaff(id, result.data);
+      
+      if (!updatedStaff) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+
+      // Remove password from response
+      res.json({
+        id: updatedStaff.id,
+        email: updatedStaff.email,
+        firstName: updatedStaff.firstName,
+        lastName: updatedStaff.lastName,
+        role: updatedStaff.role,
+        isActive: updatedStaff.isActive,
+        createdAt: updatedStaff.createdAt,
+      });
+    } catch (error: any) {
+      console.error("Update staff error:", error);
+      res.status(500).json({ message: "Error updating staff: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/staff/:id/password", requireStaffAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Only allow updating own password or if admin
+      if (id !== req.staff.id && req.staff.role !== 'admin') {
+        return res.status(403).json({ message: "Access denied" });
+      }
+
+      const result = updateStaffPasswordSchema.safeParse(req.body);
+      
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid password data",
+          errors: result.error.errors 
+        });
+      }
+
+      const staff = await storage.getStaff(id);
+      if (!staff) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+
+      // Verify current password
+      if (staff.password !== result.data.currentPassword) {
+        return res.status(401).json({ message: "Current password is incorrect" });
+      }
+
+      const updatedStaff = await storage.updateStaffPassword(id, result.data.newPassword);
+      
+      if (!updatedStaff) {
+        return res.status(500).json({ message: "Failed to update password" });
+      }
+
+      res.json({ message: "Password updated successfully" });
+    } catch (error: any) {
+      console.error("Update staff password error:", error);
+      res.status(500).json({ message: "Error updating password: " + error.message });
+    }
+  });
+
+  app.delete("/api/admin/staff/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Prevent staff from deleting themselves
+      if (id === req.staff.id) {
+        return res.status(403).json({ message: "Cannot delete your own account" });
+      }
+
+      const deleted = await storage.deleteStaff(id);
+      
+      if (!deleted) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+
+      res.json({ message: "Staff member deleted successfully" });
+    } catch (error: any) {
+      console.error("Delete staff error:", error);
+      res.status(500).json({ message: "Error deleting staff: " + error.message });
     }
   });
 

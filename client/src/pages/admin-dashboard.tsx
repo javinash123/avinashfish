@@ -48,16 +48,21 @@ import AdminNews from "./admin-news";
 import AdminGallery from "./admin-gallery";
 import AdminProfile from "./admin-profile";
 import AdminSlider from "./admin-slider";
+import AdminStaff from "./admin-staff";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
+import { ShieldCheck } from "lucide-react";
 
-type AdminSection = "dashboard" | "competitions" | "anglers" | "sponsors" | "news" | "gallery" | "settings" | "profile" | "slider";
+type AdminSection = "dashboard" | "competitions" | "anglers" | "sponsors" | "news" | "gallery" | "settings" | "profile" | "slider" | "staff";
 
 interface AdminUser {
   id: string;
   email: string;
-  name: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  role?: "admin" | "manager";
 }
 
 export default function AdminDashboard() {
@@ -138,6 +143,8 @@ export default function AdminDashboard() {
     { id: "news" as const, title: "News", icon: Newspaper },
     { id: "gallery" as const, title: "Gallery", icon: ImageIcon },
     { id: "slider" as const, title: "Slider & Logo", icon: Images },
+    // Show staff management only to admins
+    ...(admin?.role === "admin" ? [{ id: "staff" as const, title: "Staff", icon: ShieldCheck }] : []),
     // { id: "settings" as const, title: "Settings", icon: Settings },
   ];
 
@@ -188,6 +195,8 @@ export default function AdminDashboard() {
         return <AdminGallery />;
       case "slider":
         return <AdminSlider />;
+      case "staff":
+        return <AdminStaff />;
       case "profile":
         return <AdminProfile />;
       case "settings":
