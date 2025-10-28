@@ -388,7 +388,7 @@ export default function AdminSponsors() {
       )}
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add New Sponsor</DialogTitle>
             <DialogDescription>
@@ -508,7 +508,7 @@ export default function AdminSponsors() {
       </Dialog>
 
       <Dialog open={isEditOpen} onOpenChange={setIsEditOpen}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit Sponsor</DialogTitle>
             <DialogDescription>

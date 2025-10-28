@@ -153,7 +153,7 @@ export default function CompetitionDetails() {
                 <img
                   src={competition.imageUrl}
                   alt={competition.name}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full object-contain"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">

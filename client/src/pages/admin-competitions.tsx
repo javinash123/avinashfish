@@ -54,6 +54,10 @@ export default function AdminCompetitions() {
   const [weighInEntries, setWeighInEntries] = useState<Record<string, { peg: number; weight: number; angler: string; time: string }[]>>({});
   const [weighInForm, setWeighInForm] = useState({ pegNumber: "", weight: "" });
   const [selectedPegForView, setSelectedPegForView] = useState<number | null>(null);
+  const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
+  const [editWeight, setEditWeight] = useState("");
+  const [editingPegParticipantId, setEditingPegParticipantId] = useState<string | null>(null);
+  const [editPegNumber, setEditPegNumber] = useState("");
 
   const { data: competitions = [], isLoading } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
@@ -214,6 +218,80 @@ export default function AdminCompetitions() {
       toast({
         title: "Error",
         description: "Failed to record weight",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateWeightMutation = useMutation({
+    mutationFn: async ({ entryId, weight }: { entryId: string; weight: string }) => {
+      return await apiRequest("PUT", `/api/admin/leaderboard/${entryId}`, { weight });
+    },
+    onSuccess: () => {
+      if (selectedCompetition && selectedParticipant) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
+        });
+      }
+      setEditingEntryId(null);
+      setEditWeight("");
+      toast({
+        title: "Weight updated",
+        description: "The weight entry has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update weight",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteWeightMutation = useMutation({
+    mutationFn: async (entryId: string) => {
+      return await apiRequest("DELETE", `/api/admin/leaderboard/${entryId}`);
+    },
+    onSuccess: () => {
+      if (selectedCompetition && selectedParticipant) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
+        queryClient.invalidateQueries({ 
+          queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
+        });
+      }
+      toast({
+        title: "Weight deleted",
+        description: "The weight entry has been removed.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to delete weight",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePegMutation = useMutation({
+    mutationFn: async ({ participantId, pegNumber }: { participantId: string; pegNumber: number }) => {
+      return await apiRequest("PUT", `/api/admin/participants/${participantId}/peg`, { pegNumber });
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
+      }
+      toast({
+        title: "Peg updated",
+        description: "The peg number has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to update peg",
         variant: "destructive",
       });
     },
@@ -472,8 +550,28 @@ export default function AdminCompetitions() {
       return;
     }
     
+    // Validate weight format (requires at least one digit, max 3 decimal places)
+    if (!/^\d+(?:\.\d{1,3})?$/.test(weighInForm.weight)) {
+      toast({
+        title: "Invalid weight",
+        description: "Please enter a valid weight (e.g., 12.5, 10.125). Maximum 3 decimal places.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
     const pegNumber = parseInt(weighInForm.pegNumber);
     const weight = parseFloat(weighInForm.weight);
+    
+    // Additional check for valid number
+    if (!Number.isFinite(weight) || weight <= 0) {
+      toast({
+        title: "Invalid weight",
+        description: "Weight must be a positive number.",
+        variant: "destructive",
+      });
+      return;
+    }
     
     // Find angler assigned to this peg from participants
     const participant = participants.find(p => p.pegNumber === pegNumber);
@@ -1050,6 +1148,7 @@ export default function AdminCompetitions() {
                       <TableRow>
                         <TableHead>Peg</TableHead>
                         <TableHead>Angler</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1059,11 +1158,64 @@ export default function AdminCompetitions() {
                         .map((participant) => (
                           <TableRow key={participant.id}>
                             <TableCell>
-                              <Badge variant="outline" className="font-mono">
-                                {participant.pegNumber}
-                              </Badge>
+                              {editingPegParticipantId === participant.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={editPegNumber}
+                                    onChange={(e) => setEditPegNumber(e.target.value)}
+                                    className="w-20 h-8"
+                                    data-testid={`input-edit-peg-${participant.id}`}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      updatePegMutation.mutate({ 
+                                        participantId: participant.id, 
+                                        pegNumber: parseInt(editPegNumber) 
+                                      });
+                                      setEditingPegParticipantId(null);
+                                      setEditPegNumber("");
+                                    }}
+                                    disabled={!editPegNumber || updatePegMutation.isPending}
+                                    data-testid={`button-save-peg-${participant.id}`}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingPegParticipantId(null);
+                                      setEditPegNumber("");
+                                    }}
+                                    data-testid={`button-cancel-peg-${participant.id}`}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="font-mono">
+                                  {participant.pegNumber}
+                                </Badge>
+                              )}
                             </TableCell>
                             <TableCell>{participant.name}</TableCell>
+                            <TableCell className="text-right">
+                              {editingPegParticipantId !== participant.id && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPegParticipantId(participant.id);
+                                    setEditPegNumber(participant.pegNumber.toString());
+                                  }}
+                                  data-testid={`button-edit-peg-${participant.id}`}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </TableCell>
                           </TableRow>
                         ))}
                     </TableBody>
@@ -1109,7 +1261,12 @@ export default function AdminCompetitions() {
                   step="0.001"
                   placeholder="12.5"
                   value={weighInForm.weight}
-                  onChange={(e) => setWeighInForm({ ...weighInForm, weight: e.target.value })}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    if (value === '' || /^\d*\.?\d{0,3}$/.test(value)) {
+                      setWeighInForm({ ...weighInForm, weight: value });
+                    }
+                  }}
                   data-testid="input-weight"
                 />
               </div>
@@ -1134,7 +1291,7 @@ export default function AdminCompetitions() {
                       <Label htmlFor="view-peg">Select Peg</Label>
                       <select
                         id="view-peg"
-                        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring"
+                        className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&>option]:bg-background [&>option]:text-foreground"
                         value={selectedPegForView || ""}
                         onChange={(e) => setSelectedPegForView(e.target.value ? parseInt(e.target.value) : null)}
                         data-testid="select-view-peg"
@@ -1171,11 +1328,74 @@ export default function AdminCompetitions() {
                             <p className="text-sm font-medium">Individual Entries ({participantEntries.entries.length})</p>
                             <div className="space-y-1">
                               {participantEntries.entries.map((entry, index) => (
-                                <div key={entry.id} className="flex items-center justify-between p-2 border rounded-md">
+                                <div key={entry.id} className="flex items-center justify-between gap-2 p-2 border rounded-md">
                                   <span className="text-sm text-muted-foreground">
                                     Entry #{participantEntries.entries.length - index}
                                   </span>
-                                  <span className="font-semibold">{parseFloat(entry.weight).toFixed(2)} lbs</span>
+                                  {editingEntryId === entry.id ? (
+                                    <div className="flex items-center gap-2">
+                                      <Input
+                                        type="number"
+                                        step="0.001"
+                                        value={editWeight}
+                                        onChange={(e) => {
+                                          const value = e.target.value;
+                                          if (value === '' || /^\d+(?:\.\d{0,3})?$/.test(value)) {
+                                            setEditWeight(value);
+                                          }
+                                        }}
+                                        className="w-24 h-8"
+                                        data-testid={`input-edit-weight-${entry.id}`}
+                                      />
+                                      <Button
+                                        size="sm"
+                                        onClick={() => updateWeightMutation.mutate({ entryId: entry.id, weight: editWeight })}
+                                        disabled={!editWeight || updateWeightMutation.isPending}
+                                        data-testid={`button-save-weight-${entry.id}`}
+                                      >
+                                        Save
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingEntryId(null);
+                                          setEditWeight("");
+                                        }}
+                                        data-testid={`button-cancel-edit-${entry.id}`}
+                                      >
+                                        Cancel
+                                      </Button>
+                                    </div>
+                                  ) : (
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-semibold">{parseFloat(entry.weight).toFixed(2)} lbs</span>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          setEditingEntryId(entry.id);
+                                          setEditWeight(entry.weight);
+                                        }}
+                                        data-testid={`button-edit-weight-${entry.id}`}
+                                      >
+                                        <Pencil className="h-3 w-3" />
+                                      </Button>
+                                      <Button
+                                        size="sm"
+                                        variant="ghost"
+                                        onClick={() => {
+                                          if (confirm('Are you sure you want to delete this weight entry?')) {
+                                            deleteWeightMutation.mutate(entry.id);
+                                          }
+                                        }}
+                                        disabled={deleteWeightMutation.isPending}
+                                        data-testid={`button-delete-weight-${entry.id}`}
+                                      >
+                                        <Trash2 className="h-3 w-3" />
+                                      </Button>
+                                    </div>
+                                  )}
                                 </div>
                               ))}
                             </div>
