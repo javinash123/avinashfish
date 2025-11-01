@@ -13,6 +13,7 @@ interface CompetitionCardProps {
   pegsAvailable: number;
   entryFee: string;
   prizePool?: string;
+  prizeType?: string;
   status: "upcoming" | "live" | "completed";
   imageUrl?: string;
 }
@@ -26,6 +27,7 @@ export function CompetitionCard({
   pegsAvailable,
   entryFee,
   prizePool,
+  prizeType = "pool",
   status,
   imageUrl,
 }: CompetitionCardProps) {
@@ -82,7 +84,9 @@ export function CompetitionCard({
         {prizePool && (
           <div className="flex items-center gap-2 text-sm font-medium text-chart-3">
             <Coins className="h-4 w-4" />
-            <span data-testid="text-prize-pool">{prizePool} Prize Pool</span>
+            <span data-testid="text-prize-pool">
+              {(prizeType === "pool" || !prizeType) ? `${prizePool} Prize Pool` : prizePool}
+            </span>
           </div>
         )}
       </CardContent>
@@ -92,7 +96,7 @@ export function CompetitionCard({
         <Link href={`/competition/${id}`} asChild>
           <Button
             variant={status === "live" ? "default" : "secondary"}
-            disabled={status === "completed" || pegsAvailable === 0}
+            disabled={pegsAvailable === 0 && status !== "completed"}
             data-testid="button-view-details"
           >
             {status === "completed" ? "View Results" : pegsAvailable === 0 ? "Sold Out" : "View Details"}

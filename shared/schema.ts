@@ -265,6 +265,7 @@ export const competitions = pgTable("competitions", {
   pegsBooked: integer("pegs_booked").notNull().default(0),
   entryFee: text("entry_fee").notNull(),
   prizePool: text("prize_pool").notNull(),
+  prizeType: text("prize_type").notNull().default("pool"),
   status: text("status").notNull().default("upcoming"),
   description: text("description").notNull(),
   type: text("type").notNull(),

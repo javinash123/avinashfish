@@ -21,6 +21,7 @@ import { type Competition } from "@shared/schema";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function CompetitionDetails() {
   const { id } = useParams();
@@ -119,6 +120,7 @@ export default function CompetitionDetails() {
   }
 
   const isJoined = isJoinedData?.isJoined || false;
+  const competitionStatus = competition ? getCompetitionStatus(competition) : "upcoming";
   
   // Generate pegs based on participants
   const pegs = Array.from({ length: Math.min(competition.pegsTotal, 40) }, (_, i) => {
@@ -243,11 +245,27 @@ export default function CompetitionDetails() {
                   <div className="flex items-center gap-2 text-chart-3">
                     <Trophy className="h-5 w-5" />
                     <div>
-                      <span className="font-bold text-lg">£{competition.prizePool}</span>
-                      <span className="text-sm ml-1">Prize Pool</span>
+                      {(competition.prizeType === "pool" || !competition.prizeType) ? (
+                        <>
+                          <span className="font-bold text-lg">£{competition.prizePool}</span>
+                          <span className="text-sm ml-1">Prize Pool</span>
+                        </>
+                      ) : (
+                        <>
+                          <span className="font-bold text-lg">{competition.prizePool}</span>
+                          <span className="text-sm ml-1">Prize</span>
+                        </>
+                      )}
                     </div>
                   </div>
-                  {user ? (
+                  {competitionStatus === "completed" ? (
+                    <Link href="#leaderboard">
+                      <Button className="w-full" size="lg" data-testid="button-view-result">
+                        <Trophy className="mr-2 h-5 w-5" />
+                        View Results
+                      </Button>
+                    </Link>
+                  ) : user ? (
                     isJoined ? (
                       <Button 
                         variant="outline" 

@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
@@ -43,7 +44,8 @@ export default function Home() {
       pegsTotal: comp.pegsTotal,
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,
       entryFee: `£${comp.entryFee}`,
-      prizePool: `£${comp.prizePool}`,
+      prizePool: (comp.prizeType === "pool" || !comp.prizeType) ? `£${comp.prizePool}` : comp.prizePool,
+      prizeType: comp.prizeType || "pool",
       status: "upcoming" as const,
       imageUrl: comp.imageUrl || undefined,
     }));
@@ -126,81 +128,6 @@ export default function Home() {
         </div>
       </section>
 
-      {featuredNews.length > 0 && (
-        <section className="py-12 bg-muted/30">
-          <div className="container mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Newspaper className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
-              </div>
-              <Link href="/news">
-                <Button variant="outline" data-testid="button-view-all-news">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredNews.slice(0, 3).map((news) => (
-                <Link key={news.id} href={`/news/${news.id}`}>
-                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
-                    {news.image && (
-                      <img
-                        src={news.image}
-                        alt={news.title}
-                        className="w-full h-48 object-cover"
-                      />
-                    )}
-                    <CardContent className="p-6">
-                      <div className="text-sm text-muted-foreground mb-2">
-                        {format(new Date(news.date), "dd MMM yyyy")}
-                      </div>
-                      <h3 className="text-xl font-bold mb-2 line-clamp-2">{news.title}</h3>
-                      <p className="text-muted-foreground line-clamp-3">{news.content}</p>
-                    </CardContent>
-                  </Card>
-                </Link>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      {featuredGallery.length > 0 && (
-        <section className="py-12">
-          <div className="container mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
-              </div>
-              <Link href="/gallery">
-                <Button variant="outline" data-testid="button-view-all-gallery">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              {featuredGallery.slice(0, 4).map((image) => (
-                <Card key={image.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
-                  <img
-                    src={image.urls[0]}
-                    alt={image.title}
-                    className="w-full h-64 object-cover"
-                  />
-                  <CardContent className="p-4">
-                    <h3 className="font-bold line-clamp-1">{image.title}</h3>
-                    <p className="text-sm text-muted-foreground line-clamp-2">{image.description}</p>
-                  </CardContent>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
       <section className="py-16 container mx-auto px-4 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -269,6 +196,113 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {featuredNews.length > 0 && (
+        <section className="py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <Newspaper className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
+              </div>
+              <Link href="/news">
+                <Button variant="outline" data-testid="button-view-all-news">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredNews.slice(0, 3).map((news) => (
+                <Card key={news.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full" data-testid={`card-news-${news.id}`}>
+                  {news.image && (
+                    <div className="relative aspect-video overflow-hidden">
+                      <img
+                        src={news.image}
+                        alt={news.title}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+                  <CardContent className="p-6 flex flex-col gap-4">
+                    <div>
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {format(new Date(news.date), "dd MMM yyyy")}
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 line-clamp-2">{news.title}</h3>
+                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
+                    </div>
+                    <Link href={`/news/${news.id}`} className="mt-auto">
+                      <Button variant="ghost" size="sm" data-testid={`button-read-more-${news.id}`}>
+                        Read More
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {featuredGallery.length > 0 && (
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
+              </div>
+              <Link href="/gallery">
+                <Button variant="outline" data-testid="button-view-all-gallery">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {featuredGallery.slice(0, 4).map((image) => (
+                <Card key={image.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full" data-testid={`card-gallery-${image.id}`}>
+                  <div className="relative aspect-[4/3] overflow-hidden">
+                    <img
+                      src={image.urls[0]}
+                      alt={image.title}
+                      className="w-full h-full object-cover"
+                    />
+                    {image.urls.length > 1 && (
+                      <div className="absolute bottom-2 left-2">
+                        <Badge variant="secondary" className="bg-black/70 text-white">
+                          <ImageIcon className="h-3 w-3 mr-1" />
+                          {image.urls.length} images
+                        </Badge>
+                      </div>
+                    )}
+                  </div>
+                  <CardContent className="p-4 flex flex-col gap-2">
+                    <div>
+                      <h3 className="font-bold line-clamp-1">{image.title}</h3>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{image.description}</p>
+                      {image.weight && (
+                        <div className="flex items-center gap-2 mt-2">
+                          <Trophy className="h-4 w-4 text-primary" />
+                          <span className="text-sm font-semibold">{image.weight}</span>
+                        </div>
+                      )}
+                    </div>
+                    <Link href="/gallery" className="mt-auto">
+                      <Button variant="ghost" size="sm" data-testid={`button-view-gallery-${image.id}`}>
+                        View Gallery
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </Link>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="py-16">
         <div className="container mx-auto px-4 lg:px-8">

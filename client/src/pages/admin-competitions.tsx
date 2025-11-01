@@ -369,6 +369,7 @@ export default function AdminCompetitions() {
     pegsTotal: "",
     entryFee: "",
     prizePool: "",
+    prizeType: "pool",
     type: "",
     description: "",
     imageUrl: "",
@@ -417,6 +418,7 @@ export default function AdminCompetitions() {
       pegsTotal: "",
       entryFee: "",
       prizePool: "",
+      prizeType: "pool",
       type: "",
       description: "",
       imageUrl: "",
@@ -453,6 +455,7 @@ export default function AdminCompetitions() {
       pegsBooked: 0,
       entryFee: formData.entryFee,
       prizePool: formData.prizePool,
+      prizeType: formData.prizeType,
       status: "upcoming",
       description: formData.description,
       type: formData.type,
@@ -493,6 +496,7 @@ export default function AdminCompetitions() {
         pegsTotal: parseInt(formData.pegsTotal),
         entryFee: formData.entryFee,
         prizePool: formData.prizePool,
+        prizeType: formData.prizeType,
         type: formData.type,
         description: formData.description,
         imageUrl: imageUrl || null,
@@ -519,6 +523,7 @@ export default function AdminCompetitions() {
       pegsTotal: competition.pegsTotal.toString(),
       entryFee: competition.entryFee,
       prizePool: competition.prizePool,
+      prizeType: competition.prizeType || "pool",
       type: competition.type,
       description: competition.description,
       imageUrl: competition.imageUrl || "",
@@ -992,18 +997,37 @@ export default function AdminCompetitions() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="prizePool">Prize Pool (£)</Label>
-                <Input
-                  id="prizePool"
-                  type="number"
-                  value={formData.prizePool}
-                  onChange={(e) =>
-                    setFormData({ ...formData, prizePool: e.target.value })
+                <Label htmlFor="prizeType">Prize Type</Label>
+                <Select
+                  value={formData.prizeType}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, prizeType: value })
                   }
-                  placeholder="1200"
-                  data-testid="input-prize-pool"
-                />
+                >
+                  <SelectTrigger id="prizeType" data-testid="select-prize-type">
+                    <SelectValue placeholder="Select prize type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pool">Pool Prize (£)</SelectItem>
+                    <SelectItem value="other">Other Prize</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="prizePool">
+                {formData.prizeType === "pool" ? "Prize Pool (£)" : "Prize Description"}
+              </Label>
+              <Input
+                id="prizePool"
+                type={formData.prizeType === "pool" ? "number" : "text"}
+                value={formData.prizePool}
+                onChange={(e) =>
+                  setFormData({ ...formData, prizePool: e.target.value })
+                }
+                placeholder={formData.prizeType === "pool" ? "1200" : "e.g., Fishing rod and tackle set"}
+                data-testid="input-prize-pool"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
@@ -1157,17 +1181,37 @@ export default function AdminCompetitions() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-prizePool">Prize Pool (£)</Label>
-                <Input
-                  id="edit-prizePool"
-                  type="number"
-                  value={formData.prizePool}
-                  onChange={(e) =>
-                    setFormData({ ...formData, prizePool: e.target.value })
+                <Label htmlFor="edit-prizeType">Prize Type</Label>
+                <Select
+                  value={formData.prizeType}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, prizeType: value })
                   }
-                  data-testid="input-edit-prize-pool"
-                />
+                >
+                  <SelectTrigger id="edit-prizeType" data-testid="select-edit-prize-type">
+                    <SelectValue placeholder="Select prize type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pool">Pool Prize (£)</SelectItem>
+                    <SelectItem value="other">Other Prize</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
+            </div>
+            <div className="grid gap-2">
+              <Label htmlFor="edit-prizePool">
+                {formData.prizeType === "pool" ? "Prize Pool (£)" : "Prize Description"}
+              </Label>
+              <Input
+                id="edit-prizePool"
+                type={formData.prizeType === "pool" ? "number" : "text"}
+                value={formData.prizePool}
+                onChange={(e) =>
+                  setFormData({ ...formData, prizePool: e.target.value })
+                }
+                placeholder={formData.prizeType === "pool" ? "1200" : "e.g., Fishing rod and tackle set"}
+                data-testid="input-edit-prize-pool"
+              />
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
