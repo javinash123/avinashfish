@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition, News, GalleryImage } from "@shared/schema";
@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function Home() {
@@ -213,34 +213,70 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredNews.slice(0, 3).map((news) => (
-                <Card key={news.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full" data-testid={`card-news-${news.id}`}>
-                  {news.image && (
+              {featuredNews.slice(0, 3).map((news) => {
+                const getCategoryBadge = (category: string) => {
+                  switch (category) {
+                    case "match-report":
+                      return { label: "Match Report", variant: "default" as const, icon: Trophy };
+                    case "announcement":
+                      return { label: "Announcement", variant: "secondary" as const, icon: Newspaper };
+                    case "news":
+                      return { label: "News", variant: "outline" as const, icon: Newspaper };
+                    default:
+                      return { label: category, variant: "outline" as const, icon: Newspaper };
+                  }
+                };
+                
+                const categoryInfo = getCategoryBadge(news.category);
+                const CategoryIcon = categoryInfo.icon;
+                
+                return (
+                  <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
                     <div className="relative aspect-video overflow-hidden">
                       <img
                         src={news.image}
                         alt={news.title}
                         className="w-full h-full object-cover"
                       />
-                    </div>
-                  )}
-                  <CardContent className="p-6 flex flex-col gap-4">
-                    <div>
-                      <div className="text-sm text-muted-foreground mb-2">
-                        {format(new Date(news.date), "dd MMM yyyy")}
+                      <div className="absolute top-2 left-2">
+                        <Badge variant={categoryInfo.variant}>
+                          <CategoryIcon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
                       </div>
-                      <h3 className="text-xl font-bold mb-2 line-clamp-2">{news.title}</h3>
-                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
                     </div>
-                    <Link href={`/news/${news.id}`} className="mt-auto">
-                      <Button variant="ghost" size="sm" data-testid={`button-read-more-${news.id}`}>
+                    <CardHeader>
+                      <h3 className="text-xl font-semibold line-clamp-2" data-testid={`text-news-title-${news.id}`}>
+                        {news.title}
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
+                    </CardContent>
+                    <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{news.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{news.readTime}</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => window.location.href = `/news#${news.id}`}
+                        data-testid={`button-read-more-${news.id}`}
+                      >
                         Read More
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
-                    </Link>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardFooter>
+                  </Card>
+                );
+              })}
             </div>
           </div>
         </section>
@@ -263,7 +299,7 @@ export default function Home() {
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {featuredGallery.slice(0, 4).map((image) => (
-                <Card key={image.id} className="overflow-hidden hover:shadow-lg transition-shadow h-full" data-testid={`card-gallery-${image.id}`}>
+                <Card key={image.id} className="group overflow-hidden hover-elevate active-elevate-2" data-testid={`card-gallery-${image.id}`}>
                   <div className="relative aspect-[4/3] overflow-hidden">
                     <img
                       src={image.urls[0]}
@@ -278,25 +314,41 @@ export default function Home() {
                         </Badge>
                       </div>
                     )}
-                  </div>
-                  <CardContent className="p-4 flex flex-col gap-2">
-                    <div>
-                      <h3 className="font-bold line-clamp-1">{image.title}</h3>
-                      <p className="text-sm text-muted-foreground line-clamp-2">{image.description}</p>
-                      {image.weight && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <Trophy className="h-4 w-4 text-primary" />
-                          <span className="text-sm font-semibold">{image.weight}</span>
-                        </div>
-                      )}
+                    <div className="absolute top-2 right-2">
+                      <Badge variant={image.category === "catch" ? "default" : "secondary"}>
+                        {image.category === "catch" ? (
+                          <>
+                            <Fish className="h-3 w-3 mr-1" />
+                            Catch
+                          </>
+                        ) : (
+                          <>
+                            <Calendar className="h-3 w-3 mr-1" />
+                            Event
+                          </>
+                        )}
+                      </Badge>
                     </div>
-                    <Link href="/gallery" className="mt-auto">
-                      <Button variant="ghost" size="sm" data-testid={`button-view-gallery-${image.id}`}>
-                        View Gallery
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold mb-1 line-clamp-1" data-testid={`text-gallery-title-${image.id}`}>
+                      {image.title}
+                    </h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{image.description}</p>
+                    {image.weight && (
+                      <div className="flex items-center gap-2 mt-2">
+                        <Trophy className="h-4 w-4 text-primary" />
+                        <span className="text-sm font-semibold">{image.weight}</span>
+                      </div>
+                    )}
+                    <Link href="/gallery" className="mt-3 block">
+                      <Button variant="ghost" size="sm" className="w-full" data-testid={`button-view-gallery-${image.id}`}>
+                        Read More
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>
-                  </CardContent>
+                  </div>
                 </Card>
               ))}
             </div>

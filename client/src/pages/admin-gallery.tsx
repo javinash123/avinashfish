@@ -580,12 +580,12 @@ export default function AdminGallery() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="weight">Weight</Label>
+                  <Label htmlFor="weight">Weight (lbs)</Label>
                   <Input
                     id="weight"
                     value={formData.weight}
                     onChange={(e) => setFormData({ ...formData, weight: e.target.value })}
-                    placeholder="45.8 kg"
+                    placeholder="100.0 lbs"
                     data-testid="input-weight"
                   />
                 </div>
@@ -772,7 +772,7 @@ export default function AdminGallery() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="edit-weight">Weight</Label>
+                  <Label htmlFor="edit-weight">Weight (lbs)</Label>
                   <Input
                     id="edit-weight"
                     value={formData.weight}

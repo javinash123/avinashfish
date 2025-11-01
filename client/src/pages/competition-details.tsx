@@ -166,10 +166,20 @@ export default function CompetitionDetails() {
               )}
               <div className="absolute top-4 right-4">
                 <Badge
-                  className="bg-chart-4 text-white animate-pulse"
+                  className={
+                    competitionStatus === "live"
+                      ? "bg-chart-4 text-white animate-pulse"
+                      : competitionStatus === "upcoming"
+                      ? "bg-blue-500 text-white"
+                      : "bg-gray-500 text-white"
+                  }
                   data-testid="badge-status"
                 >
-                  Live Now
+                  {competitionStatus === "live"
+                    ? "Live Now"
+                    : competitionStatus === "upcoming"
+                    ? "Upcoming"
+                    : "Completed"}
                 </Badge>
               </div>
             </div>

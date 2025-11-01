@@ -363,6 +363,11 @@ export const updateUserProfileSchema = z.object({
   favouriteMethod: z.string().optional(),
   favouriteSpecies: z.string().optional(),
   avatar: z.string().optional(),
+  youtubeUrl: z.string().optional(),
+  facebookUrl: z.string().optional(),
+  twitterUrl: z.string().optional(),
+  instagramUrl: z.string().optional(),
+  tiktokUrl: z.string().optional(),
 }).refine(data => Object.values(data).some(val => val !== undefined), {
   message: "At least one field must be provided",
 });

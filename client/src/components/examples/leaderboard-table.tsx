@@ -7,34 +7,34 @@ export default function LeaderboardTableExample() {
       position: 1,
       anglerName: "James Mitchell",
       pegNumber: 23,
-      weight: "45.8 kg",
+      weight: "100.0 lbs",
       club: "Thames Anglers"
     },
     {
       position: 2,
       anglerName: "Sarah Thompson",
       pegNumber: 12,
-      weight: "42.3 kg",
+      weight: "92.5 lbs",
       club: "Bristol Fishing Club"
     },
     {
       position: 3,
       anglerName: "David Brown",
       pegNumber: 8,
-      weight: "39.5 kg",
+      weight: "86.3 lbs",
     },
     {
       position: 4,
       anglerName: "Michael Green",
       pegNumber: 31,
-      weight: "37.2 kg",
+      weight: "81.2 lbs",
       club: "Manchester Carp"
     },
     {
       position: 5,
       anglerName: "Emma Wilson",
       pegNumber: 19,
-      weight: "35.9 kg",
+      weight: "78.5 lbs",
     },
   ];
 
