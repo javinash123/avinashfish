@@ -8,8 +8,10 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   User as UserIcon, Trophy, Calendar, MapPin, Fish, TrendingUp, 
-  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera
+  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera, Share2
 } from "lucide-react";
+import { SiFacebook, SiX, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
+import { FaWhatsapp } from "react-icons/fa";
 import {
   Dialog,
   DialogContent,
@@ -419,9 +421,126 @@ export default function Profile() {
                   )}
                 </div>
 
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
                   <Calendar className="h-4 w-4" />
                   <span>Member since {new Date(displayUser.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'Europe/London' })}</span>
+                </div>
+
+                {(displayUser.youtubeUrl || displayUser.facebookUrl || displayUser.twitterUrl || displayUser.instagramUrl || displayUser.tiktokUrl) && (
+                  <div className="border-t pt-4 mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-sm font-semibold">Social Media:</span>
+                      <div className="flex gap-2">
+                        {displayUser.youtubeUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => displayUser.youtubeUrl && window.open(displayUser.youtubeUrl, '_blank')}
+                            data-testid="button-youtube"
+                          >
+                            <SiYoutube className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {displayUser.facebookUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => displayUser.facebookUrl && window.open(displayUser.facebookUrl, '_blank')}
+                            data-testid="button-facebook"
+                          >
+                            <SiFacebook className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {displayUser.twitterUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => displayUser.twitterUrl && window.open(displayUser.twitterUrl, '_blank')}
+                            data-testid="button-twitter"
+                          >
+                            <SiX className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {displayUser.instagramUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
+                            data-testid="button-instagram"
+                          >
+                            <SiInstagram className="h-4 w-4" />
+                          </Button>
+                        )}
+                        {displayUser.tiktokUrl && (
+                          <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => displayUser.tiktokUrl && window.open(displayUser.tiktokUrl, '_blank')}
+                            data-testid="button-tiktok"
+                          >
+                            <SiTiktok className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <div className="border-t pt-4">
+                  <div className="flex items-center gap-2">
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-2">Share Profile:</span>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = window.location.origin + `/profile/${displayUser.username}`;
+                        const text = `Check out ${displayUser.firstName} ${displayUser.lastName}'s fishing profile`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + url)}`, '_blank');
+                      }}
+                      data-testid="button-share-whatsapp"
+                    >
+                      <FaWhatsapp className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = window.location.origin + `/profile/${displayUser.username}`;
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-facebook"
+                    >
+                      <SiFacebook className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = window.location.origin + `/profile/${displayUser.username}`;
+                        const text = `Check out ${displayUser.firstName} ${displayUser.lastName}'s fishing profile`;
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-x"
+                    >
+                      <SiX className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const url = window.location.origin + `/profile/${displayUser.username}`;
+                        navigator.clipboard.writeText(url);
+                        toast({
+                          title: "Link copied!",
+                          description: "Profile link copied to clipboard",
+                        });
+                      }}
+                      data-testid="button-share-copy"
+                    >
+                      Copy Link
+                    </Button>
+                  </div>
                 </div>
               </div>
             </div>

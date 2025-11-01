@@ -26,6 +26,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Fish, Calendar, Image as ImageIcon, Trophy, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -49,6 +50,7 @@ export default function AdminGallery() {
     date: "",
     angler: "",
     weight: "",
+    featured: false,
   });
 
   const { data: images = [], isLoading } = useQuery<GalleryImage[]>({
@@ -201,6 +203,7 @@ export default function AdminGallery() {
         date: formData.date,
         angler: formData.angler || undefined,
         weight: formData.weight || undefined,
+        featured: formData.featured,
       };
 
       createMutation.mutate(imageData);
@@ -249,6 +252,7 @@ export default function AdminGallery() {
         date: formData.date,
         angler: formData.angler || undefined,
         weight: formData.weight || undefined,
+        featured: formData.featured,
       };
 
       updateMutation.mutate({ id: selectedImage.id, data: imageData });
@@ -284,6 +288,7 @@ export default function AdminGallery() {
       date: image.date,
       angler: image.angler || "",
       weight: image.weight || "",
+      featured: image.featured || false,
     });
     setImageFiles([]);
     setIsEditOpen(true);
@@ -299,6 +304,7 @@ export default function AdminGallery() {
       date: "",
       angler: "",
       weight: "",
+      featured: false,
     });
     setImageFiles([]);
   };
@@ -585,6 +591,17 @@ export default function AdminGallery() {
                 </div>
               </div>
             )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked as boolean })}
+                data-testid="checkbox-featured"
+              />
+              <Label htmlFor="featured" className="cursor-pointer">
+                Feature this image on homepage
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel">
@@ -765,6 +782,17 @@ export default function AdminGallery() {
                 </div>
               </div>
             )}
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="edit-featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked as boolean })}
+                data-testid="checkbox-edit-featured"
+              />
+              <Label htmlFor="edit-featured" className="cursor-pointer">
+                Feature this image on homepage
+              </Label>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEditOpen(false)} data-testid="button-cancel-edit">

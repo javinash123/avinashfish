@@ -23,6 +23,11 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
   const [location, setLocation] = useState(user.location || "");
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || "");
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || "");
+  const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || "");
+  const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || "");
+  const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || "");
+  const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || "");
+  const [tiktokUrl, setTiktokUrl] = useState(user.tiktokUrl || "");
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: {
@@ -31,6 +36,11 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       location?: string;
       favouriteMethod?: string;
       favouriteSpecies?: string;
+      youtubeUrl?: string;
+      facebookUrl?: string;
+      twitterUrl?: string;
+      instagramUrl?: string;
+      tiktokUrl?: string;
     }) => {
       const response = await apiRequest("PUT", "/api/user/profile", data);
       return response.json();
@@ -60,6 +70,11 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       location,
       favouriteMethod,
       favouriteSpecies,
+      youtubeUrl,
+      facebookUrl,
+      twitterUrl,
+      instagramUrl,
+      tiktokUrl,
     });
   };
 
@@ -122,6 +137,60 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
               value={favouriteSpecies}
               onChange={(e) => setFavouriteSpecies(e.target.value)}
               data-testid="input-species"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label className="text-lg font-semibold">Social Media</Label>
+            <p className="text-sm text-muted-foreground">Add your social media profiles (optional)</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="youtubeUrl">YouTube URL</Label>
+            <Input
+              id="youtubeUrl"
+              placeholder="https://youtube.com/@username"
+              value={youtubeUrl}
+              onChange={(e) => setYoutubeUrl(e.target.value)}
+              data-testid="input-youtube"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="facebookUrl">Facebook URL</Label>
+            <Input
+              id="facebookUrl"
+              placeholder="https://facebook.com/username"
+              value={facebookUrl}
+              onChange={(e) => setFacebookUrl(e.target.value)}
+              data-testid="input-facebook"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="twitterUrl">Twitter/X URL</Label>
+            <Input
+              id="twitterUrl"
+              placeholder="https://twitter.com/username"
+              value={twitterUrl}
+              onChange={(e) => setTwitterUrl(e.target.value)}
+              data-testid="input-twitter"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="instagramUrl">Instagram URL</Label>
+            <Input
+              id="instagramUrl"
+              placeholder="https://instagram.com/username"
+              value={instagramUrl}
+              onChange={(e) => setInstagramUrl(e.target.value)}
+              data-testid="input-instagram"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="tiktokUrl">TikTok URL</Label>
+            <Input
+              id="tiktokUrl"
+              placeholder="https://tiktok.com/@username"
+              value={tiktokUrl}
+              onChange={(e) => setTiktokUrl(e.target.value)}
+              data-testid="input-tiktok"
             />
           </div>
           <DialogFooter>

@@ -16,6 +16,11 @@ export const users = pgTable("users", {
   favouriteMethod: text("favourite_method"),
   favouriteSpecies: text("favourite_species"),
   location: text("location"),
+  youtubeUrl: text("youtube_url"),
+  facebookUrl: text("facebook_url"),
+  twitterUrl: text("twitter_url"),
+  instagramUrl: text("instagram_url"),
+  tiktokUrl: text("tiktok_url"),
   status: text("status").notNull().default("active"),
   memberSince: timestamp("member_since").notNull().defaultNow(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
@@ -202,6 +207,7 @@ export const news = pgTable("news", {
   readTime: text("read_time").notNull(),
   image: text("image").notNull(),
   competition: text("competition"),
+  featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -229,6 +235,7 @@ export const galleryImages = pgTable("gallery_images", {
   date: text("date").notNull(),
   angler: text("angler"),
   weight: text("weight"),
+  featured: boolean("featured").notNull().default(false),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

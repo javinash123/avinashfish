@@ -3,10 +3,10 @@ import { Button } from "@/components/ui/button";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import type { Competition } from "@shared/schema";
+import type { Competition, News, GalleryImage } from "@shared/schema";
 import { format } from "date-fns";
 import {
   Select,
@@ -21,6 +21,14 @@ import { getCompetitionStatus } from "@/lib/uk-timezone";
 export default function Home() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
+  });
+
+  const { data: featuredNews = [] } = useQuery<News[]>({
+    queryKey: ["/api/news/featured"],
+  });
+
+  const { data: featuredGallery = [] } = useQuery<GalleryImage[]>({
+    queryKey: ["/api/gallery/featured"],
   });
 
   // Filter upcoming competitions - only show if status is upcoming
@@ -117,6 +125,81 @@ export default function Home() {
           </div>
         </div>
       </section>
+
+      {featuredNews.length > 0 && (
+        <section className="py-12 bg-muted/30">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <Newspaper className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
+              </div>
+              <Link href="/news">
+                <Button variant="outline" data-testid="button-view-all-news">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredNews.slice(0, 3).map((news) => (
+                <Link key={news.id} href={`/news/${news.id}`}>
+                  <Card className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer h-full">
+                    {news.image && (
+                      <img
+                        src={news.image}
+                        alt={news.title}
+                        className="w-full h-48 object-cover"
+                      />
+                    )}
+                    <CardContent className="p-6">
+                      <div className="text-sm text-muted-foreground mb-2">
+                        {format(new Date(news.date), "dd MMM yyyy")}
+                      </div>
+                      <h3 className="text-xl font-bold mb-2 line-clamp-2">{news.title}</h3>
+                      <p className="text-muted-foreground line-clamp-3">{news.content}</p>
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
+
+      {featuredGallery.length > 0 && (
+        <section className="py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
+              </div>
+              <Link href="/gallery">
+                <Button variant="outline" data-testid="button-view-all-gallery">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+              {featuredGallery.slice(0, 4).map((image) => (
+                <Card key={image.id} className="overflow-hidden hover:shadow-lg transition-shadow cursor-pointer">
+                  <img
+                    src={image.urls[0]}
+                    alt={image.title}
+                    className="w-full h-64 object-cover"
+                  />
+                  <CardContent className="p-4">
+                    <h3 className="font-bold line-clamp-1">{image.title}</h3>
+                    <p className="text-sm text-muted-foreground line-clamp-2">{image.description}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="py-16 container mx-auto px-4 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">

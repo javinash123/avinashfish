@@ -1513,6 +1513,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get("/api/news/featured", async (req, res) => {
+    try {
+      const allNews = await storage.getAllNews();
+      const featuredNews = allNews.filter(item => item.featured === true);
+      res.json(featuredNews);
+    } catch (error: any) {
+      console.error("Error fetching featured news:", error);
+      res.status(500).json({ message: "Error fetching featured news: " + error.message });
+    }
+  });
+
   // Admin news management routes
   app.post("/api/admin/news", async (req, res) => {
     try {
@@ -1585,6 +1596,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching gallery images:", error);
       res.status(500).json({ message: "Error fetching gallery images: " + error.message });
+    }
+  });
+
+  app.get("/api/gallery/featured", async (req, res) => {
+    try {
+      const allImages = await storage.getAllGalleryImages();
+      const featuredImages = allImages.filter(image => image.featured === true);
+      res.json(featuredImages);
+    } catch (error: any) {
+      console.error("Error fetching featured gallery images:", error);
+      res.status(500).json({ message: "Error fetching featured gallery images: " + error.message });
     }
   });
 

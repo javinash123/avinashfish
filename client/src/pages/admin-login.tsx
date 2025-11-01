@@ -46,7 +46,7 @@ export default function AdminLogin() {
       if (response.ok) {
         toast({
           title: "Login successful",
-          description: `Welcome back, ${data.name}!`,
+          description: `Welcome back, ${data.firstName} ${data.lastName}!`,
         });
         setLocation("/admin");
       } else {

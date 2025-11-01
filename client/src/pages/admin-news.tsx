@@ -34,6 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Plus, Pencil, Trash2, Trophy, Newspaper, Search, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import ReactQuill from 'react-quill';
@@ -60,6 +61,7 @@ export default function AdminNews() {
     readTime: "",
     image: "",
     competition: "",
+    featured: false,
   });
 
   const { data: articles = [], isLoading } = useQuery<News[]>({
@@ -167,6 +169,7 @@ export default function AdminNews() {
         readTime: formData.readTime,
         image: imageUrl,
         competition: formData.competition || undefined,
+        featured: formData.featured,
       };
 
       createMutation.mutate(newsData);
@@ -204,6 +207,7 @@ export default function AdminNews() {
         readTime: formData.readTime,
         image: imageUrl,
         competition: formData.competition || undefined,
+        featured: formData.featured,
       };
 
       updateMutation.mutate({ id: selectedArticle.id, data: newsData });
@@ -240,6 +244,7 @@ export default function AdminNews() {
       readTime: article.readTime,
       image: article.image,
       competition: article.competition || "",
+      featured: article.featured || false,
     });
     setIsEditOpen(true);
   };
@@ -255,6 +260,7 @@ export default function AdminNews() {
       readTime: "",
       image: "",
       competition: "",
+      featured: false,
     });
   };
 
@@ -513,6 +519,17 @@ export default function AdminNews() {
                 data-testid="input-competition"
               />
             </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked as boolean })}
+                data-testid="checkbox-featured"
+              />
+              <Label htmlFor="featured" className="cursor-pointer">
+                Feature this article on homepage
+              </Label>
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="image">Upload Image</Label>
               <Input
@@ -632,6 +649,17 @@ export default function AdminNews() {
                 onChange={(e) => setFormData({ ...formData, competition: e.target.value })}
                 data-testid="input-edit-competition"
               />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Checkbox
+                id="edit-featured"
+                checked={formData.featured}
+                onCheckedChange={(checked) => setFormData({ ...formData, featured: checked as boolean })}
+                data-testid="checkbox-edit-featured"
+              />
+              <Label htmlFor="edit-featured" className="cursor-pointer">
+                Feature this article on homepage
+              </Label>
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-image">Upload New Image (optional)</Label>
