@@ -34,8 +34,10 @@ app.set('trust proxy', 1);
 
 // Disable ETag generation to prevent HTTP 304 caching
 app.set('etag', false);
-app.use(express.json());
-app.use(express.urlencoded({ extended: false }));
+
+// Increase body size limit to handle rich text content with embedded images
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: false, limit: '50mb' }));
 
 // Configure CORS based on environment
 const allowedOrigins = process.env.ALLOWED_ORIGINS 

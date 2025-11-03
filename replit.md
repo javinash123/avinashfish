@@ -40,6 +40,25 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 03, 2025 - Homepage Layout, News Enhancements & Request Size Fix
+*   **Homepage Section Reordering:** Moved featured news section to appear immediately after hero, before upcoming competitions for better content visibility.
+*   **General News Category:** Added "General" as a new category option for news content management:
+    - Category dropdown in create/edit news dialogs
+    - General filter button on admin news listing page
+    - Proper badge display on frontend
+    - Database compatible: uses existing text field, no schema changes
+*   **Enhanced Rich Text Editor:** Upgraded ReactQuill news editor with comprehensive formatting toolbar:
+    - Headings (H1-H6), font and size options
+    - Text formatting (bold, italic, underline, strikethrough)
+    - Colors (text and background), subscript/superscript
+    - Lists (ordered, bullet, indent controls)
+    - Text alignment, block quotes, code blocks
+    - Link, image, and video insertion
+    - Increased editor height from 200px to 300px for better UX
+*   **Profile Avatar Fix:** Added `object-cover` CSS to profile avatars to prevent image stretching/squashing while maintaining aspect ratio.
+*   **Request Size Limit Increase:** Increased Express body parser limit from default 100kb to 50mb to handle rich text content with embedded images, resolving "request entity too large" errors when creating news articles with images.
+*   **Files Modified:** client/src/pages/home.tsx, client/src/pages/admin-news.tsx, client/src/pages/profile.tsx, server/index.ts
+
 ### October 28, 2025 - Production Deployment Security Fixes (AWS EC2 / MongoDB Atlas)
 *   **Security Hardening:** Fixed critical security vulnerabilities for production deployment on AWS EC2 with MongoDB Atlas.
 *   **No Default Credentials in Production:** Default admin account (admin@pegslam.co.uk / admin123) and sample users are now only created in development mode (NODE_ENV !== 'production'). Production requires manual admin account creation with strong passwords.

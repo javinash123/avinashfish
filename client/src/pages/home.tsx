@@ -128,6 +128,93 @@ export default function Home() {
         </div>
       </section>
 
+      {featuredNews.length > 0 && (
+        <section className="py-12">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <Newspaper className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
+              </div>
+              <Link href="/news">
+                <Button variant="outline" data-testid="button-view-all-news">
+                  View All
+                  <ArrowRight className="ml-2 h-4 w-4" />
+                </Button>
+              </Link>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {featuredNews.slice(0, 3).map((news) => {
+                const getCategoryBadge = (category: string) => {
+                  switch (category) {
+                    case "match-report":
+                      return { label: "Match Report", variant: "default" as const, icon: Trophy };
+                    case "announcement":
+                      return { label: "Announcement", variant: "secondary" as const, icon: Newspaper };
+                    case "news":
+                      return { label: "News", variant: "outline" as const, icon: Newspaper };
+                    case "general":
+                      return { label: "General", variant: "outline" as const, icon: Newspaper };
+                    default:
+                      return { label: category, variant: "outline" as const, icon: Newspaper };
+                  }
+                };
+                
+                const categoryInfo = getCategoryBadge(news.category);
+                const CategoryIcon = categoryInfo.icon;
+                
+                return (
+                  <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
+                    <div className="relative aspect-video overflow-hidden">
+                      <img
+                        src={news.image}
+                        alt={news.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <Badge variant={categoryInfo.variant}>
+                          <CategoryIcon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardHeader>
+                      <h3 className="text-xl font-semibold line-clamp-2" data-testid={`text-news-title-${news.id}`}>
+                        {news.title}
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
+                    </CardContent>
+                    <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{news.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{news.readTime}</span>
+                        </div>
+                      </div>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => window.location.href = `/news#${news.id}`}
+                        data-testid={`button-read-more-${news.id}`}
+                      >
+                        Read More
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+      )}
+
       <section className="py-16 container mx-auto px-4 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
@@ -196,91 +283,6 @@ export default function Home() {
           )}
         </div>
       </section>
-
-      {featuredNews.length > 0 && (
-        <section className="py-12">
-          <div className="container mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Newspaper className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
-              </div>
-              <Link href="/news">
-                <Button variant="outline" data-testid="button-view-all-news">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredNews.slice(0, 3).map((news) => {
-                const getCategoryBadge = (category: string) => {
-                  switch (category) {
-                    case "match-report":
-                      return { label: "Match Report", variant: "default" as const, icon: Trophy };
-                    case "announcement":
-                      return { label: "Announcement", variant: "secondary" as const, icon: Newspaper };
-                    case "news":
-                      return { label: "News", variant: "outline" as const, icon: Newspaper };
-                    default:
-                      return { label: category, variant: "outline" as const, icon: Newspaper };
-                  }
-                };
-                
-                const categoryInfo = getCategoryBadge(news.category);
-                const CategoryIcon = categoryInfo.icon;
-                
-                return (
-                  <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
-                    <div className="relative aspect-video overflow-hidden">
-                      <img
-                        src={news.image}
-                        alt={news.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute top-2 left-2">
-                        <Badge variant={categoryInfo.variant}>
-                          <CategoryIcon className="h-3 w-3 mr-1" />
-                          {categoryInfo.label}
-                        </Badge>
-                      </div>
-                    </div>
-                    <CardHeader>
-                      <h3 className="text-xl font-semibold line-clamp-2" data-testid={`text-news-title-${news.id}`}>
-                        {news.title}
-                      </h3>
-                    </CardHeader>
-                    <CardContent className="flex-1">
-                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
-                    </CardContent>
-                    <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{news.date}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{news.readTime}</span>
-                        </div>
-                      </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => window.location.href = `/news#${news.id}`}
-                        data-testid={`button-read-more-${news.id}`}
-                      >
-                        Read More
-                        <ArrowRight className="ml-2 h-4 w-4" />
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                );
-              })}
-            </div>
-          </div>
-        </section>
-      )}
 
       {featuredGallery.length > 0 && (
         <section className="py-12 bg-muted/30">

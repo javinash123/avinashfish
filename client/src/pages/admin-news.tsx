@@ -40,13 +40,40 @@ import { useToast } from "@/hooks/use-toast";
 import ReactQuill from 'react-quill';
 import 'react-quill/dist/quill.snow.css';
 
+const quillModules = {
+  toolbar: [
+    [{ 'header': [1, 2, 3, 4, 5, 6, false] }],
+    [{ 'font': [] }],
+    [{ 'size': ['small', false, 'large', 'huge'] }],
+    ['bold', 'italic', 'underline', 'strike'],
+    [{ 'color': [] }, { 'background': [] }],
+    [{ 'script': 'sub'}, { 'script': 'super' }],
+    [{ 'list': 'ordered'}, { 'list': 'bullet' }, { 'indent': '-1'}, { 'indent': '+1' }],
+    [{ 'align': [] }],
+    ['blockquote', 'code-block'],
+    ['link', 'image', 'video'],
+    ['clean']
+  ],
+};
+
+const quillFormats = [
+  'header', 'font', 'size',
+  'bold', 'italic', 'underline', 'strike',
+  'color', 'background',
+  'script',
+  'list', 'bullet', 'indent',
+  'align',
+  'blockquote', 'code-block',
+  'link', 'image', 'video'
+];
+
 export default function AdminNews() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
-  const [categoryFilter, setCategoryFilter] = useState<"all" | "match-report" | "announcement" | "news">("all");
+  const [categoryFilter, setCategoryFilter] = useState<"all" | "match-report" | "announcement" | "news" | "general">("all");
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [uploadingImage, setUploadingImage] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -357,6 +384,14 @@ export default function AdminNews() {
           >
             News
           </Button>
+          <Button
+            variant={categoryFilter === "general" ? "default" : "outline"}
+            onClick={() => setCategoryFilter("general")}
+            size="sm"
+            data-testid="filter-general"
+          >
+            General
+          </Button>
         </div>
       </div>
 
@@ -473,6 +508,7 @@ export default function AdminNews() {
                     <SelectItem value="match-report">Match Report</SelectItem>
                     <SelectItem value="announcement">Announcement</SelectItem>
                     <SelectItem value="news">News</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -558,9 +594,11 @@ export default function AdminNews() {
                 theme="snow"
                 value={formData.content}
                 onChange={(value) => setFormData({ ...formData, content: value })}
+                modules={quillModules}
+                formats={quillFormats}
                 placeholder="Write your article content with formatting..."
                 className="bg-background"
-                style={{ height: '200px', marginBottom: '50px' }}
+                style={{ height: '300px', marginBottom: '50px' }}
               />
             </div>
           </div>
@@ -607,6 +645,7 @@ export default function AdminNews() {
                     <SelectItem value="match-report">Match Report</SelectItem>
                     <SelectItem value="announcement">Announcement</SelectItem>
                     <SelectItem value="news">News</SelectItem>
+                    <SelectItem value="general">General</SelectItem>
                   </SelectContent>
                 </Select>
               </div>

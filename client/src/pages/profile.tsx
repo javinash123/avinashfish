@@ -329,7 +329,7 @@ export default function Profile() {
               <div className="flex flex-col items-center md:items-start">
                 <div className="relative mb-4">
                   <Avatar className="h-32 w-32" data-testid="avatar-profile">
-                    {displayUser.avatar && <AvatarImage src={displayUser.avatar} alt={`${displayUser.firstName} ${displayUser.lastName}`} />}
+                    {displayUser.avatar && <AvatarImage src={displayUser.avatar} alt={`${displayUser.firstName} ${displayUser.lastName}`} className="object-cover" />}
                     <AvatarFallback className="text-3xl">
                       {displayUser.firstName[0]}{displayUser.lastName[0]}
                     </AvatarFallback>
