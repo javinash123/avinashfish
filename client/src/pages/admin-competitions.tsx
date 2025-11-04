@@ -40,6 +40,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
+import { convertToOunces, formatWeight, convertFromOunces } from "@shared/weight-utils";
 
 export default function AdminCompetitions() {
   const { toast } = useToast();
@@ -54,10 +55,11 @@ export default function AdminCompetitions() {
   
   // Weigh-in state
   const [weighInEntries, setWeighInEntries] = useState<Record<string, { peg: number; weight: number; angler: string; time: string }[]>>({});
-  const [weighInForm, setWeighInForm] = useState({ pegNumber: "", weight: "" });
+  const [weighInForm, setWeighInForm] = useState({ pegNumber: "", pounds: "", ounces: "" });
   const [selectedPegForView, setSelectedPegForView] = useState<number | null>(null);
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
-  const [editWeight, setEditWeight] = useState("");
+  const [editPounds, setEditPounds] = useState("");
+  const [editOunces, setEditOunces] = useState("");
   const [editingPegParticipantId, setEditingPegParticipantId] = useState<string | null>(null);
   const [editPegNumber, setEditPegNumber] = useState("");
 
@@ -222,11 +224,11 @@ export default function AdminCompetitions() {
         [selectedCompetition?.id || ""]: [newEntry, ...existingEntries]
       });
       
-      setWeighInForm({ pegNumber: "", weight: "" });
+      setWeighInForm({ pegNumber: "", pounds: "", ounces: "" });
       
       toast({
         title: "Weight recorded",
-        description: `${variables.weight} lbs recorded for ${anglerName} (Peg ${variables.pegNumber})`,
+        description: `${formatWeight(variables.weight)} recorded for ${anglerName} (Peg ${variables.pegNumber})`,
       });
     },
     onError: () => {
@@ -250,7 +252,8 @@ export default function AdminCompetitions() {
         });
       }
       setEditingEntryId(null);
-      setEditWeight("");
+      setEditPounds("");
+      setEditOunces("");
       toast({
         title: "Weight updated",
         description: "The weight entry has been updated successfully.",
@@ -635,33 +638,34 @@ export default function AdminCompetitions() {
   };
 
   const handleSubmitWeight = () => {
-    if (!selectedCompetition || !weighInForm.pegNumber || !weighInForm.weight) {
+    if (!selectedCompetition || !weighInForm.pegNumber || !weighInForm.pounds || !weighInForm.ounces) {
       toast({
         title: "Error",
-        description: "Please enter both peg number and weight.",
-        variant: "destructive",
-      });
-      return;
-    }
-    
-    // Validate weight format (requires at least one digit, max 3 decimal places)
-    if (!/^\d+(?:\.\d{1,3})?$/.test(weighInForm.weight)) {
-      toast({
-        title: "Invalid weight",
-        description: "Please enter a valid weight (e.g., 12.5, 10.125). Maximum 3 decimal places.",
+        description: "Please enter peg number, pounds, and ounces.",
         variant: "destructive",
       });
       return;
     }
     
     const pegNumber = parseInt(weighInForm.pegNumber);
-    const weight = parseFloat(weighInForm.weight);
+    const pounds = parseInt(weighInForm.pounds);
+    const ounces = parseInt(weighInForm.ounces);
     
-    // Additional check for valid number
-    if (!Number.isFinite(weight) || weight <= 0) {
+    // Validate numeric values
+    if (!Number.isFinite(pounds) || !Number.isFinite(ounces) || pounds < 0 || ounces < 0) {
       toast({
         title: "Invalid weight",
-        description: "Weight must be a positive number.",
+        description: "Please select valid pounds and ounces.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // Check if at least some weight is entered
+    if (pounds === 0 && ounces === 0) {
+      toast({
+        title: "Invalid weight",
+        description: "Weight must be greater than 0.",
         variant: "destructive",
       });
       return;
@@ -679,12 +683,15 @@ export default function AdminCompetitions() {
       return;
     }
     
-    // Submit to database (weight must be string as per schema)
+    // Convert to total ounces for storage
+    const totalOunces = convertToOunces(pounds, ounces);
+    
+    // Submit to database (weight stored as total ounces in string format)
     submitWeightMutation.mutate({
       competitionId: selectedCompetition.id,
       userId: participant.userId,
       pegNumber: pegNumber,
-      weight: weight.toString(),
+      weight: totalOunces.toString(),
     });
   };
 
@@ -1395,7 +1402,7 @@ export default function AdminCompetitions() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-4 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="peg-number">Peg Number</Label>
                 <Input
@@ -1408,21 +1415,40 @@ export default function AdminCompetitions() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="weight">Weight (lbs)</Label>
-                <Input
-                  id="weight"
-                  type="number"
-                  step="0.001"
-                  placeholder="12.5"
-                  value={weighInForm.weight}
-                  onChange={(e) => {
-                    const value = e.target.value;
-                    if (value === '' || /^\d*\.?\d{0,3}$/.test(value)) {
-                      setWeighInForm({ ...weighInForm, weight: value });
-                    }
-                  }}
-                  data-testid="input-weight"
-                />
+                <Label htmlFor="pounds">Pounds</Label>
+                <Select
+                  value={weighInForm.pounds}
+                  onValueChange={(value) => setWeighInForm({ ...weighInForm, pounds: value })}
+                >
+                  <SelectTrigger id="pounds" data-testid="select-pounds">
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent className="max-h-[200px]">
+                    {Array.from({ length: 101 }, (_, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        {i} lb
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="ounces">Ounces</Label>
+                <Select
+                  value={weighInForm.ounces}
+                  onValueChange={(value) => setWeighInForm({ ...weighInForm, ounces: value })}
+                >
+                  <SelectTrigger id="ounces" data-testid="select-ounces">
+                    <SelectValue placeholder="0" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {Array.from({ length: 16 }, (_, i) => (
+                      <SelectItem key={i} value={i.toString()}>
+                        {i} oz
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
               <div className="grid gap-2">
                 <Label>&nbsp;</Label>
@@ -1472,7 +1498,7 @@ export default function AdminCompetitions() {
                           {participantEntries && (
                             <div className="text-right">
                               <p className="text-sm text-muted-foreground">Total Weight</p>
-                              <p className="text-2xl font-bold">{parseFloat(participantEntries.totalWeight).toFixed(2)} lbs</p>
+                              <p className="text-2xl font-bold">{formatWeight(participantEntries.totalWeight)}</p>
                             </div>
                           )}
                         </div>
@@ -1488,23 +1514,43 @@ export default function AdminCompetitions() {
                                   </span>
                                   {editingEntryId === entry.id ? (
                                     <div className="flex items-center gap-2">
-                                      <Input
-                                        type="number"
-                                        step="0.001"
-                                        value={editWeight}
-                                        onChange={(e) => {
-                                          const value = e.target.value;
-                                          if (value === '' || /^\d+(?:\.\d{0,3})?$/.test(value)) {
-                                            setEditWeight(value);
-                                          }
-                                        }}
-                                        className="w-24 h-8"
-                                        data-testid={`input-edit-weight-${entry.id}`}
-                                      />
+                                      <Select
+                                        value={editPounds}
+                                        onValueChange={setEditPounds}
+                                      >
+                                        <SelectTrigger className="w-20 h-8" data-testid={`select-edit-pounds-${entry.id}`}>
+                                          <SelectValue placeholder="lb" />
+                                        </SelectTrigger>
+                                        <SelectContent className="max-h-[200px]">
+                                          {Array.from({ length: 101 }, (_, i) => (
+                                            <SelectItem key={i} value={i.toString()}>
+                                              {i} lb
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
+                                      <Select
+                                        value={editOunces}
+                                        onValueChange={setEditOunces}
+                                      >
+                                        <SelectTrigger className="w-20 h-8" data-testid={`select-edit-ounces-${entry.id}`}>
+                                          <SelectValue placeholder="oz" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                          {Array.from({ length: 16 }, (_, i) => (
+                                            <SelectItem key={i} value={i.toString()}>
+                                              {i} oz
+                                            </SelectItem>
+                                          ))}
+                                        </SelectContent>
+                                      </Select>
                                       <Button
                                         size="sm"
-                                        onClick={() => updateWeightMutation.mutate({ entryId: entry.id, weight: editWeight })}
-                                        disabled={!editWeight || updateWeightMutation.isPending}
+                                        onClick={() => {
+                                          const totalOunces = convertToOunces(parseInt(editPounds), parseInt(editOunces));
+                                          updateWeightMutation.mutate({ entryId: entry.id, weight: totalOunces.toString() });
+                                        }}
+                                        disabled={!editPounds || !editOunces || updateWeightMutation.isPending}
                                         data-testid={`button-save-weight-${entry.id}`}
                                       >
                                         Save
@@ -1514,7 +1560,8 @@ export default function AdminCompetitions() {
                                         variant="ghost"
                                         onClick={() => {
                                           setEditingEntryId(null);
-                                          setEditWeight("");
+                                          setEditPounds("");
+                                          setEditOunces("");
                                         }}
                                         data-testid={`button-cancel-edit-${entry.id}`}
                                       >
@@ -1523,13 +1570,15 @@ export default function AdminCompetitions() {
                                     </div>
                                   ) : (
                                     <div className="flex items-center gap-2">
-                                      <span className="font-semibold">{parseFloat(entry.weight).toFixed(2)} lbs</span>
+                                      <span className="font-semibold">{formatWeight(entry.weight)}</span>
                                       <Button
                                         size="sm"
                                         variant="ghost"
                                         onClick={() => {
                                           setEditingEntryId(entry.id);
-                                          setEditWeight(entry.weight);
+                                          const { pounds, ounces } = convertFromOunces(parseFloat(entry.weight));
+                                          setEditPounds(pounds.toString());
+                                          setEditOunces(ounces.toString());
                                         }}
                                         data-testid={`button-edit-weight-${entry.id}`}
                                       >
@@ -1590,7 +1639,7 @@ export default function AdminCompetitions() {
                               </Badge>
                             </TableCell>
                             <TableCell>{entry.angler}</TableCell>
-                            <TableCell className="font-semibold">{entry.weight} lbs</TableCell>
+                            <TableCell className="font-semibold">{formatWeight(entry.weight)}</TableCell>
                           </TableRow>
                         ))}
                       </TableBody>

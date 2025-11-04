@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Trophy } from "lucide-react";
 import { Link } from "wouter";
+import { formatWeight } from "@shared/weight-utils";
 
 interface LeaderboardEntry {
   position: number;
@@ -56,7 +57,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
               <TableHead className="w-20">Position</TableHead>
               <TableHead>Angler</TableHead>
               <TableHead className="text-center">Peg</TableHead>
-              <TableHead className="text-right">Weight (lbs)</TableHead>
+              <TableHead className="text-right">Weight</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -107,7 +108,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                 </TableCell>
                 <TableCell className="text-right">
                   <span className="font-mono font-bold text-lg" data-testid={`text-weight-${entry.position}`}>
-                    {entry.weight}
+                    {formatWeight(entry.weight)}
                   </span>
                 </TableCell>
               </TableRow>

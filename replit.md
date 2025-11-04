@@ -2,7 +2,7 @@
 
 ## Overview
 
-Peg Slam is a professional UK-based platform for managing fishing competitions, enabling anglers to register, book pegs, and track performance. Organizers can run various match fishing events with integrated ticketing, payment processing in GBP, sponsor management, and a media gallery. The platform also provides live leaderboards and results for spectators.
+Peg Slam is a professional UK-based platform for managing fishing competitions. It enables anglers to register, book pegs, and track performance. Organizers can run various match fishing events with integrated ticketing, payment processing in GBP, sponsor management, and a media gallery. The platform also provides live leaderboards and results for spectators, aiming to be the premier online destination for UK fishing competitions.
 
 ## User Preferences
 
@@ -10,148 +10,45 @@ Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
+### Frontend
 
-*   **Framework & Build System:** React 18 with TypeScript, Vite, Wouter for client-side routing.
+*   **Framework:** React 18 with TypeScript and Vite.
+*   **Routing:** Wouter for client-side routing.
 *   **Component Library & Styling:** Radix UI primitives with shadcn/ui styling, Tailwind CSS, custom design tokens, responsive design, and dark mode support.
 *   **State Management:** TanStack Query for server state, local React state for UI state.
 *   **Design System:** New York style variant from shadcn/ui, custom color palette (Deep Water Blue, Lake Green, Slate Grey), Inter and JetBrains Mono typography.
-*   **Key UI Patterns:** Competition cards, live leaderboards, interactive peg map, sponsor carousel, react-hook-form with Zod validation.
+*   **Key UI Patterns:** Competition cards, live leaderboards, interactive peg map, sponsor carousel, `react-hook-form` with Zod validation.
+*   **Image Display:** Public-facing images use `object-cover` for visual appeal, while admin previews use `object-contain`.
+*   **Weight Input:** Implemented UK Pounds and Ounces weight system for entries and display.
 
-### Backend Architecture
+### Backend
 
 *   **Server Framework:** Express.js with TypeScript, custom middleware for logging and error handling.
 *   **API Design:** RESTful endpoints, JSON format, session-based authentication.
-*   **Data Layer:** In-memory storage for development, interface-based storage abstraction, Drizzle ORM for PostgreSQL.
+*   **Data Layer:** Drizzle ORM for PostgreSQL. In-memory storage used for development.
+*   **UK Timezone Support:** Utilizes `date-fns-tz` for accurate UK timezone handling in competition status calculations.
+*   **Request Size Limit:** Increased body parser limit to 50MB to accommodate rich text content with embedded images.
 
 ### Admin Panel
 
-*   **Comprehensive Management:** Dashboard with revenue/booking metrics, CRUD for competitions, anglers, sponsors, news, and gallery.
-*   **Admin Authentication:** Secure login (email/password), session-based, route protection, default admin account (admin@pegslam.co.uk / admin123).
-*   **Content Management:** Rich text editor (react-quill) for news, dynamic hero slider (embla-carousel-react), and logo management with admin controls.
+*   **Management:** Dashboard for revenue/booking metrics, CRUD operations for competitions, anglers, sponsors, news, and gallery.
+*   **Admin Authentication:** Secure login (email/password), session-based, route protection, with role-based access control (Admin/Manager).
+*   **Content Management:** Rich text editor (`react-quill`) for news, dynamic hero slider, and logo management.
+*   **Staff Management:** Comprehensive system with role-based permissions (Admin, Manager).
+*   **Competition Angler Management:** Admins can add/remove participants from competitions, with peg assignment and capacity management.
 
-### User Authentication System
+### User Authentication
 
-*   **Angler Authentication:** Registration (email, username, password, names, club), secure login/logout, session-based, profile page with user details and competition history.
-*   **User Profile Features:** Displays personal info, fishing preferences, competition stats, upcoming competitions. Anglers can edit their bio, club, location, favourite method, and favourite species through an edit profile dialog.
-*   **User Gallery:** Anglers can upload and manage personal photo galleries on their profiles. Features include photo URL upload with optional captions, grid display of photos, and delete functionality with ownership verification.
-*   **Admin Angler Management:** View, search, filter, approve, block users; view profiles and send emails.
+*   **Angler Authentication:** Registration (email, username, password, names, club), secure login/logout, session-based.
+*   **User Profile:** Displays personal info, fishing preferences, competition stats, upcoming competitions. Anglers can edit bio, club, location, favourite method, and species.
+*   **User Gallery:** Anglers can upload and manage personal photo galleries.
+*   **Admin Angler Management:** View, search, filter, approve, block users, view profiles.
 *   **Competition Participation:** Anglers can join/leave competitions with peg assignment and capacity management.
-
-## Recent Changes
-
-### November 03, 2025 - Homepage Layout, News Enhancements & Request Size Fix
-*   **Homepage Section Reordering:** Moved featured news section to appear immediately after hero, before upcoming competitions for better content visibility.
-*   **General News Category:** Added "General" as a new category option for news content management:
-    - Category dropdown in create/edit news dialogs
-    - General filter button on admin news listing page
-    - Proper badge display on frontend
-    - Database compatible: uses existing text field, no schema changes
-*   **Enhanced Rich Text Editor:** Upgraded ReactQuill news editor with comprehensive formatting toolbar:
-    - Headings (H1-H6), font and size options
-    - Text formatting (bold, italic, underline, strikethrough)
-    - Colors (text and background), subscript/superscript
-    - Lists (ordered, bullet, indent controls)
-    - Text alignment, block quotes, code blocks
-    - Link, image, and video insertion
-    - Increased editor height from 200px to 300px for better UX
-*   **Profile Avatar Fix:** Added `object-cover` CSS to profile avatars to prevent image stretching/squashing while maintaining aspect ratio.
-*   **Request Size Limit Increase:** Increased Express body parser limit from default 100kb to 50mb to handle rich text content with embedded images, resolving "request entity too large" errors when creating news articles with images.
-*   **Files Modified:** client/src/pages/home.tsx, client/src/pages/admin-news.tsx, client/src/pages/profile.tsx, server/index.ts
-
-### October 28, 2025 - Production Deployment Security Fixes (AWS EC2 / MongoDB Atlas)
-*   **Security Hardening:** Fixed critical security vulnerabilities for production deployment on AWS EC2 with MongoDB Atlas.
-*   **No Default Credentials in Production:** Default admin account (admin@pegslam.co.uk / admin123) and sample users are now only created in development mode (NODE_ENV !== 'production'). Production requires manual admin account creation with strong passwords.
-*   **No Sample Data in Production:** Sample competitions, participants, sponsors, and all seed data are only created in development to prevent test data pollution in production databases.
-*   **Secure CORS Configuration:** Changed from hardcoded IP to environment-based CORS using ALLOWED_ORIGINS variable:
-    - Development: Allows all origins for easy testing
-    - Production: Only allows explicitly configured origins, rejects cross-origin requests if ALLOWED_ORIGINS is not set
-*   **Production Environment Validation:** Added startup warnings for missing critical environment variables (SESSION_SECRET, MONGODB_URI).
-*   **MongoDB Storage Completeness:** Added 10 missing IStorage methods to MongoDBStorage implementation:
-    - User management: updateUser, deleteUser
-    - Staff management: getAllStaff, getStaff, createStaff, updateStaff, updateStaffPassword, deleteStaff
-    - Participant management: deleteParticipant
-    - Site settings: updateSiteSettings
-*   **Production Deployment Checklist:**
-    - Set SESSION_SECRET to a cryptographically secure random string
-    - Set MONGODB_URI to your MongoDB Atlas connection string
-    - Set ALLOWED_ORIGINS to comma-separated list of allowed frontend URLs (e.g., "https://yourdomain.com,https://www.yourdomain.com")
-    - Create admin accounts manually with strong passwords after deployment
-    - Monitor startup logs to confirm no sample data is created
-*   **Files Modified:** server/mongodb-storage.ts, server/index.ts
-
-### October 28, 2025 - Staff Management System with Role-Based Permissions
-*   **Staff Schema:** Created comprehensive staff table with Admin/Manager roles replacing legacy admin table.
-*   **Role-Based Permissions:** Implemented requireStaffAuth and requireAdminRole middleware for route protection.
-*   **Staff API Routes:** Added complete CRUD API (GET/POST/PUT/DELETE /api/admin/staff) with role-based access control.
-*   **Admin Panel Integration:** Added Staff Management page accessible only to admin role (managers cannot access).
-*   **Permission Levels:**
-    - **Admin:** Full access to all features including staff management, can create/edit/delete staff, manage all content
-    - **Manager:** Access to competitions, anglers, sponsors, news, gallery, slider - cannot manage staff
-*   **Authentication Updates:** Updated admin login to support staff authentication with backward compatibility for legacy admin accounts.
-*   **Session Management:** Enhanced session types to include staffId and staff object with role information.
-*   **Security Features:**
-    - Admins cannot delete their own account
-    - Admins cannot change their own role
-    - Password validation and hashing support (in production should use bcrypt)
-    - Email uniqueness validation
-    - Active/inactive account status management
-*   **Files Modified:**
-    - shared/schema.ts - Added staff table, roles enum, and validation schemas
-    - server/storage.ts - Added staff CRUD methods to IStorage and MemStorage
-    - server/routes.ts - Added staff management routes and permission middleware
-    - server/types.ts - Enhanced session and request types
-    - client/src/pages/admin-staff.tsx - New comprehensive staff management UI
-    - client/src/pages/admin-dashboard.tsx - Integrated staff management with role-based menu visibility
-
-### October 28, 2025 - Competition Angler Management
-*   **Admin Competition Anglers:** Added "Anglers" button to each competition in admin panel for comprehensive participant management.
-*   **Participant Dialog:** New dialog displays all anglers enrolled in a competition with details (name, club, peg assignment, join date).
-*   **Add Participants:** Admin can add any existing angler to a competition via dropdown selector (filters out already-participating anglers).
-*   **Remove Participants:** Admin can remove anglers from competitions with confirmation dialog and proper pegsBooked decrement.
-*   **Backend API Routes:** 
-    - POST /api/admin/competitions/:id/participants - Add participant with validation
-    - DELETE /api/admin/participants/:id - Remove participant with proper cleanup
-*   **Storage Layer:** Added deleteParticipant method to IStorage interface and MemStorage implementation.
-*   **Cache Management:** Proper React Query cache invalidation ensures real-time UI updates across all admin pages.
-*   **Files Modified:** server/routes.ts, server/storage.ts, client/src/pages/admin-competitions.tsx
-
-### October 28, 2025 - Brand Color Update, Weight Precision & Mobile Enhancements
-*   **Primary Color Update:** Changed primary brand color from light green (hsl(165 75% 45%)) to dark green (hsl(152 60% 30%)) to better match logo branding and provide a more professional appearance across all buttons, badges, and interactive elements.
-*   **Weight Input Precision:** Enhanced admin panel weigh-in functionality to accept weights with up to 3 decimal places (step="0.001") for more accurate competition results (e.g., 12.345 lbs).
-*   **Mobile Responsiveness Improvements:**
-    - About page: Made statistics grid more responsive with smaller text and tighter spacing on mobile devices
-    - News page: Increased dialog max-height from 80vh to 90vh for better article viewing on mobile
-    - Competition details: Added responsive padding to tabs (px-2 sm:px-4) to prevent cramping on small screens
-*   **Files Modified:** client/src/index.css, client/src/pages/admin-competitions.tsx, client/src/pages/about.tsx, client/src/pages/news.tsx, client/src/pages/competition-details.tsx
-
-### October 26, 2025 - Image Display Optimization
-*   **Website Image Display:** All images on website pages now use `object-cover` CSS to fill available canvas space while maintaining aspect ratio:
-    - Homepage hero slider fills entire viewport width and height
-    - News article cards and detail views fill container completely
-    - Gallery photo cards and detail views fill container completely
-    - Competition cards and detail images fill container completely
-*   **Admin Panel Images:** Admin panel image previews use `object-contain` CSS to show complete images without cropping (useful for preview/verification purposes)
-*   **Implementation Details:** Changed from `object-contain` (which shows full image with letterboxing) to `object-cover` (which fills space by cropping edges as needed) for all public-facing website images to provide better visual presentation
-
-### October 22, 2025 - UK Timezone Support & Weight Labels
-*   **Weight Display:** Added "(lbs)" suffix to all weight column headers in leaderboards and profile statistics for clarity.
-*   **UK Timezone Handling:** Implemented proper UK timezone (Europe/London) support using date-fns-tz for accurate competition status calculation.
-*   **Shared Timezone Utility:** Created `client/src/lib/uk-timezone.ts` with centralized functions:
-    - `getUKNow()`: Returns current date/time in UK timezone
-    - `toUKDateTime(date, time)`: Converts date/time strings to UK timezone Date objects
-    - `getCompetitionStatus(competition)`: Calculates competition status (upcoming/live/completed) based on UK time
-*   **Multi-Day Competition Support:** Fixed critical bug where multi-day competitions without explicit end times were ending prematurely. Now properly handles all edge cases:
-    - endDate + endTime: Uses specified end date and time
-    - endDate only: Uses end date at 23:59
-    - endTime only: Uses start date with end time
-    - Neither: Uses start date at 23:59
-*   **Code Consolidation:** Removed duplicate `getCompetitionStatus` functions from all pages (home, competitions, admin-competitions, profile) - all now use shared utility.
 
 ## External Dependencies
 
-*   **Payment Processing:** Stripe for ticketing and bookings (Payment Intents API, Stripe Elements).
-*   **Database:** PostgreSQL via Neon serverless driver, Drizzle ORM.
-*   **Timezone Support:** date-fns-tz for UK timezone handling (Europe/London).
-*   **UI Component Libraries:** Radix UI, Tailwind CSS, Lucide React, react-icons, date-fns.
-*   **Development Tools:** Vite, esbuild, TypeScript, Replit-specific plugins.
+*   **Payment Processing:** Stripe (Payment Intents API, Stripe Elements).
+*   **Database:** PostgreSQL via Neon serverless driver.
+*   **Timezone Support:** `date-fns-tz`.
+*   **UI Component Libraries:** Radix UI, Tailwind CSS, Lucide React, `react-icons`, `date-fns`.
+*   **Development Tools:** Vite, esbuild, TypeScript.

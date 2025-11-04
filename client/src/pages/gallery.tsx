@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Image, Trophy, Fish, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
 import type { GalleryImage } from "@shared/schema";
+import { formatWeight } from "@shared/weight-utils";
 
 export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
@@ -117,7 +118,7 @@ export default function Gallery() {
                     {image.weight && (
                       <div className="flex items-center gap-2 mt-2">
                         <Trophy className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">{image.weight}</span>
+                        <span className="text-sm font-semibold">{formatWeight(image.weight)}</span>
                       </div>
                     )}
                   </div>
@@ -228,7 +229,7 @@ export default function Gallery() {
                         <div className="flex-1">
                           <p className="text-sm text-muted-foreground">Weight</p>
                           <p className="font-semibold text-primary" data-testid="text-dialog-weight">
-                            {selectedImage.weight}
+                            {formatWeight(selectedImage.weight)}
                           </p>
                         </div>
                       )}

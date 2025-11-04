@@ -18,6 +18,7 @@ import {
 } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
+import { formatWeight } from "@shared/weight-utils";
 
 export default function Home() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -341,7 +342,7 @@ export default function Home() {
                     {image.weight && (
                       <div className="flex items-center gap-2 mt-2">
                         <Trophy className="h-4 w-4 text-primary" />
-                        <span className="text-sm font-semibold">{image.weight}</span>
+                        <span className="text-sm font-semibold">{formatWeight(image.weight)}</span>
                       </div>
                     )}
                     <Link href="/gallery" className="mt-3 block">
