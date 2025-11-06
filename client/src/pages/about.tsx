@@ -1,13 +1,28 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Fish, Target, Users, Award } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function About() {
+  const { data: siteSettings } = useQuery<{ logoUrl?: string }>({
+    queryKey: ["/api/site-settings"],
+  });
+
   return (
     <div className="min-h-screen py-8">
       <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
         <div className="mb-12 text-center">
-          <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary mb-6">
-            <Fish className="h-10 w-10" />
+          <div className="inline-flex items-center justify-center w-20 h-20 mb-6">
+            {siteSettings?.logoUrl ? (
+              <img 
+                src={siteSettings.logoUrl} 
+                alt="Peg Slam Logo" 
+                className="w-20 h-20 object-contain"
+              />
+            ) : (
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-primary/10 text-primary">
+                <Fish className="h-10 w-10" />
+              </div>
+            )}
           </div>
           <h1 className="text-4xl font-bold mb-4">About Peg Slam</h1>
           <p className="text-xl text-muted-foreground">

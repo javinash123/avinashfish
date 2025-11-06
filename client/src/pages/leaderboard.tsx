@@ -6,20 +6,30 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
 import { Trophy } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
+import { getCompetitionStatus } from "@/lib/uk-timezone";
 
 export default function Leaderboard() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
   });
 
-  const competitions = competitionsData.map((comp) => ({
-    id: comp.id,
-    name: `${comp.name}${comp.status === "live" ? " - Live" : ""}`,
-  }));
+  const competitions = competitionsData
+    .map((comp) => {
+      const status = getCompetitionStatus(comp);
+      return {
+        id: comp.id,
+        name: comp.name,
+        status: status,
+        date: new Date(comp.date),
+      };
+    })
+    .filter((comp) => comp.status === "live" || comp.status === "completed")
+    .sort((a, b) => b.date.getTime() - a.date.getTime());
 
   const [selectedCompetition, setSelectedCompetition] = useState(
     competitions.length > 0 ? competitions[0].id : ""
@@ -53,7 +63,25 @@ export default function Leaderboard() {
   }));
 
   const selectedComp = competitions.find(c => c.id === selectedCompetition);
-  const isLive = selectedComp?.name.includes("Live") || false;
+  const isLive = selectedComp?.status === "live";
+
+  const getStatusBadge = (status: string) => {
+    if (status === "live") {
+      return (
+        <Badge variant="default" className="bg-chart-4 hover:bg-chart-4 ml-2">
+          Live
+        </Badge>
+      );
+    }
+    if (status === "completed") {
+      return (
+        <Badge variant="secondary" className="ml-2">
+          Completed
+        </Badge>
+      );
+    }
+    return null;
+  };
 
   return (
     <div className="min-h-screen py-8">
@@ -79,7 +107,10 @@ export default function Leaderboard() {
             <SelectContent>
               {competitions.map((comp) => (
                 <SelectItem key={comp.id} value={comp.id}>
-                  {comp.name}
+                  <div className="flex items-center justify-between w-full">
+                    <span>{comp.name}</span>
+                    {getStatusBadge(comp.status)}
+                  </div>
                 </SelectItem>
               ))}
             </SelectContent>

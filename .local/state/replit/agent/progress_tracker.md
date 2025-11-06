@@ -697,7 +697,86 @@ All migration and update tasks completed successfully:
 [x] 327. Take screenshot to verify frontend loads correctly and application is functioning
 [x] 328. Update progress tracker with all completed tasks marked with [x] notation
 
+## November 06, 2025 - Current Session (Final Migration Completion)
+
+[x] 329. User requested to mark all items in progress tracker as complete with [x] notation
+[x] 330. Reinstalled all packages to resolve tsx missing error (workflow restart issue)
+[x] 331. Configured workflow with webview output type and port 5000 for frontend display
+[x] 332. Restarted workflow and confirmed server running successfully on port 5000
+[x] 333. Verified application is fully functional with in-memory storage
+[x] 334. Updated progress tracker marking all items complete with [x] notation
+[x] 335. Marked import as completed using complete_project_import tool
+
+## November 06, 2025 - UI/UX Improvements Session
+
+[x] 336. Update leaderboard table to display weight in two rows (pounds and ounces) with adjusted column spacing
+[x] 337. Fix weight formatting bug - use parseWeight instead of parseFloat to handle mixed-unit strings correctly
+[x] 338. Update leaderboard page dropdown to filter and show only live/completed competitions with status badges
+[x] 339. Sort leaderboard dropdown competitions from newest to oldest by date
+[x] 340. Replace fish icon with logo image in About page above "About the Peg Slam" section
+[x] 341. Add contact form to homepage with fields: firstName, lastName, email, mobileNumber, comment
+[x] 342. Architect review #1 - identified weight formatting bug (parseFloat issue)
+[x] 343. Fixed weight formatting bug by using parseWeight utility function
+[x] 344. Architect review #2 - approved all changes with "Pass" rating
+[x] 345. Verified application running successfully with all improvements working correctly
+
+## UI/UX Improvements Details:
+
+### Leaderboard Weight Display Enhancement:
+- **Two-Row Format:** Weight now displays with pounds on first line, ounces on second line
+  - Example: "25 lb" (first line) / "4 oz" (second line)
+- **Correct Parsing:** Fixed bug where parseFloat was collapsing "25 lb 4 oz" to just "25 oz"
+  - Now uses `parseWeight` utility to correctly handle mixed-unit weight strings
+  - Properly converts to total ounces before formatting for display
+- **Column Spacing:** Adjusted table column widths:
+  - Position: w-24 (increased from w-20)
+  - Angler: w-auto (flexible)
+  - Peg: w-20 (centered)
+  - Weight: w-28 (right-aligned with two-row display)
+- **Applied To:** All leaderboard tables (homepage live leaderboard, dedicated leaderboard page, competition details page)
+
+### Leaderboard Page Dropdown Enhancement:
+- **Status Filtering:** Dropdown now shows only live and completed competitions
+  - Filters out upcoming competitions (not relevant for leaderboard viewing)
+- **Status Badges:** Each competition in dropdown displays status badge
+  - Live competitions: Green badge with "Live" text
+  - Completed competitions: Secondary badge with "Completed" text
+- **Date Sorting:** Competitions sorted from newest to oldest by start date
+  - Most recent competitions appear at top of dropdown
+- **Status Detection:** Uses `getCompetitionStatus` utility for accurate live/completed detection
+
+### About Page Logo Display:
+- **Logo Integration:** Replaced static fish icon with dynamic logo from site settings
+- **Fallback Behavior:** Shows fish icon if logo is not configured
+- **Image Display:** Logo displayed at 80x80px with object-contain to preserve aspect ratio
+- **Data Fetching:** Uses React Query to fetch site settings and display logo
+
+### Homepage Contact Form:
+- **New Component:** Created ContactForm component with full validation
+- **Form Fields:**
+  - First Name (required, min 2 characters)
+  - Last Name (required, min 2 characters)
+  - Email (required, valid email format)
+  - Mobile Number (required, min 10 characters)
+  - Comment (required, min 10 characters, textarea)
+- **Visual Design:** Icons for email, phone, and message fields for better UX
+- **Form Validation:** Zod schema validation with react-hook-form integration
+- **User Feedback:** Success toast on submission with form reset
+- **Placement:** Contact form section added before final CTA on homepage
+- **Test IDs:** All form elements have data-testid attributes for testing
+
+### Architect Reviews:
+- **First Review (Bug Found):** Identified critical weight parsing bug
+  - Issue: parseFloat("25 lb 4 oz") returned 25 instead of 404 total ounces
+  - Impact: Weights displayed incorrectly (e.g., "25 lb 4 oz" showed as "1 lb 9 oz")
+- **Second Review (Pass):** Confirmed fix works correctly
+  - Weight formatting now routes through parseWeight utility
+  - All leaderboard tables display accurate two-line weights
+  - No regressions in other improvements
+
 ✅ **ALL TASKS COMPLETED SUCCESSFULLY**
 ✅ **APPLICATION FULLY FUNCTIONAL AND DEPLOYED**
 ✅ **ALL PROGRESS ITEMS MARKED WITH [x] CHECKBOXES**
 ✅ **ALL CHANGES DATABASE-COMPATIBLE - NO DATA DELETION REQUIRED**
+✅ **MIGRATION IMPORT PROCESS COMPLETED ON NOVEMBER 06, 2025**
+✅ **UI/UX IMPROVEMENTS SESSION COMPLETED - ALL FEATURES WORKING AND ARCHITECT APPROVED**

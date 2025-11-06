@@ -730,8 +730,11 @@ export default function AdminNews() {
                 theme="snow"
                 value={formData.content}
                 onChange={(value) => setFormData({ ...formData, content: value })}
+                modules={quillModules}
+                formats={quillFormats}
+                placeholder="Write your article content with formatting..."
                 className="bg-background"
-                style={{ height: '200px', marginBottom: '50px' }}
+                style={{ height: '300px', marginBottom: '50px' }}
               />
             </div>
           </div>

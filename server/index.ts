@@ -36,8 +36,8 @@ app.set('trust proxy', 1);
 app.set('etag', false);
 
 // Increase body size limit to handle rich text content with embedded images
-app.use(express.json({ limit: '50mb' }));
-app.use(express.urlencoded({ extended: false, limit: '50mb' }));
+app.use(express.json({ limit: '100mb' }));
+app.use(express.urlencoded({ extended: false, limit: '100mb' }));
 
 // Configure CORS based on environment
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
