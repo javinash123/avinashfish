@@ -37,6 +37,8 @@ export default function News() {
         return { label: "Announcement", variant: "secondary" as const, icon: Newspaper };
       case "news":
         return { label: "News", variant: "outline" as const, icon: Newspaper };
+      case "general":
+        return { label: "General", variant: "outline" as const, icon: Newspaper };
       default:
         return { label: category, variant: "outline" as const, icon: Newspaper };
     }
@@ -125,11 +127,11 @@ export default function News() {
                 
                 return (
                   <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
-                    <div className="relative aspect-video overflow-hidden">
+                    <div className="relative aspect-video overflow-hidden bg-muted">
                       <img
                         src={article.image}
                         alt={article.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -193,11 +195,11 @@ export default function News() {
                 <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="relative aspect-video overflow-hidden rounded-md">
+                <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
                   <img
                     src={selectedArticle.image}
                     alt={selectedArticle.title}
-                    className="w-full h-full object-cover"
+                    className="w-full h-full object-contain"
                   />
                 </div>
                 <div className="flex flex-wrap items-center gap-4">

@@ -304,6 +304,25 @@ export const insertCompetitionParticipantSchema = createInsertSchema(competition
 export type InsertCompetitionParticipant = z.infer<typeof insertCompetitionParticipantSchema>;
 export type CompetitionParticipant = typeof competitionParticipants.$inferSelect;
 
+export const payments = pgTable("payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  amount: text("amount").notNull(),
+  currency: text("currency").notNull().default("gbp"),
+  stripePaymentIntentId: text("stripe_payment_intent_id").notNull(),
+  status: text("status").notNull(),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertPaymentSchema = createInsertSchema(payments).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type InsertPayment = z.infer<typeof insertPaymentSchema>;
+export type Payment = typeof payments.$inferSelect;
+
 export const leaderboardEntries = pgTable("leaderboard_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").notNull(),

@@ -131,7 +131,7 @@ export default function Home() {
       </section>
 
       {featuredNews.length > 0 && (
-        <section className="py-12">
+        <section className="py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">
@@ -167,11 +167,11 @@ export default function Home() {
                 
                 return (
                   <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
-                    <div className="relative aspect-video overflow-hidden">
+                    <div className="relative aspect-video overflow-hidden bg-muted">
                       <img
                         src={news.image}
                         alt={news.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -287,7 +287,7 @@ export default function Home() {
       </section>
 
       {featuredGallery.length > 0 && (
-        <section className="py-12 bg-muted/30">
+        <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-2">

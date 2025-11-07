@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -93,6 +93,14 @@ export interface IStorage {
   createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry>;
   updateLeaderboardEntry(id: string, updates: UpdateLeaderboardEntry): Promise<LeaderboardEntry | undefined>;
   deleteLeaderboardEntry(id: string): Promise<boolean>;
+  
+  // Payment methods
+  createPayment(payment: InsertPayment): Promise<Payment>;
+  getPayment(id: string): Promise<Payment | undefined>;
+  getPaymentByIntentId(intentId: string): Promise<Payment | undefined>;
+  getCompetitionPayments(competitionId: string): Promise<Payment[]>;
+  getUserPayments(userId: string): Promise<Payment[]>;
+  updatePaymentStatus(id: string, status: string): Promise<Payment | undefined>;
 }
 
 export class MemStorage implements IStorage {
@@ -108,6 +116,7 @@ export class MemStorage implements IStorage {
   private competitionParticipants: Map<string, CompetitionParticipant>;
   private leaderboardEntries: Map<string, LeaderboardEntry>;
   private userGalleryPhotos: Map<string, UserGalleryPhoto>;
+  private payments: Map<string, Payment>;
 
   constructor() {
     this.users = new Map();
@@ -121,6 +130,7 @@ export class MemStorage implements IStorage {
     this.competitionParticipants = new Map();
     this.leaderboardEntries = new Map();
     this.userGalleryPhotos = new Map();
+    this.payments = new Map();
     
     // Create default admin account (password: admin123) - Legacy support
     const defaultAdminId = randomUUID();
@@ -1157,6 +1167,53 @@ export class MemStorage implements IStorage {
 
   async deleteLeaderboardEntry(id: string): Promise<boolean> {
     return this.leaderboardEntries.delete(id);
+  }
+
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const id = randomUUID();
+    const payment: Payment = {
+      id,
+      ...insertPayment,
+      currency: insertPayment.currency || "gbp",
+      createdAt: new Date(),
+    };
+    this.payments.set(id, payment);
+    return payment;
+  }
+
+  async getPayment(id: string): Promise<Payment | undefined> {
+    return this.payments.get(id);
+  }
+
+  async getPaymentByIntentId(intentId: string): Promise<Payment | undefined> {
+    return Array.from(this.payments.values()).find(
+      (payment) => payment.stripePaymentIntentId === intentId
+    );
+  }
+
+  async getCompetitionPayments(competitionId: string): Promise<Payment[]> {
+    return Array.from(this.payments.values())
+      .filter((payment) => payment.competitionId === competitionId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async getUserPayments(userId: string): Promise<Payment[]> {
+    return Array.from(this.payments.values())
+      .filter((payment) => payment.userId === userId)
+      .sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+  }
+
+  async updatePaymentStatus(id: string, status: string): Promise<Payment | undefined> {
+    const payment = this.payments.get(id);
+    if (!payment) return undefined;
+
+    const updatedPayment: Payment = {
+      ...payment,
+      status,
+    };
+
+    this.payments.set(id, updatedPayment);
+    return updatedPayment;
   }
 }
 
