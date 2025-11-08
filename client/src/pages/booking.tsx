@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
 import { 
   CalendarDays, MapPin, Users, Ticket, CreditCard, 
   ShieldCheck, Trophy, Info, CheckCircle2, AlertCircle
@@ -15,28 +16,18 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { loadStripe } from '@stripe/stripe-js';
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useQuery } from "@tanstack/react-query";
+import { type Competition } from "@shared/schema";
 
 const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
-interface Competition {
-  id: string;
-  name: string;
-  date: string;
-  venue: string;
-  pegsTotal: number;
-  pegsAvailable: number;
-  entryFee: string;
-  prizePool: string;
-  description: string;
-}
-
 function PaymentForm({ 
-  competition, 
+  competitionId,
   totalAmount, 
   onSuccess 
 }: { 
-  competition: Competition; 
+  competitionId: string;
   totalAmount: number; 
   onSuccess: () => void;
 }) {
@@ -55,7 +46,7 @@ function PaymentForm({
     setIsProcessing(true);
 
     try {
-      const { error } = await stripe.confirmPayment({
+      const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
           return_url: `${window.location.origin}/booking/success`,
@@ -70,7 +61,18 @@ function PaymentForm({
           variant: "destructive",
         });
         setIsProcessing(false);
-      } else {
+      } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+        // Call backend to confirm payment and join competition atomically
+        const response = await apiRequest("POST", "/api/confirm-payment-and-join", {
+          paymentIntentId: paymentIntent.id,
+          competitionId,
+        });
+
+        if (!response.ok) {
+          const data = await response.json();
+          throw new Error(data.message || "Failed to confirm booking");
+        }
+
         toast({
           title: "Payment Successful",
           description: "Your peg has been booked!",
@@ -119,40 +121,62 @@ export default function Booking() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [paymentError, setPaymentError] = useState("");
 
-  const competition: Competition = {
-    id: params?.id || "1",
-    name: "Spring Carp Qualifier",
-    date: "15th March 2024, 6:00 AM - 4:00 PM",
-    venue: "Willow Lake Fishery, Oxfordshire",
-    pegsTotal: 40,
-    pegsAvailable: 12,
-    entryFee: "£45.00",
-    prizePool: "£1,200",
-    description: "Join us for the Spring Carp Qualifier at the prestigious Willow Lake Fishery. This qualifier event features 40 pegs across two lakes with excellent carp stocks.",
-  };
+  const competitionId = params?.id || "";
 
-  const entryFee = 45.00;
-  const bookingFee = 2.00;
-  const totalAmount = entryFee + bookingFee;
+  // Fetch competition data from API
+  const { data: competition, isLoading: competitionLoading } = useQuery<Competition>({
+    queryKey: [`/api/competitions/${competitionId}`],
+    enabled: !!competitionId,
+  });
+
+  if (!competitionId) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Invalid Competition</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p>No competition ID provided.</p>
+            <Button className="mt-4" onClick={() => setLocation("/competitions")}>
+              Browse Competitions
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  if (competitionLoading || !competition) {
+    return (
+      <div className="min-h-screen bg-background py-8">
+        <div className="container mx-auto px-4 lg:px-8">
+          <Skeleton className="h-10 w-64 mb-6" />
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Skeleton className="h-64" />
+              <Skeleton className="h-32" />
+            </div>
+            <Skeleton className="h-64" />
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const entryFee = parseFloat(competition.entryFee);
+  const totalAmount = entryFee;
 
   useEffect(() => {
-    if (acceptTerms && !clientSecret && !paymentError) {
+    if (acceptTerms && !clientSecret && !paymentError && competition) {
       // Don't send amount - server calculates it from authoritative pricing data
       apiRequest("POST", "/api/create-payment-intent", {
         competitionId: competition.id,
-        competitionName: competition.name,
       })
         .then((res) => res.json())
         .then((data: { clientSecret?: string; amount?: number; message?: string }) => {
           if (data.clientSecret) {
             setClientSecret(data.clientSecret);
-            // Server returns the calculated amount for verification/display
-            if (data.amount && Math.abs(data.amount - totalAmount) > 0.01) {
-              console.warn("Client amount doesn't match server amount", {
-                client: totalAmount,
-                server: data.amount,
-              });
-            }
           } else {
             throw new Error(data.message || "Failed to initialize payment");
           }
@@ -167,7 +191,7 @@ export default function Booking() {
           });
         });
     }
-  }, [acceptTerms, clientSecret, paymentError, competition.id, competition.name, totalAmount, toast]);
+  }, [acceptTerms, clientSecret, paymentError, competition, toast]);
 
   if (bookingComplete) {
     return (
@@ -202,7 +226,7 @@ export default function Booking() {
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Date</span>
                 <span className="font-semibold" data-testid="text-confirmation-date">
-                  {competition.date.split(',')[0]}
+                  {competition.date}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -278,7 +302,7 @@ export default function Booking() {
                       <div>
                         <p className="text-sm font-medium">Date & Time</p>
                         <p className="text-sm text-muted-foreground" data-testid="text-competition-date">
-                          {competition.date}
+                          {competition.date} at {competition.time}
                         </p>
                       </div>
                     </div>
@@ -298,7 +322,7 @@ export default function Booking() {
                       <div>
                         <p className="text-sm font-medium">Availability</p>
                         <p className="text-sm text-muted-foreground" data-testid="text-competition-availability">
-                          {competition.pegsAvailable} of {competition.pegsTotal} pegs available
+                          {competition.pegsTotal - competition.pegsBooked} of {competition.pegsTotal} pegs available
                         </p>
                       </div>
                     </div>
@@ -306,9 +330,9 @@ export default function Booking() {
                     <div className="flex items-start gap-3">
                       <Trophy className="h-5 w-5 text-muted-foreground mt-0.5" />
                       <div>
-                        <p className="text-sm font-medium">Prize Pool</p>
+                        <p className="text-sm font-medium">Prize Type</p>
                         <p className="text-sm text-muted-foreground" data-testid="text-competition-prize">
-                          {competition.prizePool}
+                          {competition.prizeType}
                         </p>
                       </div>
                     </div>
@@ -353,7 +377,7 @@ export default function Booking() {
                   <CardContent>
                     <Elements stripe={stripePromise} options={{ clientSecret }}>
                       <PaymentForm 
-                        competition={competition}
+                        competitionId={competition.id}
                         totalAmount={totalAmount}
                         onSuccess={() => setBookingComplete(true)}
                       />
@@ -412,10 +436,6 @@ export default function Booking() {
                       <span className="font-semibold" data-testid="text-entry-fee">
                         £{entryFee.toFixed(2)}
                       </span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Booking Fee</span>
-                      <span className="font-semibold">£{bookingFee.toFixed(2)}</span>
                     </div>
                     <Separator />
                     <div className="flex justify-between">

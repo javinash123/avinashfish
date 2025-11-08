@@ -170,14 +170,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Competition pricing - in production, this should come from database
-  // TODO: Move to database when competitions table is implemented
-  const competitionPricing: Record<string, { entryFee: number; bookingFee: number }> = {
-    "1": { entryFee: 45.00, bookingFee: 2.00 },
-    "2": { entryFee: 65.00, bookingFee: 2.00 },
-    "3": { entryFee: 25.00, bookingFee: 2.00 },
-  };
-
   // Stripe payment intent route for competition bookings
   app.post("/api/create-payment-intent", async (req, res) => {
     if (!stripe) {
@@ -186,8 +178,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
     try {
-      const { competitionId, competitionName } = req.body;
+      const { competitionId } = req.body;
       
       if (!competitionId) {
         return res.status(400).json({ 
@@ -195,36 +191,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
-      // Get authoritative pricing from server - NEVER trust client-sent amounts
-      const pricing = competitionPricing[competitionId];
-      if (!pricing) {
+      // Get competition from database for authoritative pricing
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
         return res.status(404).json({ 
           message: "Competition not found" 
         });
       }
 
-      // Calculate total on server side only
-      const totalAmount = pricing.entryFee + pricing.bookingFee;
+      // Parse entry fee from competition (stored as string)
+      const entryFee = parseFloat(competition.entryFee);
       
+      if (isNaN(entryFee) || entryFee <= 0) {
+        return res.status(400).json({
+          message: "This competition does not require payment"
+        });
+      }
+
+      // Create payment intent
       const paymentIntent = await stripe.paymentIntents.create({
-        amount: Math.round(totalAmount * 100), // Convert to pence (GBP uses pence like USD uses cents)
-        currency: "gbp", // UK currency
+        amount: Math.round(entryFee * 100), // Convert to pence (GBP)
+        currency: "gbp",
         metadata: {
           competitionId,
-          competitionName: competitionName || "Unknown Competition",
-          entryFee: pricing.entryFee.toString(),
-          bookingFee: pricing.bookingFee.toString(),
+          competitionName: competition.name,
+          userId: req.user!.id,
+          entryFee: entryFee.toString(),
         },
+      });
+      
+      // Create pending payment record
+      await storage.createPayment({
+        competitionId,
+        userId: req.user!.id,
+        amount: entryFee.toString(),
+        currency: "gbp",
+        stripePaymentIntentId: paymentIntent.id,
+        status: "pending",
       });
       
       res.json({ 
         clientSecret: paymentIntent.client_secret,
-        amount: totalAmount, // Send back the server-calculated amount for display only
+        amount: entryFee,
       });
     } catch (error: any) {
       console.error("Error creating payment intent:", error);
       res.status(500).json({ 
         message: "Error creating payment intent: " + error.message 
+      });
+    }
+  });
+
+  // Confirm payment and join competition atomically
+  app.post("/api/confirm-payment-and-join", async (req, res) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+
+    try {
+      const { paymentIntentId, competitionId } = req.body;
+      
+      if (!paymentIntentId || !competitionId) {
+        return res.status(400).json({ 
+          message: "Payment intent ID and competition ID are required" 
+        });
+      }
+
+      // Get payment record
+      const payment = await storage.getPaymentByIntentId(paymentIntentId);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+
+      // Verify payment belongs to this user and competition
+      if (payment.userId !== req.user!.id || payment.competitionId !== competitionId) {
+        return res.status(403).json({ message: "Payment verification failed" });
+      }
+
+      // Update payment status to succeeded
+      await storage.updatePaymentStatus(payment.id, "succeeded");
+
+      // Join the competition (pegNumber will be auto-assigned)
+      const participant = await storage.joinCompetition({
+        competitionId,
+        userId: req.user!.id,
+        pegNumber: 0, // Will be auto-assigned by storage
+      });
+
+      res.json({ 
+        success: true,
+        participant,
+        message: "Payment confirmed and peg booked successfully" 
+      });
+    } catch (error: any) {
+      console.error("Error confirming payment:", error);
+      res.status(500).json({ 
+        message: "Error confirming payment: " + error.message 
       });
     }
   });

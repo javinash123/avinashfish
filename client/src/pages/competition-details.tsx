@@ -47,6 +47,20 @@ export default function CompetitionDetails() {
     queryKey: ["/api/user/me"],
   });
 
+  const handleBookPeg = () => {
+    if (!competition) return;
+    
+    const entryFee = parseFloat(competition.entryFee);
+    
+    // If entry fee is greater than 0, redirect to booking/payment page
+    if (!isNaN(entryFee) && entryFee > 0) {
+      window.location.href = `/booking/${id}`;
+    } else {
+      // Free competition - allow direct join
+      joinMutation.mutate();
+    }
+  };
+
   const joinMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/competitions/${id}/join`, {});
@@ -298,7 +312,7 @@ export default function CompetitionDetails() {
                       <Button 
                         className="w-full" 
                         size="lg" 
-                        onClick={() => joinMutation.mutate()}
+                        onClick={handleBookPeg}
                         disabled={joinMutation.isPending || competition.pegsBooked >= competition.pegsTotal}
                         data-testid="button-book-peg"
                       >
