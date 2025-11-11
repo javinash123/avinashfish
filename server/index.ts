@@ -141,7 +141,13 @@ app.use((req, res, next) => {
   const storage = await initializeStorage();
   
   // Serve uploaded files statically (must exist on production server)
-  app.use('/assets', express.static('attached_assets'));
+  // BACKWARDS COMPATIBILITY: Serve from both /assets and /attached-assets
+  // Old URLs (/assets/uploads/...) continue working for existing production data
+  // New uploads use /attached-assets to avoid Vite bundle conflicts
+  // The /assets route only serves the attached_assets/uploads subdirectory to avoid
+  // conflicts with Vite's /assets output (which contains CSS/JS bundles)
+  app.use('/assets/uploads', express.static('attached_assets/uploads'));
+  app.use('/attached-assets', express.static('attached_assets'));
   
   // Register routes after storage is ready - pass storage instance directly
   const server = await registerRoutes(app, storage);

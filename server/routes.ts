@@ -160,7 +160,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Move file to correct location
       fs.renameSync(tempPath, targetPath);
       
-      const fileUrl = `/assets/uploads/${type}/${fileName}`;
+      const fileUrl = `/attached-assets/uploads/${type}/${fileName}`;
 
       res.json({ 
         url: fileUrl,
