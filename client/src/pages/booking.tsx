@@ -129,6 +129,33 @@ export default function Booking() {
     enabled: !!competitionId,
   });
 
+  // IMPORTANT: Always call useEffect before any conditional returns to avoid "Rendered more hooks" error
+  useEffect(() => {
+    if (acceptTerms && !clientSecret && !paymentError && competition) {
+      // Don't send amount - server calculates it from authoritative pricing data
+      apiRequest("POST", "/api/create-payment-intent", {
+        competitionId: competition.id,
+      })
+        .then((res) => res.json())
+        .then((data: { clientSecret?: string; amount?: number; message?: string }) => {
+          if (data.clientSecret) {
+            setClientSecret(data.clientSecret);
+          } else {
+            throw new Error(data.message || "Failed to initialize payment");
+          }
+        })
+        .catch((error) => {
+          const errorMessage = error.message || "Payment processing is not configured. Please contact support.";
+          setPaymentError(errorMessage);
+          toast({
+            title: "Payment Setup Error",
+            description: errorMessage,
+            variant: "destructive",
+          });
+        });
+    }
+  }, [acceptTerms, clientSecret, paymentError, competition, toast]);
+
   if (!competitionId) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -166,32 +193,6 @@ export default function Booking() {
 
   const entryFee = parseFloat(competition.entryFee);
   const totalAmount = entryFee;
-
-  useEffect(() => {
-    if (acceptTerms && !clientSecret && !paymentError && competition) {
-      // Don't send amount - server calculates it from authoritative pricing data
-      apiRequest("POST", "/api/create-payment-intent", {
-        competitionId: competition.id,
-      })
-        .then((res) => res.json())
-        .then((data: { clientSecret?: string; amount?: number; message?: string }) => {
-          if (data.clientSecret) {
-            setClientSecret(data.clientSecret);
-          } else {
-            throw new Error(data.message || "Failed to initialize payment");
-          }
-        })
-        .catch((error) => {
-          const errorMessage = error.message || "Payment processing is not configured. Please contact support.";
-          setPaymentError(errorMessage);
-          toast({
-            title: "Payment Setup Error",
-            description: errorMessage,
-            variant: "destructive",
-          });
-        });
-    }
-  }, [acceptTerms, clientSecret, paymentError, competition, toast]);
 
   if (bookingComplete) {
     return (

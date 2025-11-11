@@ -178,7 +178,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
 
-    if (!req.isAuthenticated()) {
+    if (!req.session?.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
@@ -208,6 +208,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
 
+      const userId = req.session!.userId!;
+      
       // Create payment intent
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(entryFee * 100), // Convert to pence (GBP)
@@ -215,7 +217,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         metadata: {
           competitionId,
           competitionName: competition.name,
-          userId: req.user!.id,
+          userId: userId,
           entryFee: entryFee.toString(),
         },
       });
@@ -223,7 +225,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create pending payment record
       await storage.createPayment({
         competitionId,
-        userId: req.user!.id,
+        userId: userId,
         amount: entryFee.toString(),
         currency: "gbp",
         stripePaymentIntentId: paymentIntent.id,
@@ -244,12 +246,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // Confirm payment and join competition atomically
   app.post("/api/confirm-payment-and-join", async (req, res) => {
-    if (!req.isAuthenticated()) {
+    if (!req.session?.userId) {
       return res.status(401).json({ message: "Unauthorized" });
     }
 
     try {
       const { paymentIntentId, competitionId } = req.body;
+      const userId = req.session!.userId!;
       
       if (!paymentIntentId || !competitionId) {
         return res.status(400).json({ 
@@ -264,18 +267,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Verify payment belongs to this user and competition
-      if (payment.userId !== req.user!.id || payment.competitionId !== competitionId) {
+      if (payment.userId !== userId || payment.competitionId !== competitionId) {
         return res.status(403).json({ message: "Payment verification failed" });
       }
 
       // Update payment status to succeeded
       await storage.updatePaymentStatus(payment.id, "succeeded");
 
-      // Join the competition (pegNumber will be auto-assigned)
+      // Join the competition (pegNumber will be auto-assigned because we don't pass it)
       const participant = await storage.joinCompetition({
         competitionId,
-        userId: req.user!.id,
-        pegNumber: 0, // Will be auto-assigned by storage
+        userId: userId,
+        // pegNumber is not passed, so it will be auto-assigned
       });
 
       res.json({ 
