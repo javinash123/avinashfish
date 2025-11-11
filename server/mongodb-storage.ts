@@ -467,6 +467,35 @@ export class MongoDBStorage implements IStorage {
     return result.deletedCount === 1;
   }
 
+  async setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined> {
+    const { value } = await this.users.findOneAndUpdate(
+      { email },
+      { $set: { resetToken: token, resetTokenExpiry: expiry } },
+      { returnDocument: "after" }
+    );
+    return value ?? undefined;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const user = await this.users.findOne({ resetToken: token });
+    if (!user || !user.resetTokenExpiry) return undefined;
+    
+    if (user.resetTokenExpiry < new Date()) {
+      return undefined;
+    }
+    
+    return user;
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<User | undefined> {
+    const { value } = await this.users.findOneAndUpdate(
+      { id: userId },
+      { $set: { resetToken: null, resetTokenExpiry: null } },
+      { returnDocument: "after" }
+    );
+    return value ?? undefined;
+  }
+
   // User gallery methods
   async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
     return await this.userGalleryPhotos.find({ userId }).toArray();

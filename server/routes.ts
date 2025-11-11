@@ -12,9 +12,15 @@ import "./types"; // Import session types
 
 // Stripe integration for payment processing
 // Requires STRIPE_SECRET_KEY environment variable
-const stripe = process.env.STRIPE_SECRET_KEY 
-  ? new Stripe(process.env.STRIPE_SECRET_KEY, { apiVersion: "2025-09-30.clover" })
-  : null;
+// Valid keys start with sk_test_ (test mode) or sk_live_ (production mode)
+const stripeKey = process.env.STRIPE_SECRET_KEY;
+const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" }) : null;
+
+// Validate Stripe key format to catch invalid/placeholder keys early
+if (stripe && stripeKey && !stripeKey.startsWith('sk_')) {
+  console.warn('⚠️  WARNING: STRIPE_SECRET_KEY appears to be invalid. Valid keys start with sk_test_ or sk_live_');
+  console.warn('⚠️  Get your Stripe API keys from: https://dashboard.stripe.com/apikeys');
+}
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Get the initialized storage instance
@@ -242,9 +248,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     } catch (error: any) {
       console.error("Error creating payment intent:", error);
-      res.status(500).json({ 
-        message: "Error creating payment intent: " + error.message 
-      });
+      
+      // Provide helpful error messages for common Stripe issues
+      let errorMessage = "Error creating payment intent: " + error.message;
+      
+      if (error.message && error.message.includes('Invalid API Key')) {
+        errorMessage = "Stripe API key is invalid. Please ensure STRIPE_SECRET_KEY is set correctly. " +
+                      "Get your key from https://dashboard.stripe.com/apikeys (starts with sk_test_ or sk_live_)";
+      }
+      
+      res.status(500).json({ message: errorMessage });
     }
   });
 
