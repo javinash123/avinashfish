@@ -223,10 +223,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       // Create pending payment record
+      // Store amount in pence (smallest currency unit) to match Stripe's format
+      const amountInPence = Math.round(entryFee * 100);
       await storage.createPayment({
         competitionId,
         userId: userId,
-        amount: entryFee.toString(),
+        amount: amountInPence.toString(),
         currency: "gbp",
         stripePaymentIntentId: paymentIntent.id,
         status: "pending",

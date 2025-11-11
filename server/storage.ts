@@ -15,6 +15,9 @@ export interface IStorage {
   updateUserStatus(id: string, status: string): Promise<User | undefined>;
   updateUserProfile(id: string, updates: UpdateUserProfile): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined>;
+  getUserByResetToken(token: string): Promise<User | undefined>;
+  clearPasswordResetToken(userId: string): Promise<User | undefined>;
   
   // User gallery methods
   getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]>;
@@ -554,6 +557,45 @@ export class MemStorage implements IStorage {
     });
 
     return this.users.delete(id);
+  }
+
+  async setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined> {
+    const user = Array.from(this.users.values()).find(u => u.email === email);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      resetToken: token,
+      resetTokenExpiry: expiry,
+    };
+
+    this.users.set(user.id, updatedUser);
+    return updatedUser;
+  }
+
+  async getUserByResetToken(token: string): Promise<User | undefined> {
+    const user = Array.from(this.users.values()).find(u => u.resetToken === token);
+    if (!user || !user.resetTokenExpiry) return undefined;
+    
+    if (user.resetTokenExpiry < new Date()) {
+      return undefined;
+    }
+    
+    return user;
+  }
+
+  async clearPasswordResetToken(userId: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      resetToken: null,
+      resetTokenExpiry: null,
+    };
+
+    this.users.set(userId, updatedUser);
+    return updatedUser;
   }
 
   async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
