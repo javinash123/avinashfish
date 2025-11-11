@@ -12,6 +12,8 @@ import Leaderboard from "@/pages/leaderboard";
 import About from "@/pages/about";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
+import ForgotPassword from "@/pages/forgot-password";
+import ResetPassword from "@/pages/reset-password";
 import CompetitionDetails from "@/pages/competition-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminLogin from "@/pages/admin-login";
@@ -31,6 +33,8 @@ function Router() {
   const isAuthRoute =
     location === "/login" ||
     location === "/register" ||
+    location === "/forgot-password" ||
+    location === "/reset-password" ||
     location === "/admin/login";
 
   return (
@@ -51,6 +55,8 @@ function Router() {
           <Route path="/booking/:id" component={Booking} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />
+          <Route path="/forgot-password" component={ForgotPassword} />
+          <Route path="/reset-password" component={ResetPassword} />
           <Route path="/privacy-policy" component={PrivacyPolicy} />
           <Route path="/terms-conditions" component={TermsConditions} />
           <Route path="/cookie-policy" component={CookiePolicy} />

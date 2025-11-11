@@ -1,7 +1,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { getStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { sendPasswordResetEmail } from "./email";
+import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
@@ -738,6 +740,105 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ message: "Logged out successfully" });
     });
+  });
+
+  // Forgot Password - Send reset email
+  app.post("/api/auth/forgot-password", async (req, res) => {
+    try {
+      const result = forgotPasswordSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid email", 
+          errors: result.error.errors 
+        });
+      }
+
+      const { email } = result.data;
+      const user = await storage.getUserByEmail(email);
+
+      // Always return success to prevent email enumeration
+      if (!user) {
+        return res.json({ 
+          message: "If an account exists with this email, you will receive password reset instructions." 
+        });
+      }
+
+      // Generate reset token (32 bytes = 64 hex characters)
+      const resetToken = randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
+
+      // Hash the token before storing in database for security
+      const hashedToken = createHash('sha256').update(resetToken).digest('hex');
+
+      // Save hashed reset token to database
+      await storage.setPasswordResetToken(email, hashedToken, resetTokenExpiry);
+
+      // Send password reset email
+      try {
+        await sendPasswordResetEmail(
+          email, 
+          resetToken, 
+          `${user.firstName} ${user.lastName}`
+        );
+        
+        res.json({ 
+          message: "If an account exists with this email, you will receive password reset instructions." 
+        });
+      } catch (emailError) {
+        console.error("Failed to send password reset email:", emailError);
+        return res.status(500).json({ 
+          message: "Failed to send password reset email. Please try again later." 
+        });
+      }
+    } catch (error: any) {
+      console.error("Forgot password error:", error);
+      res.status(500).json({ message: "Failed to process request: " + error.message });
+    }
+  });
+
+  // Reset Password - Update password with token
+  app.post("/api/auth/reset-password", async (req, res) => {
+    try {
+      const result = resetPasswordSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ 
+          message: "Invalid reset data", 
+          errors: result.error.errors 
+        });
+      }
+
+      const { token, password } = result.data;
+
+      // Hash the token to compare with database
+      const hashedToken = createHash('sha256').update(token).digest('hex');
+
+      // Find user by hashed reset token
+      const user = await storage.getUserByResetToken(hashedToken);
+
+      if (!user) {
+        return res.status(400).json({ 
+          message: "Invalid or expired reset token" 
+        });
+      }
+
+      // Check if token has expired
+      if (user.resetTokenExpiry && user.resetTokenExpiry < new Date()) {
+        return res.status(400).json({ 
+          message: "Reset token has expired. Please request a new password reset." 
+        });
+      }
+
+      // Update password and clear reset token
+      await storage.updateUser(user.id, { password });
+      await storage.clearPasswordResetToken(user.id);
+
+      res.json({ 
+        message: "Password has been reset successfully. You can now login with your new password." 
+      });
+    } catch (error: any) {
+      console.error("Reset password error:", error);
+      res.status(500).json({ message: "Failed to reset password: " + error.message });
+    }
   });
 
   app.get("/api/user/me", async (req, res) => {
