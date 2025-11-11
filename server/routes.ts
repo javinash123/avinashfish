@@ -1917,6 +1917,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Already joined this competition" });
       }
 
+      // Get competition to check entry fee
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      const entryFee = parseFloat(competition.entryFee);
+
+      // For paid competitions, verify payment exists and is successful
+      // This prevents users from bypassing payment by calling join API directly
+      if (!isNaN(entryFee) && entryFee > 0) {
+        const userPayments = await storage.getUserPayments(userId);
+        const validPayment = userPayments.find(
+          p => p.competitionId === competitionId && 
+              p.userId === userId && 
+              p.status === "succeeded"
+        );
+
+        if (!validPayment) {
+          return res.status(402).json({ 
+            message: "Payment required. Please complete payment to join this competition."
+          });
+        }
+      }
+
       // Let storage layer handle peg assignment atomically
       // Pass optional pegNumber from request if user wants a specific peg
       const participant = await storage.joinCompetition({
@@ -2173,6 +2198,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error fetching participant entries:", error);
       res.status(500).json({ message: "Error fetching participant entries: " + error.message });
+    }
+  });
+
+  app.get("/api/admin/competitions/:id/payments", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const competitionId = req.params.id;
+      const payments = await storage.getCompetitionPayments(competitionId);
+
+      // Enrich payments with user data
+      const enrichedPayments = await Promise.all(
+        payments.map(async (payment) => {
+          const user = await storage.getUser(payment.userId);
+          return {
+            id: payment.id,
+            userId: payment.userId,
+            userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+            userEmail: user?.email || "",
+            amount: payment.amount,
+            currency: payment.currency,
+            status: payment.status,
+            stripePaymentIntentId: payment.stripePaymentIntentId,
+            createdAt: payment.createdAt,
+          };
+        })
+      );
+
+      res.json(enrichedPayments);
+    } catch (error: any) {
+      console.error("Error fetching competition payments:", error);
+      res.status(500).json({ message: "Error fetching payments: " + error.message });
     }
   });
 

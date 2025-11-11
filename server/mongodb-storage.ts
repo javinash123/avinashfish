@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -17,6 +17,7 @@ export class MongoDBStorage implements IStorage {
   private competitionParticipants!: Collection<CompetitionParticipant>;
   private leaderboardEntries!: Collection<LeaderboardEntry>;
   private userGalleryPhotos!: Collection<UserGalleryPhoto>;
+  private payments!: Collection<Payment>;
 
   constructor(uri: string) {
     this.client = new MongoClient(uri);
@@ -39,6 +40,7 @@ export class MongoDBStorage implements IStorage {
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
       this.leaderboardEntries = this.db.collection<LeaderboardEntry>("leaderboard_entries");
       this.userGalleryPhotos = this.db.collection<UserGalleryPhoto>("user_gallery_photos");
+      this.payments = this.db.collection<Payment>("payments");
 
       // Create indexes
       await this.createIndexes();
@@ -1033,5 +1035,49 @@ export class MongoDBStorage implements IStorage {
   async deleteLeaderboardEntry(id: string): Promise<boolean> {
     const result = await this.leaderboardEntries.deleteOne({ id });
     return result.deletedCount === 1;
+  }
+
+  async createPayment(insertPayment: InsertPayment): Promise<Payment> {
+    const payment: Payment = {
+      id: randomUUID(),
+      ...insertPayment,
+      currency: insertPayment.currency || "gbp",
+      createdAt: new Date(),
+    };
+    await this.payments.insertOne(payment);
+    return payment;
+  }
+
+  async getPayment(id: string): Promise<Payment | undefined> {
+    const payment = await this.payments.findOne({ id });
+    return payment || undefined;
+  }
+
+  async getPaymentByIntentId(intentId: string): Promise<Payment | undefined> {
+    const payment = await this.payments.findOne({ stripePaymentIntentId: intentId });
+    return payment || undefined;
+  }
+
+  async getCompetitionPayments(competitionId: string): Promise<Payment[]> {
+    return await this.payments
+      .find({ competitionId })
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  async getUserPayments(userId: string): Promise<Payment[]> {
+    return await this.payments
+      .find({ userId })
+      .sort({ createdAt: -1 })
+      .toArray();
+  }
+
+  async updatePaymentStatus(id: string, status: string): Promise<Payment | undefined> {
+    const result = await this.payments.findOneAndUpdate(
+      { id },
+      { $set: { status } },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
   }
 }

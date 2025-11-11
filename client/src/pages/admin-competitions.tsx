@@ -34,7 +34,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -49,6 +49,7 @@ export default function AdminCompetitions() {
   const [isPegAssignmentOpen, setIsPegAssignmentOpen] = useState(false);
   const [isWeighInOpen, setIsWeighInOpen] = useState(false);
   const [isAnglersOpen, setIsAnglersOpen] = useState(false);
+  const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
@@ -110,6 +111,22 @@ export default function AdminCompetitions() {
   }>({
     queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/participants/${selectedParticipant?.userId}/entries`],
     enabled: !!selectedCompetition && !!selectedParticipant,
+  });
+
+  // Fetch payments for selected competition
+  const { data: payments = [], isLoading: paymentsLoading } = useQuery<Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    amount: number;
+    currency: string;
+    status: string;
+    stripePaymentIntentId: string;
+    createdAt: Date;
+  }>>({
+    queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/payments`],
+    enabled: !!selectedCompetition && isPaymentsOpen,
   });
 
   const createMutation = useMutation({
@@ -550,6 +567,11 @@ export default function AdminCompetitions() {
     setIsAnglersOpen(true);
   };
 
+  const openPaymentsDialog = (competition: Competition) => {
+    setSelectedCompetition(competition);
+    setIsPaymentsOpen(true);
+  };
+
   const handleAddParticipant = () => {
     if (!selectedCompetition || !selectedUserId) {
       toast({
@@ -856,6 +878,15 @@ export default function AdminCompetitions() {
                       >
                         <Users className="h-3 w-3 mr-1" />
                         Anglers
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPaymentsDialog(competition)}
+                        data-testid={`button-payments-${competition.id}`}
+                      >
+                        <CreditCard className="h-3 w-3 mr-1" />
+                        Payments
                       </Button>
                       <Button
                         variant="outline"
@@ -1773,6 +1804,87 @@ export default function AdminCompetitions() {
 
           <DialogFooter>
             <Button onClick={() => setIsAnglersOpen(false)} data-testid="button-close-anglers">
+              Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPaymentsOpen} onOpenChange={setIsPaymentsOpen}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>Payments - {selectedCompetition?.name}</DialogTitle>
+            <DialogDescription>
+              View all payments for this competition
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="py-4">
+            {paymentsLoading ? (
+              <div className="text-center py-8">
+                <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full mx-auto" />
+                <p className="mt-3 text-muted-foreground">Loading payments...</p>
+              </div>
+            ) : payments.length > 0 ? (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Angler</TableHead>
+                    <TableHead>Email</TableHead>
+                    <TableHead>Amount</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead>Payment Intent ID</TableHead>
+                    <TableHead>Date</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {payments.map(payment => (
+                    <TableRow key={payment.id} data-testid={`payment-row-${payment.id}`}>
+                      <TableCell>
+                        <div className="font-medium">{payment.userName}</div>
+                      </TableCell>
+                      <TableCell className="text-sm text-muted-foreground">
+                        {payment.userEmail}
+                      </TableCell>
+                      <TableCell>
+                        <span className="font-semibold">
+                          £{(payment.amount / 100).toFixed(2)}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <Badge 
+                          variant={payment.status === "succeeded" ? "default" : "secondary"}
+                          data-testid={`badge-payment-status-${payment.id}`}
+                        >
+                          {payment.status}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-mono text-xs">
+                        {payment.stripePaymentIntentId}
+                      </TableCell>
+                      <TableCell className="text-sm">
+                        {new Date(payment.createdAt).toLocaleDateString('en-GB', { 
+                          timeZone: 'Europe/London',
+                          day: 'numeric',
+                          month: 'short',
+                          year: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit'
+                        })}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                No payments recorded for this competition yet.
+              </div>
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button onClick={() => setIsPaymentsOpen(false)} data-testid="button-close-payments">
               Close
             </Button>
           </DialogFooter>
