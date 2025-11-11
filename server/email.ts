@@ -3,31 +3,57 @@ import { Resend } from 'resend';
 let connectionSettings: any;
 
 async function getCredentials() {
-  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME
+  // First try direct environment variable (for production deployments like AWS EC2)
+  const directApiKey = process.env.RESEND_API_KEY;
+  const directFromEmail = process.env.RESEND_FROM_EMAIL;
+  
+  if (directApiKey) {
+    console.log('[Resend] Using direct API key from environment variable');
+    return {
+      apiKey: directApiKey,
+      fromEmail: directFromEmail || 'noreply@pegslam.co.uk'
+    };
+  }
+
+  // Fall back to Replit connector system (for Replit deployments)
+  const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
     : process.env.WEB_REPL_RENEWAL 
     ? 'depl ' + process.env.WEB_REPL_RENEWAL 
     : null;
 
-  if (!xReplitToken) {
-    throw new Error('X_REPLIT_TOKEN not found for repl/depl');
+  if (!hostname || !xReplitToken) {
+    throw new Error(
+      'Resend not configured. Please set RESEND_API_KEY environment variable or configure Resend connector in Replit.'
+    );
   }
 
-  connectionSettings = await fetch(
-    'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
-    {
-      headers: {
-        'Accept': 'application/json',
-        'X_REPLIT_TOKEN': xReplitToken
+  try {
+    connectionSettings = await fetch(
+      'https://' + hostname + '/api/v2/connection?include_secrets=true&connector_names=resend',
+      {
+        headers: {
+          'Accept': 'application/json',
+          'X_REPLIT_TOKEN': xReplitToken
+        }
       }
-    }
-  ).then(res => res.json()).then(data => data.items?.[0]);
+    ).then(res => res.json()).then(data => data.items?.[0]);
 
-  if (!connectionSettings || (!connectionSettings.settings.api_key)) {
-    throw new Error('Resend not connected');
+    if (!connectionSettings || (!connectionSettings.settings.api_key)) {
+      throw new Error('Resend connector not set up in Replit');
+    }
+    
+    console.log('[Resend] Using Replit connector');
+    return {
+      apiKey: connectionSettings.settings.api_key, 
+      fromEmail: connectionSettings.settings.from_email || 'noreply@pegslam.co.uk'
+    };
+  } catch (error) {
+    throw new Error(
+      'Resend not configured. Please set RESEND_API_KEY environment variable or configure Resend connector in Replit.'
+    );
   }
-  return {apiKey: connectionSettings.settings.api_key, fromEmail: connectionSettings.settings.from_email};
 }
 
 async function getUncachableResendClient() {

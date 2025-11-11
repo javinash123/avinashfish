@@ -35,6 +35,50 @@ To enable Stripe payments in production, set these environment variables:
 
 **Note:** The application works without Stripe keys configured, but payment functionality will not be available until valid keys are set.
 
+### ✅ AWS EC2 Production Deployment Support (November 11, 2025)
+
+**Issue:** The application was using Replit-specific connector system for email functionality, which failed in AWS EC2 production deployments with error "Resend not connected".
+
+**Solution:** Enhanced email configuration (`server/email.ts`) to support dual-environment deployment:
+- **Priority 1**: Direct environment variables (for AWS EC2, standalone servers)
+  - `RESEND_API_KEY` - Resend API key for email sending
+  - `RESEND_FROM_EMAIL` - Sender email address (must be verified domain)
+- **Fallback**: Replit connector system (for Replit deployments)
+
+**How it Works:**
+1. Application first checks for `RESEND_API_KEY` environment variable
+2. If found, uses it directly (production/AWS mode)
+3. If not found, attempts Replit connector integration (Replit mode)
+4. Provides clear error messages if neither is configured
+
+**Production Environment Variables Required:**
+For AWS EC2 or standalone deployments, configure these in your `.env` file:
+```bash
+# Database
+MONGODB_URI=mongodb+srv://user:pass@cluster.net/peg_slam
+
+# Security
+SESSION_SECRET=generate-with-crypto-randomBytes-32
+
+# Stripe Payments
+STRIPE_SECRET_KEY=sk_live_your_secret_key
+VITE_STRIPE_PUBLIC_KEY=pk_live_your_publishable_key
+
+# Email (Resend)
+RESEND_API_KEY=re_your_api_key
+RESEND_FROM_EMAIL=noreply@pegslam.co.uk
+
+# Optional: Base path for reverse proxy
+EXPRESS_BASE_PATH=/pegslam
+VITE_BASE_PATH=/pegslam
+```
+
+**Documentation Created:**
+- `AWS_EC2_PRODUCTION_SETUP.md` - Complete guide for AWS EC2 deployment
+- `.env.example` - Updated with all required environment variables
+
+**Backward Compatibility:** ✅ Fully backward compatible. Existing Replit deployments continue to work with connector system. AWS EC2 deployments now work with environment variables.
+
 ## User Preferences
 
 Preferred communication style: Simple, everyday language.

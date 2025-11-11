@@ -1,6 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
-import { getStorage } from "./storage";
+import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
 import { sendPasswordResetEmail } from "./email";
 import { randomBytes, createHash } from "crypto";
@@ -22,9 +22,8 @@ if (stripe && stripeKey && !stripeKey.startsWith('sk_')) {
   console.warn('⚠️  Get your Stripe API keys from: https://dashboard.stripe.com/apikeys');
 }
 
-export async function registerRoutes(app: Express): Promise<Server> {
-  // Get the initialized storage instance
-  const storage = getStorage();
+export async function registerRoutes(app: Express, storage: IStorage): Promise<Server> {
+  // Use the passed storage instance (guaranteed to be initialized)
   
   // Whitelist of allowed upload types to prevent directory traversal
   const ALLOWED_UPLOAD_TYPES = ['slider', 'news', 'gallery', 'sponsors', 'logo', 'competitions'] as const;

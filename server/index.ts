@@ -138,13 +138,13 @@ app.use((req, res, next) => {
 (async () => {
   // Initialize storage first (MongoDB or in-memory fallback)
   const { initializeStorage } = await import("./storage");
-  await initializeStorage();
+  const storage = await initializeStorage();
   
   // Serve uploaded files statically (must exist on production server)
   app.use('/assets', express.static('attached_assets'));
   
-  // Register routes after storage is ready
-  const server = await registerRoutes(app);
+  // Register routes after storage is ready - pass storage instance directly
+  const server = await registerRoutes(app, storage);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
     const status = err.status || err.statusCode || 500;
