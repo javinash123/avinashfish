@@ -132,12 +132,21 @@ export default function Booking() {
   // IMPORTANT: Always call useEffect before any conditional returns to avoid "Rendered more hooks" error
   useEffect(() => {
     if (acceptTerms && !clientSecret && !paymentError && competition) {
+      console.log('[Booking] Creating payment intent for competition:', competition.id);
       // Don't send amount - server calculates it from authoritative pricing data
       apiRequest("POST", "/api/create-payment-intent", {
         competitionId: competition.id,
       })
-        .then((res) => res.json())
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then(data => {
+              throw new Error(data.message || "Failed to initialize payment");
+            });
+          }
+          return res.json();
+        })
         .then((data: { clientSecret?: string; amount?: number; message?: string }) => {
+          console.log('[Booking] Payment intent created successfully');
           if (data.clientSecret) {
             setClientSecret(data.clientSecret);
           } else {
@@ -145,6 +154,7 @@ export default function Booking() {
           }
         })
         .catch((error) => {
+          console.error('[Booking] Payment setup error:', error);
           const errorMessage = error.message || "Payment processing is not configured. Please contact support.";
           setPaymentError(errorMessage);
           toast({
@@ -154,7 +164,7 @@ export default function Booking() {
           });
         });
     }
-  }, [acceptTerms, clientSecret, paymentError, competition, toast]);
+  }, [acceptTerms, clientSecret, paymentError, competition]);
 
   if (!competitionId) {
     return (
