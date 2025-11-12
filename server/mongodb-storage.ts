@@ -496,6 +496,35 @@ export class MongoDBStorage implements IStorage {
     return value ?? undefined;
   }
 
+  async setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined> {
+    const { value } = await this.users.findOneAndUpdate(
+      { id: userId },
+      { $set: { verificationToken: token, verificationTokenExpiry: expiry, emailVerified: false } },
+      { returnDocument: "after" }
+    );
+    return value ?? undefined;
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    const user = await this.users.findOne({ verificationToken: token });
+    if (!user || !user.verificationTokenExpiry) return undefined;
+    
+    if (user.verificationTokenExpiry < new Date()) {
+      return undefined;
+    }
+    
+    return user;
+  }
+
+  async verifyUserEmail(userId: string): Promise<User | undefined> {
+    const { value } = await this.users.findOneAndUpdate(
+      { id: userId },
+      { $set: { emailVerified: true, verificationToken: null, verificationTokenExpiry: null } },
+      { returnDocument: "after" }
+    );
+    return value ?? undefined;
+  }
+
   // User gallery methods
   async getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]> {
     return await this.userGalleryPhotos.find({ userId }).toArray();

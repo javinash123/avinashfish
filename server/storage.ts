@@ -18,6 +18,9 @@ export interface IStorage {
   setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined>;
   getUserByResetToken(token: string): Promise<User | undefined>;
   clearPasswordResetToken(userId: string): Promise<User | undefined>;
+  setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined>;
+  getUserByVerificationToken(token: string): Promise<User | undefined>;
+  verifyUserEmail(userId: string): Promise<User | undefined>;
   
   // User gallery methods
   getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]>;
@@ -592,6 +595,47 @@ export class MemStorage implements IStorage {
       ...user,
       resetToken: null,
       resetTokenExpiry: null,
+    };
+
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      verificationToken: token,
+      verificationTokenExpiry: expiry,
+      emailVerified: false,
+    };
+
+    this.users.set(userId, updatedUser);
+    return updatedUser;
+  }
+
+  async getUserByVerificationToken(token: string): Promise<User | undefined> {
+    for (const user of this.users.values()) {
+      if (user.verificationToken === token) {
+        if (!user.verificationTokenExpiry) return undefined;
+        if (user.verificationTokenExpiry < new Date()) return undefined;
+        return user;
+      }
+    }
+    return undefined;
+  }
+
+  async verifyUserEmail(userId: string): Promise<User | undefined> {
+    const user = this.users.get(userId);
+    if (!user) return undefined;
+
+    const updatedUser: User = {
+      ...user,
+      emailVerified: true,
+      verificationToken: null,
+      verificationTokenExpiry: null,
     };
 
     this.users.set(userId, updatedUser);

@@ -2,7 +2,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
-import { sendPasswordResetEmail } from "./email";
+import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
@@ -671,25 +671,24 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       const user = await storage.createUser(result.data);
 
-      console.log("[DEBUG register] Before setting session:", { existingUserId: req.session?.userId, existingAdminId: req.session?.adminId, newUserId: user.id });
-      req.session.userId = user.id;
-      console.log("[DEBUG register] After setting session:", { userId: req.session?.userId, adminId: req.session?.adminId });
+      // Generate verification token and send email
+      const verificationToken = randomBytes(32).toString('hex');
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 24); // 24 hour expiry
 
-      req.session.save((err) => {
-        if (err) {
-          console.error("Session save error:", err);
-          return res.status(500).json({ message: "Failed to save session" });
-        }
+      await storage.setEmailVerificationToken(user.id, verificationToken, tokenExpiry);
+      
+      try {
+        await sendEmailVerification(user.email, verificationToken, user.firstName);
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        // Continue with registration even if email fails
+      }
 
-        res.json({
-          id: user.id,
-          firstName: user.firstName,
-          lastName: user.lastName,
-          email: user.email,
-          username: user.username,
-          club: user.club,
-          status: user.status,
-        });
+      // Do NOT auto-login - user must verify email first
+      res.json({
+        message: "Registration successful! Please check your email to verify your account.",
+        email: user.email,
       });
     } catch (error: any) {
       console.error("User registration error:", error);
@@ -717,6 +716,14 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       if (user.status === "blocked") {
         return res.status(403).json({ message: "Your account has been blocked" });
+      }
+
+      // Only block if emailVerified is explicitly false (backward compatible with existing users)
+      if (user.emailVerified === false) {
+        return res.status(403).json({ 
+          message: "Please verify your email address before logging in. Check your inbox for the verification link.",
+          emailNotVerified: true
+        });
       }
 
       req.session.userId = user.id;
@@ -850,6 +857,98 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Reset password error:", error);
       res.status(500).json({ message: "Failed to reset password: " + error.message });
+    }
+  });
+
+  // Email Verification
+  app.get("/api/verify-email", async (req, res) => {
+    try {
+      const { token } = req.query;
+
+      if (!token || typeof token !== 'string') {
+        return res.status(400).json({ message: "Invalid verification token" });
+      }
+
+      const user = await storage.getUserByVerificationToken(token);
+
+      if (!user) {
+        return res.status(400).json({ message: "Invalid or expired verification token" });
+      }
+
+      await storage.verifyUserEmail(user.id);
+
+      res.json({ 
+        message: "Email verified successfully! You can now login to your account.",
+        success: true
+      });
+    } catch (error: any) {
+      console.error("Email verification error:", error);
+      res.status(500).json({ message: "Failed to verify email: " + error.message });
+    }
+  });
+
+  // Resend Verification Email
+  app.post("/api/resend-verification", async (req, res) => {
+    try {
+      const { email } = req.body;
+
+      if (!email) {
+        return res.status(400).json({ message: "Email is required" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+
+      if (!user) {
+        return res.json({ 
+          message: "If an account exists with this email, a verification email will be sent." 
+        });
+      }
+
+      if (user.emailVerified) {
+        return res.status(400).json({ message: "Email is already verified" });
+      }
+
+      // Generate new verification token
+      const verificationToken = randomBytes(32).toString('hex');
+      const tokenExpiry = new Date();
+      tokenExpiry.setHours(tokenExpiry.getHours() + 24); // 24 hour expiry
+
+      await storage.setEmailVerificationToken(user.id, verificationToken, tokenExpiry);
+      
+      try {
+        await sendEmailVerification(user.email, verificationToken, user.firstName);
+        res.json({ 
+          message: "If an account exists with this email, a verification email will be sent." 
+        });
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        return res.status(500).json({ 
+          message: "Failed to send verification email. Please try again later." 
+        });
+      }
+    } catch (error: any) {
+      console.error("Resend verification error:", error);
+      res.status(500).json({ message: "Failed to process request: " + error.message });
+    }
+  });
+
+  // Contact Form
+  app.post("/api/contact", async (req, res) => {
+    try {
+      const { firstName, lastName, email, mobileNumber, comment } = req.body;
+
+      if (!firstName || !lastName || !email || !mobileNumber || !comment) {
+        return res.status(400).json({ message: "All fields are required" });
+      }
+
+      await sendContactEmail({ firstName, lastName, email, mobileNumber, comment });
+
+      res.json({ 
+        message: "Thank you for contacting us. We'll get back to you soon!" 
+      });
+    } catch (error: any) {
+      console.error("Contact form error:", error);
+      res.status(500).json({ message: "Failed to send message. Please try again later." });
     }
   });
 
