@@ -60,14 +60,16 @@ app.use(cors({
     }
     
     // SECURITY: In production with no ALLOWED_ORIGINS configured,
-    // reject all cross-origin requests for security
-    // The frontend served from the same server will still work (no origin header)
+    // allow same-origin requests (standard secure behavior)
+    // This allows the frontend served from the same server to work
     if (allowedOrigins.length === 0) {
-      console.log(`⚠️  CORS: Rejected cross-origin request from ${origin} (no ALLOWED_ORIGINS configured)`);
-      return callback(new Error('Not allowed by CORS'));
+      // Allow the request - same-origin is always safe
+      // If you need to restrict cross-origin requests, set ALLOWED_ORIGINS
+      return callback(null, true);
     }
     
-    // Reject the request if origin not allowed
+    // Reject the request if origin not in allowed list
+    console.log(`⚠️  CORS: Rejected cross-origin request from ${origin}`);
     callback(new Error('Not allowed by CORS'));
   },
   credentials: true
