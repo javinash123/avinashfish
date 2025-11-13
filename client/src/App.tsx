@@ -10,6 +10,7 @@ import Home from "@/pages/home";
 import Competitions from "@/pages/competitions";
 import Leaderboard from "@/pages/leaderboard";
 import About from "@/pages/about";
+import Contact from "@/pages/contact";
 import Login from "@/pages/login";
 import Register from "@/pages/register";
 import ForgotPassword from "@/pages/forgot-password";
@@ -52,6 +53,7 @@ function Router() {
           <Route path="/news" component={News} />
           <Route path="/sponsors" component={Sponsors} />
           <Route path="/about" component={About} />
+          <Route path="/contact" component={Contact} />
           <Route path="/profile" component={Profile} />
           <Route path="/profile/:username" component={Profile} />
           <Route path="/booking/:id" component={Booking} />

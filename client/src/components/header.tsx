@@ -39,6 +39,7 @@ export function Header() {
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
     { href: "/sponsors", label: "Sponsors" },
+    { href: "/contact", label: "Contact" },
   ];
 
   // Close mobile menu when location changes

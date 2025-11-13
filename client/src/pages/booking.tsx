@@ -19,7 +19,15 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { type Competition } from "@shared/schema";
 
-const stripePublicKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+declare global {
+  interface Window {
+    RUNTIME_CONFIG?: {
+      VITE_STRIPE_PUBLIC_KEY?: string;
+    };
+  }
+}
+
+const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
 const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 function PaymentForm({ 

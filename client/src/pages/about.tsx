@@ -1,6 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Fish, Target, Users, Award } from "lucide-react";
+import { Fish, Trophy, TrendingUp, Users, Heart, CheckCircle2, Mail } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 export default function About() {
   const { data: siteSettings } = useQuery<{ logoUrl?: string }>({
@@ -24,44 +25,75 @@ export default function About() {
               </div>
             )}
           </div>
-          <h1 className="text-4xl font-bold mb-4">About Peg Slam</h1>
+          <h1 className="text-4xl font-bold mb-4" data-testid="text-about-title">About Peg Slam</h1>
           <p className="text-xl text-muted-foreground">
-            UK's Premier Fishing Competition Platform
+            A UK-based fishing competition organisation created to inspire anglers of all ages
           </p>
         </div>
 
-        <div className="prose prose-lg dark:prose-invert max-w-none mb-12">
+        <div className="space-y-6 mb-12">
           <p className="text-lg">
-            Peg Slam was founded with a simple mission: to bring the excitement
-            of competitive match fishing to anglers across the United Kingdom.
-            We provide a professional platform for organisers to run
-            high-quality fishing competitions, from local qualifiers to national
-            finals.
+            Peg Slam is a UK-based fishing competition organisation created to inspire anglers of all ages.
+            The goal is simple — to bring together juniors, youth, and adults in a fair, friendly, and competitive environment that celebrates skill, respect, and community spirit.
           </p>
           <p className="text-lg">
-            Our platform enables anglers to easily discover and book
-            competitions, track their performance, and compete for prizes. With
-            real-time leaderboards, peg allocation systems, and integrated
-            payments, we make match fishing more accessible and exciting than
-            ever before.
+            What started as a small series of junior matches has grown into a national movement promoting angling as a positive outdoor activity that builds confidence, patience, and teamwork.
+            Peg Slam now runs a full calendar of events, from junior development days to senior match qualifiers and grand finals held at some of the country's best fisheries.
           </p>
         </div>
+
+        <Card className="mb-12">
+          <CardHeader>
+            <CardTitle>What We Stand For</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex gap-3">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold">Fair competition</strong> – every peg, every angler, same opportunity.
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold">Youth development</strong> – encouraging the next generation of anglers.
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold">Community</strong> – connecting families, clubs, and fisheries across the UK.
+              </div>
+            </div>
+            <div className="flex gap-3">
+              <CheckCircle2 className="h-5 w-5 text-primary shrink-0 mt-0.5" />
+              <div>
+                <strong className="font-semibold">Sustainability</strong> – promoting responsible fishing and environmental care.
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <p className="text-lg mb-12">
+          Peg Slam works alongside sponsors, fisheries, and volunteers to deliver safe, inclusive, and professionally run matches with real progression opportunities for every participant.
+          Whether you're a first-time junior angler or an experienced match competitor, Peg Slam is the place to learn, compete, and belong.
+        </p>
+
+        <h2 className="text-3xl font-bold mb-6" data-testid="text-values-title">Peg Slam Values</h2>
 
         <div className="grid gap-6 md:grid-cols-2 mb-12">
           <Card>
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-primary/10 text-primary">
-                  <Target className="h-5 w-5" />
+                  <Trophy className="h-5 w-5" />
                 </div>
-                Our Mission
+                Excellence
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                To revolutionize competitive match fishing by providing a
-                modern, user-friendly platform that connects anglers,
-                organisers, and sponsors across the UK.
+                Striving for high standards in every match, every angler, and every result — promoting skill, focus, and achievement.
               </p>
             </CardContent>
           </Card>
@@ -70,16 +102,14 @@ export default function About() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-chart-2/10 text-chart-2">
-                  <Users className="h-5 w-5" />
+                  <TrendingUp className="h-5 w-5" />
                 </div>
-                Community First
+                Growth
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                We believe in building a strong fishing community where anglers
-                of all skill levels can compete, learn, and share their passion
-                for the sport.
+                Creating opportunities for anglers of all ages to learn, progress, and build confidence both on and off the bank.
               </p>
             </CardContent>
           </Card>
@@ -88,16 +118,14 @@ export default function About() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-chart-3/10 text-chart-3">
-                  <Award className="h-5 w-5" />
+                  <Users className="h-5 w-5" />
                 </div>
-                Fair Competition
+                Community
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                We ensure transparent peg allocation, live result tracking, and
-                verified weigh-ins to maintain the integrity of every
-                competition.
+                Uniting anglers, families, and fisheries across the UK through shared experiences, teamwork, and respect.
               </p>
             </CardContent>
           </Card>
@@ -106,39 +134,144 @@ export default function About() {
             <CardHeader>
               <CardTitle className="flex items-center gap-3">
                 <div className="p-2 rounded-lg bg-chart-4/10 text-chart-4">
-                  <Fish className="h-5 w-5" />
+                  <Heart className="h-5 w-5" />
                 </div>
-                UK Focus
+                Responsibility
               </CardTitle>
             </CardHeader>
             <CardContent>
               <p className="text-muted-foreground">
-                Proudly serving the UK fishing community with competitions at
-                premium venues across England.
+                Championing fair play, environmental care, and integrity in everything Peg Slam represents.
               </p>
             </CardContent>
           </Card>
         </div>
 
-        <Card className="bg-primary text-primary-foreground">
-          <CardContent className="p-8 text-center">
-            <h3 className="text-2xl font-bold mb-4">Join Our Growing Community</h3>
-            <p className="text-lg opacity-90 mb-6">
-              Over 1000 registered anglers and counting. Be part of the UK's most exciting fishing competition platform.
+        <Card className="mb-12 bg-card">
+          <CardHeader>
+            <CardTitle className="text-2xl" data-testid="text-volunteer-title">Join the Peg Slam Team</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p>
+              Peg Slam is built on passion, teamwork, and community spirit. Every event relies on dedicated people who give their time to make a difference — on and off the bank.
             </p>
-            <div className="grid grid-cols-3 gap-4 sm:gap-6 max-w-2xl mx-auto">
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold">1k+</div>
-                <div className="text-xs sm:text-sm opacity-80">Anglers</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold">50+</div>
-                <div className="text-xs sm:text-sm opacity-80">Competitions</div>
-              </div>
-              <div>
-                <div className="text-2xl sm:text-3xl font-bold">30+</div>
-                <div className="text-xs sm:text-sm opacity-80">Venues</div>
-              </div>
+            
+            <h3 className="text-xl font-semibold pt-2">Why Volunteer?</h3>
+            <p>
+              Becoming part of the Peg Slam team means helping grow angling for all ages. Volunteers keep events safe, organised, and enjoyable. Whether you can spare a day or join us regularly, your time directly supports young anglers, families, and the wider fishing community.
+            </p>
+
+            <h3 className="text-xl font-semibold pt-2">Roles Available</h3>
+            <ul className="space-y-2 ml-4">
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Peg Runners</strong> – helping anglers during matches and keeping scores.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Event Helpers</strong> – setting up, registering anglers, or managing weigh-ins.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Media & Social Team</strong> – capturing photos, video, and updating social posts.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>Coaches & Mentors</strong> – guiding young or new anglers on match days.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span><strong>General Support</strong> – helping with logistics, catering, or admin.</span>
+              </li>
+            </ul>
+
+            <h3 className="text-xl font-semibold pt-2">Who Can Join?</h3>
+            <p>
+              Anyone with enthusiasm, reliability, and a passion for fishing. No prior experience is required — just a willingness to get involved and support others.
+            </p>
+
+            <h3 className="text-xl font-semibold pt-2">What You'll Gain</h3>
+            <ul className="space-y-2 ml-4">
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Be part of a fast-growing national competition network.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Build experience in event management and community sport.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Meet sponsors, fisheries, and like-minded anglers.</span>
+              </li>
+              <li className="flex gap-2">
+                <span className="text-primary">•</span>
+                <span>Make a real impact on the future of angling.</span>
+              </li>
+            </ul>
+
+            <div className="pt-4">
+              <Button asChild data-testid="button-volunteer-contact">
+                <a href="mailto:info@pegslam.com">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact Us to Volunteer
+                </a>
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="bg-primary text-primary-foreground">
+          <CardHeader>
+            <CardTitle className="text-2xl" data-testid="text-sponsor-title">Sponsor Peg Slam</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <p className="opacity-90">
+              Peg Slam is more than a fishing competition — it's a growing national platform that inspires anglers of all ages, connects communities, and promotes responsible, competitive angling.
+              Every event, prize, and opportunity exists thanks to the support of sponsors and partners who share that vision.
+            </p>
+
+            <h3 className="text-xl font-semibold pt-2">Why Sponsor Peg Slam?</h3>
+            <p className="opacity-90">
+              Partnering with Peg Slam gives your brand visibility, credibility, and a direct link to one of the UK's fastest-growing community angling networks.
+            </p>
+
+            <h3 className="text-xl font-semibold pt-2">How Your Support Helps</h3>
+            <p className="opacity-90">
+              Your sponsorship funds go directly into supporting junior, youth, and adult competitions, providing prizes, coaching, and development sessions, improving event facilities and safety, and promoting environmental awareness and responsible angling.
+            </p>
+
+            <h3 className="text-xl font-semibold pt-2">Ways to Get Involved</h3>
+            <ul className="space-y-2 ml-4 opacity-90">
+              <li className="flex gap-2">
+                <span>•</span>
+                <span><strong>Main Event Sponsor</strong> – full branding, media coverage, and lead recognition.</span>
+              </li>
+              <li className="flex gap-2">
+                <span>•</span>
+                <span><strong>Peg Sponsor</strong> – name or company logo displayed on match pegs and event posts.</span>
+              </li>
+              <li className="flex gap-2">
+                <span>•</span>
+                <span><strong>Prize or Product Sponsor</strong> – provide bait, tackle, or vouchers.</span>
+              </li>
+              <li className="flex gap-2">
+                <span>•</span>
+                <span><strong>Community Partner</strong> – help us deliver youth and outreach projects.</span>
+              </li>
+            </ul>
+
+            <p className="opacity-90 pt-2">
+              If your company values community, youth development, and real sport, Peg Slam is the perfect partnership.
+            </p>
+
+            <div className="pt-4">
+              <Button variant="secondary" asChild data-testid="button-sponsor-contact">
+                <a href="mailto:info@pegslam.com">
+                  <Mail className="h-4 w-4 mr-2" />
+                  Contact Us About Sponsorship
+                </a>
+              </Button>
             </div>
           </CardContent>
         </Card>

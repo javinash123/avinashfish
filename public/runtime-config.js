@@ -1,0 +1,3 @@
+window.RUNTIME_CONFIG = {
+  VITE_STRIPE_PUBLIC_KEY: ''
+};

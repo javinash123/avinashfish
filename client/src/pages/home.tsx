@@ -4,7 +4,6 @@ import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ContactForm } from "@/components/contact-form";
 import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -391,12 +390,6 @@ export default function Home() {
               </p>
             </div>
           </div>
-        </div>
-      </section>
-
-      <section className="py-16 bg-muted/30">
-        <div className="container mx-auto px-4 lg:px-8">
-          <ContactForm />
         </div>
       </section>
 

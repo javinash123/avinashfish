@@ -20,6 +20,7 @@ export function Footer() {
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
     { href: "/sponsors", label: "Sponsors" },
+    { href: "/contact", label: "Contact" },
   ];
 
   const socialLinks = [
