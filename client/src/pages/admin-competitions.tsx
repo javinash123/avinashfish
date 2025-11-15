@@ -1081,6 +1081,9 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="image">Competition Image</Label>
+              <p className="text-xs text-muted-foreground mb-2">
+                Recommended: 800x600px or 4:3 aspect ratio for optimal display (Max 8MB)
+              </p>
               <Input
                 id="image"
                 type="file"

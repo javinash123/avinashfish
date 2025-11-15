@@ -69,7 +69,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
     },
     limits: {
-      fileSize: 5 * 1024 * 1024 // 5MB limit
+      fileSize: 8 * 1024 * 1024 // 8MB limit for profile gallery and competition images
     }
   });
 

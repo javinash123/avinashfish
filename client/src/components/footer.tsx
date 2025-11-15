@@ -81,13 +81,13 @@ export function Footer() {
             <ul className="space-y-2">
               {navigationLinks.slice(0, 4).map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} asChild>
-                    <button 
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1 -ml-2"
-                      data-testid={`link-footer-${link.label.toLowerCase()}`}
-                    >
-                      {link.label}
-                    </button>
+                  <Link 
+                    href={link.href}
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1 -ml-2 inline-block"
+                    data-testid={`link-footer-${link.label.toLowerCase()}`}
+                  >
+                    {link.label}
                   </Link>
                 </li>
               ))}
@@ -99,13 +99,13 @@ export function Footer() {
             <ul className="space-y-2">
               {navigationLinks.slice(4).map((link) => (
                 <li key={link.href}>
-                  <Link href={link.href} asChild>
-                    <button 
-                      className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1 -ml-2"
-                      data-testid={`link-footer-${link.label.toLowerCase()}`}
-                    >
-                      {link.label}
-                    </button>
+                  <Link 
+                    href={link.href}
+                    onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1 -ml-2 inline-block"
+                    data-testid={`link-footer-${link.label.toLowerCase()}`}
+                  >
+                    {link.label}
                   </Link>
                 </li>
               ))}

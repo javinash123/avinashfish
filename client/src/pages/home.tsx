@@ -359,9 +359,9 @@ export default function Home() {
         </section>
       )}
 
-      <section className="py-16">
+      <section className="py-12">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="grid gap-6 md:grid-cols-3 mb-16">
+          <div className="grid gap-6 md:grid-cols-3">
             <div className="text-center p-6">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-primary/10 text-primary mb-4">
                 <Trophy className="h-8 w-8" />
@@ -375,7 +375,7 @@ export default function Home() {
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-chart-2/10 text-chart-2 mb-4">
                 <Users className="h-8 w-8" />
               </div>
-              <h3 className="text-xl font-bold mb-2">Join the Community</h3>
+              <h3 className="text-xl font-bold mb-2">Anglers Directory</h3>
               <p className="text-muted-foreground">
                 Connect with anglers across the UK and build your reputation
               </p>
@@ -393,7 +393,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 bg-background">
+      <section className="py-12 bg-background">
         <div className="container mx-auto px-4 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold mb-4">
             Ready to Join the Competition?

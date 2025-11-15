@@ -2,11 +2,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Fish } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
+import type { SiteSettings } from "@shared/schema";
 
 export default function Register() {
   const [formData, setFormData] = useState({
@@ -21,6 +22,10 @@ export default function Register() {
   const [isLoading, setIsLoading] = useState(false);
   const { toast } = useToast();
   const [, setLocation] = useLocation();
+  
+  const { data: siteSettings } = useQuery<SiteSettings>({
+    queryKey: ["/api/site-settings"],
+  });
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,9 +90,15 @@ export default function Register() {
       <Card className="w-full max-w-2xl">
         <CardHeader className="space-y-1 text-center">
           <div className="flex justify-center mb-4">
-            <div className="p-3 rounded-full bg-primary/10">
-              <Fish className="h-8 w-8 text-primary" />
-            </div>
+            {siteSettings?.logoUrl ? (
+              <img 
+                src={siteSettings.logoUrl} 
+                alt="Peg Slam Logo" 
+                className="h-16 w-auto object-contain"
+              />
+            ) : (
+              <div className="text-2xl font-bold text-primary">Peg Slam</div>
+            )}
           </div>
           <CardTitle className="text-2xl font-bold">Create Your Account</CardTitle>
           <CardDescription>
