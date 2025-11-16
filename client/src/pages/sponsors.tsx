@@ -11,7 +11,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { ExternalLink, Star, Award, Handshake } from "lucide-react";
+import { ExternalLink, Star, Award, Handshake, Mail } from "lucide-react";
 import { SiInstagram, SiFacebook, SiX } from "react-icons/si";
 import type { Sponsor } from "@shared/schema";
 
@@ -374,6 +374,64 @@ export default function Sponsors() {
             </div>
           </div>
         )}
+
+        {/* Sponsor Peg Slam Section */}
+        <div className="mt-16">
+          <Card className="bg-primary text-primary-foreground">
+            <CardHeader>
+              <CardTitle className="text-3xl" data-testid="text-become-sponsor-title">Sponsor Peg Slam</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <p className="opacity-90">
+                Peg Slam is more than a fishing competition — it's a growing national platform that inspires anglers of all ages, connects communities, and promotes responsible, competitive angling.
+                Every event, prize, and opportunity exists thanks to the support of sponsors and partners who share that vision.
+              </p>
+
+              <h3 className="text-xl font-semibold pt-2">Why Sponsor Peg Slam?</h3>
+              <p className="opacity-90">
+                Partnering with Peg Slam gives your brand visibility, credibility, and a direct link to one of the UK's fastest-growing community angling networks.
+              </p>
+
+              <h3 className="text-xl font-semibold pt-2">How Your Support Helps</h3>
+              <p className="opacity-90">
+                Your sponsorship funds go directly into supporting junior, youth, and adult competitions, providing prizes, coaching, and development sessions, improving event facilities and safety, and promoting environmental awareness and responsible angling.
+              </p>
+
+              <h3 className="text-xl font-semibold pt-2">Ways to Get Involved</h3>
+              <ul className="space-y-2 ml-4 opacity-90">
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span><strong>Main Event Sponsor</strong> – full branding, media coverage, and lead recognition.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span><strong>Peg Sponsor</strong> – name or company logo displayed on match pegs and event posts.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span><strong>Prize or Product Sponsor</strong> – provide bait, tackle, or vouchers.</span>
+                </li>
+                <li className="flex gap-2">
+                  <span>•</span>
+                  <span><strong>Community Partner</strong> – help us deliver youth and outreach projects.</span>
+                </li>
+              </ul>
+
+              <p className="opacity-90 pt-2">
+                If your company values community, youth development, and real sport, Peg Slam is the perfect partnership.
+              </p>
+
+              <div className="pt-4">
+                <Button variant="secondary" asChild data-testid="button-sponsor-contact">
+                  <a href="mailto:info@pegslam.com">
+                    <Mail className="h-4 w-4 mr-2" />
+                    Contact Us About Sponsorship
+                  </a>
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>

@@ -36,6 +36,7 @@ export function Header() {
     { href: "/about", label: "About" },
     { href: "/competitions", label: "Competitions" },
     { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/angler-directory", label: "Anglers" },
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
     { href: "/sponsors", label: "Sponsors" },

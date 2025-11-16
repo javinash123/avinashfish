@@ -17,6 +17,7 @@ export function Footer() {
     { href: "/about", label: "About" },
     { href: "/competitions", label: "Competitions" },
     { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/angler-directory", label: "Anglers" },
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
     { href: "/sponsors", label: "Sponsors" },
@@ -168,20 +169,6 @@ export function Footer() {
                 Cookie Policy
               </Link>
             </div>
-          </div>
-          <div className="mt-6 pt-6 border-t border-border">
-            <p className="text-xs text-muted-foreground text-center" data-testid="text-footer-developer">
-              Designed & Developed by{" "}
-              <a 
-                href="https://www.procodeitservices.com/" 
-                target="_blank" 
-                rel="noopener noreferrer"
-                className="text-primary hover:underline font-medium"
-                data-testid="link-footer-developer"
-              >
-                PROCODE IT SERVICES
-              </a>
-            </p>
           </div>
         </div>
       </div>

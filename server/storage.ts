@@ -21,6 +21,13 @@ export interface IStorage {
   setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   verifyUserEmail(userId: string): Promise<User | undefined>;
+  listAnglers(query: {
+    search?: string;
+    sortBy?: 'name' | 'memberSince' | 'club';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: User[]; total: number }>;
   
   // User gallery methods
   getUserGalleryPhotos(userId: string): Promise<UserGalleryPhoto[]>;
@@ -460,6 +467,56 @@ export class MemStorage implements IStorage {
     return Array.from(this.users.values()).sort((a, b) => 
       new Date(b.memberSince).getTime() - new Date(a.memberSince).getTime()
     );
+  }
+
+  async listAnglers(query: {
+    search?: string;
+    sortBy?: 'name' | 'memberSince' | 'club';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: User[]; total: number }> {
+    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20 } = query;
+    
+    let filteredUsers = Array.from(this.users.values());
+    
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredUsers = filteredUsers.filter(user =>
+        user.firstName.toLowerCase().includes(searchLower) ||
+        user.lastName.toLowerCase().includes(searchLower) ||
+        user.username.toLowerCase().includes(searchLower) ||
+        (user.club && user.club.toLowerCase().includes(searchLower))
+      );
+    }
+    
+    filteredUsers.sort((a, b) => {
+      let aVal: any, bVal: any;
+      
+      if (sortBy === 'name') {
+        aVal = `${a.firstName} ${a.lastName}`.toLowerCase();
+        bVal = `${b.firstName} ${b.lastName}`.toLowerCase();
+      } else if (sortBy === 'memberSince') {
+        aVal = new Date(a.memberSince).getTime();
+        bVal = new Date(b.memberSince).getTime();
+      } else if (sortBy === 'club') {
+        aVal = (a.club || '').toLowerCase();
+        bVal = (b.club || '').toLowerCase();
+      }
+      
+      if (sortOrder === 'asc') {
+        return aVal > bVal ? 1 : aVal < bVal ? -1 : 0;
+      } else {
+        return aVal < bVal ? 1 : aVal > bVal ? -1 : 0;
+      }
+    });
+    
+    const total = filteredUsers.length;
+    const startIndex = (page - 1) * pageSize;
+    const endIndex = startIndex + pageSize;
+    const paginatedUsers = filteredUsers.slice(startIndex, endIndex);
+    
+    return { data: paginatedUsers, total };
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {

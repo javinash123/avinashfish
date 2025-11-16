@@ -73,6 +73,33 @@ export type ForgotPassword = z.infer<typeof forgotPasswordSchema>;
 export type ResetPassword = z.infer<typeof resetPasswordSchema>;
 export type User = typeof users.$inferSelect;
 
+// Sanitized user/angler for public listing (no sensitive fields)
+export const anglerListingSchema = z.object({
+  id: z.string(),
+  firstName: z.string(),
+  lastName: z.string(),
+  username: z.string(),
+  club: z.string().nullable(),
+  avatar: z.string().nullable(),
+  location: z.string().nullable(),
+  favouriteMethod: z.string().nullable(),
+  favouriteSpecies: z.string().nullable(),
+  memberSince: z.date(),
+});
+
+export type AnglerListing = z.infer<typeof anglerListingSchema>;
+
+// Angler directory query params
+export const anglerDirectoryQuerySchema = z.object({
+  search: z.string().optional(),
+  sortBy: z.enum(['name', 'memberSince', 'club']).optional().default('name'),
+  sortOrder: z.enum(['asc', 'desc']).optional().default('asc'),
+  page: z.coerce.number().int().positive().optional().default(1),
+  pageSize: z.coerce.number().int().positive().max(100).optional().default(20),
+});
+
+export type AnglerDirectoryQuery = z.infer<typeof anglerDirectoryQuerySchema>;
+
 // Staff roles enum
 export const staffRoles = ['admin', 'manager'] as const;
 export type StaffRole = typeof staffRoles[number];

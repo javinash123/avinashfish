@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
@@ -972,6 +972,37 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Get user error:", error);
       res.status(500).json({ message: "Error fetching user: " + error.message });
+    }
+  });
+
+  // Get all anglers (public directory) with search, sort, and pagination
+  app.get("/api/anglers", async (req, res) => {
+    try {
+      const validation = anglerDirectoryQuerySchema.safeParse(req.query);
+      
+      if (!validation.success) {
+        return res.status(400).json({ message: "Invalid query parameters", errors: validation.error.errors });
+      }
+
+      const query = validation.data;
+      const result = await storage.listAnglers(query);
+      
+      // Sanitize data - remove sensitive fields
+      const sanitizedData = result.data.map(user => {
+        const { password, email, resetToken, resetTokenExpiry, verificationToken, verificationTokenExpiry, emailVerified, ...publicData } = user;
+        return publicData;
+      });
+
+      res.json({
+        data: sanitizedData,
+        total: result.total,
+        page: query.page,
+        pageSize: query.pageSize,
+        totalPages: Math.ceil(result.total / query.pageSize),
+      });
+    } catch (error: any) {
+      console.error("Get anglers error:", error);
+      res.status(500).json({ message: "Error fetching anglers: " + error.message });
     }
   });
 
