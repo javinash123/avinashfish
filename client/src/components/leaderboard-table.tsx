@@ -61,14 +61,14 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
 
   return (
     <Card>
-      <div className="overflow-x-auto">
+      <div>
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-24">Position</TableHead>
+              <TableHead className="w-16 sm:w-20">Pos</TableHead>
               <TableHead className="w-auto">Angler</TableHead>
-              <TableHead className="text-center w-20">Peg</TableHead>
-              <TableHead className="text-right w-28">Weight</TableHead>
+              <TableHead className="text-center w-14 sm:w-16">Peg</TableHead>
+              <TableHead className="text-right w-20 sm:w-24">Weight</TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
@@ -82,49 +82,49 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                   }`}
                   data-testid={`row-leaderboard-${entry.position}`}
                 >
-                  <TableCell data-testid={`text-position-${entry.position}`} className="py-3">
+                  <TableCell data-testid={`text-position-${entry.position}`} className="py-2 sm:py-3 px-2 sm:px-4">
                     {getPositionBadge(entry.position)}
                   </TableCell>
-                  <TableCell className="py-3">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-8 w-8">
+                  <TableCell className="py-2 sm:py-3 px-2 sm:px-4">
+                    <div className="flex items-center gap-2 sm:gap-3">
+                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
                         <AvatarImage src={entry.anglerAvatar} />
-                        <AvatarFallback>
+                        <AvatarFallback className="text-xs sm:text-sm">
                           {entry.anglerName
                             .split(" ")
                             .map((n) => n[0])
                             .join("")}
                         </AvatarFallback>
                       </Avatar>
-                      <div>
+                      <div className="min-w-0">
                         {entry.username ? (
                           <Link href={`/profile/${entry.username}`}>
-                            <div className="font-medium hover:underline cursor-pointer" data-testid={`text-angler-${entry.position}`}>
+                            <div className="font-medium hover:underline cursor-pointer text-sm sm:text-base truncate" data-testid={`text-angler-${entry.position}`}>
                               {entry.anglerName}
                             </div>
                           </Link>
                         ) : (
-                          <div className="font-medium" data-testid={`text-angler-${entry.position}`}>
+                          <div className="font-medium text-sm sm:text-base truncate" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
                           </div>
                         )}
                         {entry.club && (
-                          <div className="text-sm text-muted-foreground">{entry.club}</div>
+                          <div className="text-xs sm:text-sm text-muted-foreground hidden sm:block truncate">{entry.club}</div>
                         )}
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center py-3">
-                    <Badge variant="outline" className="font-mono" data-testid={`badge-peg-${entry.position}`}>
+                  <TableCell className="text-center py-2 sm:py-3 px-2 sm:px-4">
+                    <Badge variant="outline" className="font-mono text-xs sm:text-sm" data-testid={`badge-peg-${entry.position}`}>
                       {entry.pegNumber}
                     </Badge>
                   </TableCell>
-                  <TableCell className="text-right py-3">
+                  <TableCell className="text-right py-2 sm:py-3 px-2 sm:px-4">
                     <div className="flex flex-col items-end" data-testid={`text-weight-${entry.position}`}>
-                      <span className="font-mono font-bold text-lg leading-tight">
+                      <span className="font-mono font-bold text-sm sm:text-lg leading-tight">
                         {weight.pounds}
                       </span>
-                      <span className="font-mono font-bold text-base leading-tight text-muted-foreground">
+                      <span className="font-mono font-bold text-xs sm:text-base leading-tight text-muted-foreground">
                         {weight.ounces}
                       </span>
                     </div>

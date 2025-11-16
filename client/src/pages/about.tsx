@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Fish, Trophy, TrendingUp, Users, Heart, CheckCircle2, Mail } from "lucide-react";
+import { Fish, Trophy, TrendingUp, Users, Heart, CheckCircle2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
+import { ContactForm } from "@/components/contact-form";
 
 export default function About() {
   const { data: siteSettings } = useQuery<{ logoUrl?: string }>({
@@ -209,15 +209,6 @@ export default function About() {
                 <span>Make a real impact on the future of angling.</span>
               </li>
             </ul>
-
-            <div className="pt-4">
-              <Button asChild data-testid="button-volunteer-contact">
-                <a href="mailto:info@pegslam.com">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact Us to Volunteer
-                </a>
-              </Button>
-            </div>
           </CardContent>
         </Card>
 
@@ -264,17 +255,12 @@ export default function About() {
             <p className="opacity-90 pt-2">
               If your company values community, youth development, and real sport, Peg Slam is the perfect partnership.
             </p>
-
-            <div className="pt-4">
-              <Button variant="secondary" asChild data-testid="button-sponsor-contact">
-                <a href="mailto:info@pegslam.com">
-                  <Mail className="h-4 w-4 mr-2" />
-                  Contact Us About Sponsorship
-                </a>
-              </Button>
-            </div>
           </CardContent>
         </Card>
+
+        <div className="mt-12">
+          <ContactForm />
+        </div>
       </div>
     </div>
   );

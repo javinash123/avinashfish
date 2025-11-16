@@ -43,8 +43,17 @@ export default function AnglerDirectory() {
   const [page, setPage] = useState(1);
   const pageSize = 20;
 
-  const { data, isLoading } = useQuery<AnglerDirectoryResponse>({
-    queryKey: ["/api/anglers", { search, sortBy, sortOrder, page, pageSize }],
+  // Build query string for API request
+  const queryParams = new URLSearchParams({
+    search,
+    sortBy,
+    sortOrder,
+    page: page.toString(),
+    pageSize: pageSize.toString(),
+  });
+  
+  const { data, isLoading} = useQuery<AnglerDirectoryResponse>({
+    queryKey: [`/api/anglers?${queryParams.toString()}`],
   });
 
   const handleSearch = (value: string) => {

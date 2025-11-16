@@ -122,17 +122,6 @@ export default function CookiePolicy() {
               our website.
             </p>
           </section>
-
-          <section data-testid="section-cookie-contact">
-            <h2 className="text-2xl font-semibold mb-3" data-testid="text-cookie-contact-heading">8. Contact Us</h2>
-            <p className="text-muted-foreground leading-relaxed" data-testid="text-cookie-contact-intro">
-              If you have any questions about our use of cookies, please contact us at:
-            </p>
-            <p className="text-muted-foreground mt-2" data-testid="text-cookie-contact-info">
-              Email: cookies@pegslam.co.uk<br />
-              Phone: +44 1234 567890
-            </p>
-          </section>
         </div>
       </div>
     </div>

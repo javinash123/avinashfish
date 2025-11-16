@@ -24,6 +24,7 @@ import News from "@/pages/news";
 import Sponsors from "@/pages/sponsors";
 import Profile from "@/pages/profile";
 import Booking from "@/pages/booking";
+import AnglerDirectory from "@/pages/angler-directory";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsConditions from "@/pages/terms-conditions";
 import CookiePolicy from "@/pages/cookie-policy";
@@ -49,6 +50,7 @@ function Router() {
           <Route path="/competitions" component={Competitions} />
           <Route path="/competition/:id" component={CompetitionDetails} />
           <Route path="/leaderboard" component={Leaderboard} />
+          <Route path="/angler-directory" component={AnglerDirectory} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/news" component={News} />
           <Route path="/sponsors" component={Sponsors} />
