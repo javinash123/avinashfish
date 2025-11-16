@@ -92,11 +92,11 @@ export default function News() {
               Announcements
             </Button>
             <Button
-              variant={selectedCategory === "news" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("news")}
-              data-testid="button-filter-news"
+              variant={selectedCategory === "general" ? "default" : "outline"}
+              onClick={() => setSelectedCategory("general")}
+              data-testid="button-filter-general"
             >
-              News
+              General
             </Button>
           </div>
         </div>

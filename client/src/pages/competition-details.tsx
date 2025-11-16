@@ -346,30 +346,11 @@ export default function CompetitionDetails() {
           </div>
         </div>
 
-        <Tabs defaultValue="leaderboard" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 h-auto" data-testid="tabs-competition">
-            <TabsTrigger value="overview" className="text-xs sm:text-sm px-2 sm:px-4">Overview</TabsTrigger>
-            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-4">Leaderboard</TabsTrigger>
+        <Tabs defaultValue="participants" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 h-auto" data-testid="tabs-competition">
             <TabsTrigger value="participants" className="text-xs sm:text-sm px-2 sm:px-4">Participants</TabsTrigger>
+            <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-4">Leaderboard</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="overview" className="mt-6">
-            <div className="space-y-6">
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-bold mb-4">Peg Layout</h3>
-                  <PegMap pegs={pegs} selectable={false} />
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="leaderboard" className="mt-6">
-            <LeaderboardTable 
-              entries={leaderboard} 
-              isLive={true} 
-            />
-          </TabsContent>
 
           <TabsContent value="participants" className="mt-6">
             <Card>
@@ -428,6 +409,13 @@ export default function CompetitionDetails() {
                 )}
               </CardContent>
             </Card>
+          </TabsContent>
+
+          <TabsContent value="leaderboard" className="mt-6">
+            <LeaderboardTable 
+              entries={leaderboard} 
+              isLive={true} 
+            />
           </TabsContent>
         </Tabs>
       </div>

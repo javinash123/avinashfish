@@ -254,12 +254,6 @@ export default function Booking() {
                   {competition.venue}
                 </span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-muted-foreground">Peg Assignment</span>
-                <Badge data-testid="badge-peg-assignment">
-                  To be confirmed 24hrs before event
-                </Badge>
-              </div>
             </div>
 
             <div className="flex flex-col sm:flex-row gap-3">
