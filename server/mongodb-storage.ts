@@ -68,6 +68,12 @@ export class MongoDBStorage implements IStorage {
       { competitionId: 1, pegNumber: 1 }, 
       { unique: true, sparse: true }
     );
+    
+    // Create indexes for angler directory search and sorting performance
+    await this.users.createIndex({ firstName: 1 });
+    await this.users.createIndex({ lastName: 1 });
+    await this.users.createIndex({ club: 1 });
+    await this.users.createIndex({ memberSince: -1 });
   }
 
   private async initializeDefaultData() {
@@ -408,6 +414,75 @@ export class MongoDBStorage implements IStorage {
 
   async getAllUsers(): Promise<User[]> {
     return await this.users.find({}).toArray();
+  }
+
+  async listAnglers(query: {
+    search?: string;
+    sortBy?: 'name' | 'memberSince' | 'club';
+    sortOrder?: 'asc' | 'desc';
+    page?: number;
+    pageSize?: number;
+  }): Promise<{ data: User[]; total: number }> {
+    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20 } = query;
+    
+    // Build MongoDB aggregation pipeline
+    const pipeline: any[] = [];
+    
+    // Stage 1: Add fullName field for proper sorting
+    pipeline.push({
+      $addFields: {
+        fullName: { $concat: ['$firstName', ' ', '$lastName'] }
+      }
+    });
+    
+    // Stage 2: Apply search filter if provided
+    if (search) {
+      const searchRegex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
+      pipeline.push({
+        $match: {
+          $or: [
+            { firstName: searchRegex },
+            { lastName: searchRegex },
+            { username: searchRegex },
+            { club: searchRegex },
+            { fullName: searchRegex }
+          ]
+        }
+      });
+    }
+    
+    // Stage 3: Sort based on criteria (default to name if invalid sortBy)
+    const sortField = sortBy === 'memberSince' ? 'memberSince' 
+                    : sortBy === 'club' ? 'club' 
+                    : 'fullName';  // Default fallback to name
+    const sortDirection = sortOrder === 'desc' ? -1 : 1;
+    
+    pipeline.push({
+      $sort: { [sortField]: sortDirection }
+    });
+    
+    // Get total count with same filters
+    const countPipeline = [...pipeline, { $count: 'total' }];
+    const countResult = await this.users.aggregate(countPipeline).toArray();
+    const total = countResult.length > 0 ? countResult[0].total : 0;
+    
+    // Stage 4: Apply pagination
+    const skip = (page - 1) * pageSize;
+    pipeline.push({ $skip: skip });
+    pipeline.push({ $limit: pageSize });
+    
+    // Stage 5: Remove internal MongoDB _id field and temporary fullName
+    pipeline.push({
+      $project: {
+        _id: 0,
+        fullName: 0
+      }
+    });
+    
+    // Execute aggregation
+    const data = await this.users.aggregate(pipeline).toArray() as User[];
+    
+    return { data, total };
   }
 
   async createUser(user: InsertUser): Promise<User> {
