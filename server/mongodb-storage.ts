@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -15,6 +15,8 @@ export class MongoDBStorage implements IStorage {
   private galleryImages!: Collection<GalleryImage>;
   private competitions!: Collection<Competition>;
   private competitionParticipants!: Collection<CompetitionParticipant>;
+  private teams!: Collection<Team>;
+  private teamMembers!: Collection<TeamMember>;
   private leaderboardEntries!: Collection<LeaderboardEntry>;
   private userGalleryPhotos!: Collection<UserGalleryPhoto>;
   private payments!: Collection<Payment>;
@@ -38,6 +40,8 @@ export class MongoDBStorage implements IStorage {
       this.galleryImages = this.db.collection<GalleryImage>("gallery_images");
       this.competitions = this.db.collection<Competition>("competitions");
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
+      this.teams = this.db.collection<Team>("teams");
+      this.teamMembers = this.db.collection<TeamMember>("team_members");
       this.leaderboardEntries = this.db.collection<LeaderboardEntry>("leaderboard_entries");
       this.userGalleryPhotos = this.db.collection<UserGalleryPhoto>("user_gallery_photos");
       this.payments = this.db.collection<Payment>("payments");
@@ -74,6 +78,14 @@ export class MongoDBStorage implements IStorage {
     await this.users.createIndex({ lastName: 1 });
     await this.users.createIndex({ club: 1 });
     await this.users.createIndex({ memberSince: -1 });
+    
+    // Create team indexes
+    await this.teams.createIndex({ competitionId: 1 });
+    await this.teams.createIndex({ createdBy: 1 });
+    await this.teams.createIndex({ inviteCode: 1 }, { unique: true });
+    await this.teamMembers.createIndex({ teamId: 1 });
+    await this.teamMembers.createIndex({ userId: 1 });
+    await this.teamMembers.createIndex({ teamId: 1, userId: 1 }, { unique: true });
   }
 
   private async initializeDefaultData() {
@@ -1212,5 +1224,88 @@ export class MongoDBStorage implements IStorage {
       { returnDocument: "after" }
     );
     return result || undefined;
+  }
+
+  // Team methods
+  async createTeam(team: InsertTeam): Promise<Team> {
+    const id = randomUUID();
+    const newTeam: Team = {
+      id,
+      ...team,
+      createdAt: new Date(),
+    };
+    await this.teams.insertOne(newTeam as any);
+    return newTeam;
+  }
+
+  async getTeam(id: string): Promise<Team | undefined> {
+    const team = await this.teams.findOne({ id });
+    return team || undefined;
+  }
+
+  async updateTeam(id: string, updates: UpdateTeam): Promise<Team | undefined> {
+    const result = await this.teams.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async deleteTeam(id: string): Promise<boolean> {
+    const result = await this.teams.deleteOne({ id });
+    return result.deletedCount > 0;
+  }
+
+  async getTeamsByCompetition(competitionId: string): Promise<Team[]> {
+    return await this.teams.find({ competitionId }).toArray();
+  }
+
+  async getUserTeams(userId: string): Promise<Team[]> {
+    return await this.teams.find({ createdBy: userId }).toArray();
+  }
+
+  async getTeamByInviteCode(inviteCode: string): Promise<Team | undefined> {
+    const team = await this.teams.findOne({ inviteCode });
+    return team || undefined;
+  }
+
+  // Team Member methods
+  async addTeamMember(member: InsertTeamMember): Promise<TeamMember> {
+    const id = randomUUID();
+    const newMember: TeamMember = {
+      id,
+      ...member,
+      joinedAt: new Date(),
+    };
+    await this.teamMembers.insertOne(newMember as any);
+    return newMember;
+  }
+
+  async getTeamMembers(teamId: string): Promise<TeamMember[]> {
+    return await this.teamMembers.find({ teamId }).toArray();
+  }
+
+  async getUserTeamMemberships(userId: string): Promise<TeamMember[]> {
+    return await this.teamMembers.find({ userId }).toArray();
+  }
+
+  async updateTeamMemberStatus(id: string, status: string): Promise<TeamMember | undefined> {
+    const result = await this.teamMembers.findOneAndUpdate(
+      { id },
+      { $set: { status } },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async removeTeamMember(id: string): Promise<boolean> {
+    const result = await this.teamMembers.deleteOne({ id });
+    return result.deletedCount > 0;
+  }
+
+  async isUserInTeam(teamId: string, userId: string): Promise<boolean> {
+    const member = await this.teamMembers.findOne({ teamId, userId, status: "accepted" });
+    return !!member;
   }
 }

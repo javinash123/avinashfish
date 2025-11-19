@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Payment, type InsertPayment } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -99,6 +99,23 @@ export interface IStorage {
   getAvailablePegs(competitionId: string): Promise<number[]>;
   updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined>;
   
+  // Team methods
+  createTeam(team: InsertTeam): Promise<Team>;
+  getTeam(id: string): Promise<Team | undefined>;
+  updateTeam(id: string, updates: UpdateTeam): Promise<Team | undefined>;
+  deleteTeam(id: string): Promise<boolean>;
+  getTeamsByCompetition(competitionId: string): Promise<Team[]>;
+  getUserTeams(userId: string): Promise<Team[]>;
+  getTeamByInviteCode(inviteCode: string): Promise<Team | undefined>;
+  
+  // Team Member methods
+  addTeamMember(member: InsertTeamMember): Promise<TeamMember>;
+  getTeamMembers(teamId: string): Promise<TeamMember[]>;
+  getUserTeamMemberships(userId: string): Promise<TeamMember[]>;
+  updateTeamMemberStatus(id: string, status: string): Promise<TeamMember | undefined>;
+  removeTeamMember(id: string): Promise<boolean>;
+  isUserInTeam(teamId: string, userId: string): Promise<boolean>;
+  
   // Leaderboard methods
   getLeaderboard(competitionId: string): Promise<LeaderboardEntry[]>;
   getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]>;
@@ -127,6 +144,8 @@ export class MemStorage implements IStorage {
   private galleryImages: Map<string, GalleryImage>;
   private competitions: Map<string, Competition>;
   private competitionParticipants: Map<string, CompetitionParticipant>;
+  private teams: Map<string, Team>;
+  private teamMembers: Map<string, TeamMember>;
   private leaderboardEntries: Map<string, LeaderboardEntry>;
   private userGalleryPhotos: Map<string, UserGalleryPhoto>;
   private payments: Map<string, Payment>;
@@ -141,6 +160,8 @@ export class MemStorage implements IStorage {
     this.galleryImages = new Map();
     this.competitions = new Map();
     this.competitionParticipants = new Map();
+    this.teams = new Map();
+    this.teamMembers = new Map();
     this.leaderboardEntries = new Map();
     this.userGalleryPhotos = new Map();
     this.payments = new Map();
@@ -1357,6 +1378,103 @@ export class MemStorage implements IStorage {
 
     this.payments.set(id, updatedPayment);
     return updatedPayment;
+  }
+
+  // Team methods
+  async createTeam(team: InsertTeam): Promise<Team> {
+    const id = randomUUID();
+    const newTeam: Team = {
+      id,
+      ...team,
+      createdAt: new Date(),
+    };
+    this.teams.set(id, newTeam);
+    return newTeam;
+  }
+
+  async getTeam(id: string): Promise<Team | undefined> {
+    return this.teams.get(id);
+  }
+
+  async updateTeam(id: string, updates: UpdateTeam): Promise<Team | undefined> {
+    const team = this.teams.get(id);
+    if (!team) return undefined;
+
+    const updatedTeam: Team = {
+      ...team,
+      ...updates,
+    };
+
+    this.teams.set(id, updatedTeam);
+    return updatedTeam;
+  }
+
+  async deleteTeam(id: string): Promise<boolean> {
+    return this.teams.delete(id);
+  }
+
+  async getTeamsByCompetition(competitionId: string): Promise<Team[]> {
+    return Array.from(this.teams.values()).filter(
+      (team) => team.competitionId === competitionId
+    );
+  }
+
+  async getUserTeams(userId: string): Promise<Team[]> {
+    return Array.from(this.teams.values()).filter(
+      (team) => team.createdBy === userId
+    );
+  }
+
+  async getTeamByInviteCode(inviteCode: string): Promise<Team | undefined> {
+    return Array.from(this.teams.values()).find(
+      (team) => team.inviteCode === inviteCode
+    );
+  }
+
+  // Team Member methods
+  async addTeamMember(member: InsertTeamMember): Promise<TeamMember> {
+    const id = randomUUID();
+    const newMember: TeamMember = {
+      id,
+      ...member,
+      joinedAt: new Date(),
+    };
+    this.teamMembers.set(id, newMember);
+    return newMember;
+  }
+
+  async getTeamMembers(teamId: string): Promise<TeamMember[]> {
+    return Array.from(this.teamMembers.values()).filter(
+      (member) => member.teamId === teamId
+    );
+  }
+
+  async getUserTeamMemberships(userId: string): Promise<TeamMember[]> {
+    return Array.from(this.teamMembers.values()).filter(
+      (member) => member.userId === userId
+    );
+  }
+
+  async updateTeamMemberStatus(id: string, status: string): Promise<TeamMember | undefined> {
+    const member = this.teamMembers.get(id);
+    if (!member) return undefined;
+
+    const updatedMember: TeamMember = {
+      ...member,
+      status,
+    };
+
+    this.teamMembers.set(id, updatedMember);
+    return updatedMember;
+  }
+
+  async removeTeamMember(id: string): Promise<boolean> {
+    return this.teamMembers.delete(id);
+  }
+
+  async isUserInTeam(teamId: string, userId: string): Promise<boolean> {
+    const members = await this.getTeamMembers(teamId);
+    return members.some(member => member.userId === userId && member.status === "accepted");
   }
 }
 

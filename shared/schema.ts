@@ -318,6 +318,8 @@ export const competitions = pgTable("competitions", {
   type: text("type").notNull(),
   rules: text("rules").array(),
   imageUrl: text("image_url"),
+  competitionMode: text("competition_mode").notNull().default("individual"),
+  maxTeamMembers: integer("max_team_members"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -350,6 +352,48 @@ export const insertCompetitionParticipantSchema = createInsertSchema(competition
 
 export type InsertCompetitionParticipant = z.infer<typeof insertCompetitionParticipantSchema>;
 export type CompetitionParticipant = typeof competitionParticipants.$inferSelect;
+
+export const teams = pgTable("teams", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  competitionId: varchar("competition_id").notNull(),
+  name: text("name").notNull(),
+  inviteCode: text("invite_code").notNull(),
+  createdBy: varchar("created_by").notNull(),
+  paymentStatus: text("payment_status").notNull().default("pending"),
+  pegNumber: integer("peg_number"),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateTeamSchema = createInsertSchema(teams).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertTeam = z.infer<typeof insertTeamSchema>;
+export type UpdateTeam = z.infer<typeof updateTeamSchema>;
+export type Team = typeof teams.$inferSelect;
+
+export const teamMembers = pgTable("team_members", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  teamId: varchar("team_id").notNull(),
+  userId: varchar("user_id").notNull(),
+  role: text("role").notNull(),
+  status: text("status").notNull().default("pending"),
+  joinedAt: timestamp("joined_at").notNull().defaultNow(),
+});
+
+export const insertTeamMemberSchema = createInsertSchema(teamMembers).omit({
+  id: true,
+  joinedAt: true,
+});
+
+export type InsertTeamMember = z.infer<typeof insertTeamMemberSchema>;
+export type TeamMember = typeof teamMembers.$inferSelect;
 
 export const payments = pgTable("payments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
