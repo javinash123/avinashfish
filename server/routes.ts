@@ -190,7 +190,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
 
     try {
-      const { competitionId } = req.body;
+      const { competitionId, teamId } = req.body;
       
       if (!competitionId) {
         return res.status(400).json({ 
@@ -216,30 +216,71 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
 
       const userId = req.session!.userId!;
+
+      // If teamId provided, verify user is the team creator (primary member)
+      if (teamId) {
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+        if (team.createdBy !== userId) {
+          return res.status(403).json({ message: "Only the team creator can make payment for the team" });
+        }
+        if (team.competitionId !== competitionId) {
+          return res.status(400).json({ message: "Team is not registered for this competition" });
+        }
+        
+        // Prevent double charging: reject if team already paid
+        if (team.paymentStatus === "succeeded") {
+          return res.status(400).json({ message: "Team has already been paid for. Cannot create another payment." });
+        }
+      }
+
+      // Check peg availability before creating payment intent
+      const existingParticipants = await storage.getCompetitionParticipants(competitionId);
+      const existingTeams = await storage.getTeamsByCompetition(competitionId);
+      const totalBooked = existingParticipants.length + existingTeams.filter(t => t.paymentStatus === "succeeded").length;
+      
+      if (totalBooked >= competition.pegsTotal) {
+        return res.status(400).json({ message: "Competition is full. No pegs available." });
+      }
       
       // Create payment intent
+      const metadata: any = {
+        competitionId,
+        competitionName: competition.name,
+        userId: userId,
+        entryFee: entryFee.toString(),
+      };
+
+      if (teamId) {
+        metadata.teamId = teamId;
+      }
+
       const paymentIntent = await stripe.paymentIntents.create({
         amount: Math.round(entryFee * 100), // Convert to pence (GBP)
         currency: "gbp",
-        metadata: {
-          competitionId,
-          competitionName: competition.name,
-          userId: userId,
-          entryFee: entryFee.toString(),
-        },
+        metadata,
       });
       
       // Create pending payment record
       // Store amount in pence (smallest currency unit) to match Stripe's format
       const amountInPence = Math.round(entryFee * 100);
-      await storage.createPayment({
+      const paymentData: any = {
         competitionId,
         userId: userId,
         amount: amountInPence.toString(),
         currency: "gbp",
         stripePaymentIntentId: paymentIntent.id,
         status: "pending",
-      });
+      };
+
+      // Add teamId if this is a team booking
+      if (teamId) {
+        paymentData.teamId = teamId;
+      }
+
+      await storage.createPayment(paymentData);
       
       res.json({ 
         clientSecret: paymentIntent.client_secret,
@@ -267,7 +308,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
 
     try {
-      const { paymentIntentId, competitionId } = req.body;
+      const { paymentIntentId, competitionId, teamId } = req.body;
       const userId = req.session!.userId!;
       
       if (!paymentIntentId || !competitionId) {
@@ -287,21 +328,126 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(403).json({ message: "Payment verification failed" });
       }
 
-      // Update payment status to succeeded
-      await storage.updatePaymentStatus(payment.id, "succeeded");
+      // Validate teamId if provided
+      if (teamId) {
+        // Verify payment was created for this team
+        if (payment.teamId !== teamId) {
+          return res.status(400).json({ message: "Payment was not created for this team" });
+        }
 
-      // Join the competition (pegNumber will be auto-assigned because we don't pass it)
-      const participant = await storage.joinCompetition({
-        competitionId,
-        userId: userId,
-        // pegNumber is not passed, so it will be auto-assigned
-      });
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+        
+        // Idempotency: If team already paid and has peg, verify pegsBooked and return success
+        if (team.paymentStatus === "succeeded" && team.pegNumber) {
+          const competition = await storage.getCompetition(competitionId);
+          if (competition) {
+            // Verify pegsBooked was incremented (fix partial failures)
+            const existingParticipants = await storage.getCompetitionParticipants(competitionId);
+            const existingTeams = await storage.getTeamsByCompetition(competitionId);
+            const paidTeamsCount = existingTeams.filter(t => t.paymentStatus === "succeeded").length;
+            const expectedBooked = existingParticipants.length + paidTeamsCount;
+            
+            if (competition.pegsBooked < expectedBooked) {
+              // Fix: increment pegsBooked if it was missed in previous attempt
+              await storage.updateCompetition(competitionId, {
+                pegsBooked: expectedBooked
+              });
+            }
+          }
+          
+          return res.json({ 
+            success: true,
+            team,
+            pegNumber: team.pegNumber,
+            message: `Team already confirmed. Assigned to peg ${team.pegNumber}.` 
+          });
+        }
+        
+        // Verify user is team creator
+        if (team.createdBy !== userId) {
+          return res.status(403).json({ message: "Only team creator can confirm payment for the team" });
+        }
 
-      res.json({ 
-        success: true,
-        participant,
-        message: "Payment confirmed and peg booked successfully" 
-      });
+        // Verify team belongs to this competition
+        if (team.competitionId !== competitionId) {
+          return res.status(400).json({ message: "Team is not registered for this competition" });
+        }
+      }
+
+      // Handle team bookings
+      if (teamId) {
+        const team = await storage.getTeam(teamId)!;
+        const competition = await storage.getCompetition(competitionId);
+        
+        if (!competition) {
+          return res.status(404).json({ message: "Competition not found" });
+        }
+
+        // Find next available peg for the team BEFORE marking payment succeeded
+        let availablePeg = 0;
+        if (competition.pegsTotal > 0) {
+          const existingParticipants = await storage.getCompetitionParticipants(competitionId);
+          const existingTeams = await storage.getTeamsByCompetition(competitionId);
+          const assignedPegs = new Set([
+            ...existingParticipants.map(p => p.pegNumber),
+            ...existingTeams.filter(t => t.pegNumber).map(t => t.pegNumber!)
+          ]);
+          
+          for (let peg = 1; peg <= competition.pegsTotal; peg++) {
+            if (!assignedPegs.has(peg)) {
+              availablePeg = peg;
+              break;
+            }
+          }
+        }
+
+        if (availablePeg === 0) {
+          // Don't mark payment as succeeded if no pegs available
+          return res.status(400).json({ message: "No available pegs for this competition. Please contact support for refund." });
+        }
+
+        // NOW mark payment as succeeded (only after confirming peg availability)
+        await storage.updatePaymentStatus(payment.id, "succeeded");
+
+        // Update team with payment success and peg assignment
+        await storage.updateTeam(teamId, { 
+          paymentStatus: "succeeded",
+          pegNumber: availablePeg 
+        });
+
+        // Increment pegsBooked for the competition
+        await storage.updateCompetition(competitionId, {
+          pegsBooked: competition.pegsBooked + 1
+        });
+
+        res.json({ 
+          success: true,
+          team: { ...team, pegNumber: availablePeg, paymentStatus: "succeeded" },
+          pegNumber: availablePeg,
+          message: `Payment confirmed for team successfully. Team assigned to peg ${availablePeg}.` 
+        });
+      } else {
+        // Verify this is not a team payment (payment.teamId should be null)
+        if (payment.teamId) {
+          return res.status(400).json({ message: "This payment was created for a team. Please provide teamId." });
+        }
+
+        // Individual booking - Join the competition (pegNumber will be auto-assigned)
+        const participant = await storage.joinCompetition({
+          competitionId,
+          userId: userId,
+          // pegNumber is not passed, so it will be auto-assigned
+        });
+
+        res.json({ 
+          success: true,
+          participant,
+          message: "Payment confirmed and peg booked successfully" 
+        });
+      }
     } catch (error: any) {
       console.error("Error confirming payment:", error);
       res.status(500).json({ 
@@ -2328,6 +2474,325 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Error removing participant:", error);
       res.status(500).json({ message: "Error removing participant: " + error.message });
+    }
+  });
+
+  // Team routes
+  // Create a team for a competition
+  app.post("/api/competitions/:id/teams", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const competitionId = req.params.id;
+      const { name } = req.body;
+
+      if (!name || !name.trim()) {
+        return res.status(400).json({ message: "Team name is required" });
+      }
+
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      if (competition.competitionMode !== "team") {
+        return res.status(400).json({ message: "This competition does not support teams" });
+      }
+
+      // Check if user already has a team in this competition
+      const userTeams = await storage.getUserTeams(userId);
+      const existingTeam = userTeams.find(t => t.competitionId === competitionId);
+      if (existingTeam) {
+        return res.status(400).json({ message: "You already have a team in this competition" });
+      }
+
+      // Generate a unique 6-character invite code
+      const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+
+      const team = await storage.createTeam({
+        competitionId,
+        name: name.trim(),
+        inviteCode,
+        createdBy: userId,
+        paymentStatus: "pending",
+        pegNumber: null,
+      });
+
+      // Add creator as primary member
+      await storage.addTeamMember({
+        teamId: team.id,
+        userId,
+        role: "primary",
+        status: "accepted",
+      });
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error creating team:", error);
+      res.status(500).json({ message: "Error creating team: " + error.message });
+    }
+  });
+
+  // Get all teams for a competition
+  app.get("/api/competitions/:id/teams", async (req, res) => {
+    try {
+      const teams = await storage.getTeamsByCompetition(req.params.id);
+      
+      // Enrich teams with member count
+      const enrichedTeams = await Promise.all(
+        teams.map(async (team) => {
+          const members = await storage.getTeamMembers(team.id);
+          const acceptedMembers = members.filter(m => m.status === "accepted");
+          const creator = await storage.getUser(team.createdBy);
+          return {
+            ...team,
+            memberCount: acceptedMembers.length,
+            creatorName: creator ? `${creator.firstName} ${creator.lastName}` : "Unknown",
+          };
+        })
+      );
+      
+      res.json(enrichedTeams);
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ message: "Error fetching teams: " + error.message });
+    }
+  });
+
+  // Get team details
+  app.get("/api/teams/:id", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const team = await storage.getTeam(req.params.id);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const members = await storage.getTeamMembers(team.id);
+      
+      // Verify user is a member of this team
+      const isMember = members.some(m => m.userId === userId && m.status === "accepted");
+      if (!isMember) {
+        return res.status(403).json({ message: "You are not a member of this team" });
+      }
+      
+      // Enrich members with user data
+      const enrichedMembers = await Promise.all(
+        members.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            ...member,
+            userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+            username: user?.username || "",
+            avatar: user?.avatar || null,
+          };
+        })
+      );
+
+      // Only return inviteCode to the team creator
+      const isPrimaryMember = team.createdBy === userId;
+      const response: any = {
+        id: team.id,
+        competitionId: team.competitionId,
+        name: team.name,
+        createdBy: team.createdBy,
+        paymentStatus: team.paymentStatus,
+        pegNumber: team.pegNumber,
+        createdAt: team.createdAt,
+        members: enrichedMembers,
+      };
+
+      // Only include inviteCode for team creator
+      if (isPrimaryMember) {
+        response.inviteCode = team.inviteCode;
+      }
+
+      res.json(response);
+    } catch (error: any) {
+      console.error("Error fetching team:", error);
+      res.status(500).json({ message: "Error fetching team: " + error.message });
+    }
+  });
+
+  // Get current user's teams
+  app.get("/api/user/teams", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const teams = await storage.getUserTeams(userId);
+      
+      // Enrich teams with competition and member data
+      const enrichedTeams = await Promise.all(
+        teams.map(async (team) => {
+          const competition = await storage.getCompetition(team.competitionId);
+          const members = await storage.getTeamMembers(team.id);
+          const acceptedMembers = members.filter(m => m.status === "accepted");
+          
+          const response: any = {
+            id: team.id,
+            competitionId: team.competitionId,
+            name: team.name,
+            createdBy: team.createdBy,
+            paymentStatus: team.paymentStatus,
+            pegNumber: team.pegNumber,
+            createdAt: team.createdAt,
+            competitionName: competition?.name || "Unknown Competition",
+            competitionDate: competition?.date || "",
+            memberCount: acceptedMembers.length,
+            maxMembers: competition?.maxTeamMembers || 0,
+          };
+
+          // Only include inviteCode if user is the team creator
+          if (team.createdBy === userId) {
+            response.inviteCode = team.inviteCode;
+          }
+
+          return response;
+        })
+      );
+      
+      res.json(enrichedTeams);
+    } catch (error: any) {
+      console.error("Error fetching user teams:", error);
+      res.status(500).json({ message: "Error fetching user teams: " + error.message });
+    }
+  });
+
+  // Join team by invite code
+  app.post("/api/teams/join", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { inviteCode } = req.body;
+      if (!inviteCode) {
+        return res.status(400).json({ message: "Invite code is required" });
+      }
+
+      const team = await storage.getTeamByInviteCode(inviteCode.toUpperCase());
+      if (!team) {
+        return res.status(404).json({ message: "Invalid invite code" });
+      }
+
+      const competition = await storage.getCompetition(team.competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // Check if user is already in this team
+      const isInTeam = await storage.isUserInTeam(team.id, userId);
+      if (isInTeam) {
+        return res.status(400).json({ message: "You are already a member of this team" });
+      }
+
+      // Check if user already has a team in this competition
+      const userTeams = await storage.getUserTeams(userId);
+      const existingTeam = userTeams.find(t => t.competitionId === team.competitionId);
+      if (existingTeam) {
+        return res.status(400).json({ message: "You already have a team in this competition" });
+      }
+
+      // Check team capacity
+      const currentMembers = await storage.getTeamMembers(team.id);
+      const acceptedMembers = currentMembers.filter(m => m.status === "accepted");
+      if (competition.maxTeamMembers && acceptedMembers.length >= competition.maxTeamMembers) {
+        return res.status(400).json({ message: "Team is full" });
+      }
+
+      const member = await storage.addTeamMember({
+        teamId: team.id,
+        userId,
+        role: "member",
+        status: "accepted",
+      });
+
+      res.json({ message: "Successfully joined team", member });
+    } catch (error: any) {
+      console.error("Error joining team:", error);
+      res.status(500).json({ message: "Error joining team: " + error.message });
+    }
+  });
+
+  // Leave team
+  app.delete("/api/teams/:id/leave", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const teamId = req.params.id;
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      // Primary member cannot leave if there are other members
+      const members = await storage.getTeamMembers(teamId);
+      const userMembership = members.find(m => m.userId === userId);
+      
+      if (!userMembership) {
+        return res.status(404).json({ message: "You are not a member of this team" });
+      }
+
+      if (userMembership.role === "primary") {
+        const otherMembers = members.filter(m => m.userId !== userId && m.status === "accepted");
+        if (otherMembers.length > 0) {
+          return res.status(400).json({ message: "Team leader cannot leave while other members are in the team. Remove all members first or transfer leadership." });
+        }
+        // Delete the team if primary member is the last one
+        await storage.deleteTeam(teamId);
+        res.json({ message: "Team deleted successfully" });
+      } else {
+        await storage.removeTeamMember(userMembership.id);
+        res.json({ message: "Left team successfully" });
+      }
+    } catch (error: any) {
+      console.error("Error leaving team:", error);
+      res.status(500).json({ message: "Error leaving team: " + error.message });
+    }
+  });
+
+  // Remove team member (primary member only)
+  app.delete("/api/teams/:teamId/members/:memberId", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { teamId, memberId } = req.params;
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      // Only primary member can remove others
+      if (team.createdBy !== userId) {
+        return res.status(403).json({ message: "Only team leader can remove members" });
+      }
+
+      const success = await storage.removeTeamMember(memberId);
+      if (!success) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      res.json({ message: "Member removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ message: "Error removing team member: " + error.message });
     }
   });
 
