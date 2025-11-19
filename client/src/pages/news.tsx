@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardFooter, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -17,10 +18,37 @@ export default function News() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
   const { toast } = useToast();
+  const [location, setLocation] = useLocation();
 
   const { data: newsArticles = [], isLoading } = useQuery<News[]>({
     queryKey: ["/api/news"],
   });
+
+  // Handle deep linking - auto-open article from URL parameter and browser navigation
+  useEffect(() => {
+    if (newsArticles.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const articleId = urlParams.get('article');
+      
+      if (articleId) {
+        const article = newsArticles.find(a => a.id === articleId);
+        if (article && (!selectedArticle || selectedArticle.id !== articleId)) {
+          setSelectedArticle(article);
+        }
+      } else if (selectedArticle) {
+        setSelectedArticle(null);
+      }
+    }
+  }, [newsArticles, location]);
+
+  // Update URL when article is opened/closed using wouter
+  const handleArticleOpen = (article: News) => {
+    setLocation(`/news?article=${article.id}`);
+  };
+
+  const handleArticleClose = () => {
+    setLocation('/news');
+  };
 
   const filteredArticles = newsArticles.filter((article) => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -162,7 +190,7 @@ export default function News() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => setSelectedArticle(article)}
+                        onClick={() => handleArticleOpen(article)}
                         data-testid={`button-read-more-${article.id}`}
                       >
                         Read More
@@ -187,115 +215,117 @@ export default function News() {
         )}
       </div>
 
-      <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && setSelectedArticle(null)}>
+      <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && handleArticleClose()}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-news-detail">
-          {selectedArticle && (
-            <>
-              <DialogHeader>
-                <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
-              </DialogHeader>
-              <div className="space-y-4">
-                <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
-                  <img
-                    src={selectedArticle.image}
-                    alt={selectedArticle.title}
-                    className="w-full h-full object-contain"
-                  />
-                </div>
-                <div className="flex flex-wrap items-center gap-4">
-                  {(() => {
-                    const categoryInfo = getCategoryBadge(selectedArticle.category);
-                    const CategoryIcon = categoryInfo.icon;
-                    return (
-                      <Badge variant={categoryInfo.variant}>
-                        <CategoryIcon className="h-3 w-3 mr-1" />
-                        {categoryInfo.label}
-                      </Badge>
-                    );
-                  })()}
-                  <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      <span data-testid="text-dialog-news-date">{selectedArticle.date}</span>
+          {selectedArticle && (() => {
+            // Generate shareable URL for this specific article
+            const articleUrl = `${window.location.origin}/news?article=${selectedArticle.id}`;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
+                    <img
+                      src={selectedArticle.image}
+                      alt={selectedArticle.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {(() => {
+                      const categoryInfo = getCategoryBadge(selectedArticle.category);
+                      const CategoryIcon = categoryInfo.icon;
+                      return (
+                        <Badge variant={categoryInfo.variant}>
+                          <CategoryIcon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
+                      );
+                    })()}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span data-testid="text-dialog-news-date">{selectedArticle.date}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{selectedArticle.readTime}</span>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      <span>{selectedArticle.readTime}</span>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground font-medium">{selectedArticle.excerpt}</p>
+                    <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: selectedArticle.content }} />
+                    <div className="flex items-center gap-4 text-sm pt-4 border-t">
+                      <span className="text-muted-foreground">By {selectedArticle.author}</span>
+                      {selectedArticle.competition && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-muted-foreground" />
+                            <span data-testid="text-dialog-news-competition">{selectedArticle.competition}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-4 border-t mt-4">
+                      <Share2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground mr-2">Share:</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const text = selectedArticle.title;
+                          window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-whatsapp"
+                      >
+                        <FaWhatsapp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-facebook"
+                      >
+                        <SiFacebook className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const text = selectedArticle.title;
+                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-x"
+                      >
+                        <SiX className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(articleUrl);
+                          toast({
+                            title: "Link copied",
+                            description: "Article link copied to clipboard - share it anywhere!",
+                          });
+                        }}
+                        data-testid="button-share-instagram"
+                      >
+                        Copy Link
+                      </Button>
                     </div>
                   </div>
                 </div>
-                <div className="space-y-3">
-                  <p className="text-muted-foreground font-medium">{selectedArticle.excerpt}</p>
-                  <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: selectedArticle.content }} />
-                  <div className="flex items-center gap-4 text-sm pt-4 border-t">
-                    <span className="text-muted-foreground">By {selectedArticle.author}</span>
-                    {selectedArticle.competition && (
-                      <>
-                        <span className="text-muted-foreground">•</span>
-                        <div className="flex items-center gap-2">
-                          <Trophy className="h-4 w-4 text-muted-foreground" />
-                          <span data-testid="text-dialog-news-competition">{selectedArticle.competition}</span>
-                        </div>
-                      </>
-                    )}
-                  </div>
-                  <div className="flex items-center gap-2 pt-4 border-t mt-4">
-                    <Share2 className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm text-muted-foreground mr-2">Share:</span>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        const url = window.location.href;
-                        const text = selectedArticle.title;
-                        window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + url)}`, '_blank');
-                      }}
-                      data-testid="button-share-whatsapp"
-                    >
-                      <FaWhatsapp className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        const url = window.location.href;
-                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
-                      }}
-                      data-testid="button-share-facebook"
-                    >
-                      <SiFacebook className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="icon"
-                      onClick={() => {
-                        const url = window.location.href;
-                        const text = selectedArticle.title;
-                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, '_blank');
-                      }}
-                      data-testid="button-share-x"
-                    >
-                      <SiX className="h-4 w-4" />
-                    </Button>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        navigator.clipboard.writeText(window.location.href);
-                        toast({
-                          title: "Link copied",
-                          description: "Link copied to clipboard for sharing on Instagram",
-                        });
-                      }}
-                      data-testid="button-share-instagram"
-                    >
-                      Copy Link
-                    </Button>
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
     </div>
