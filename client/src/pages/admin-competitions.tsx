@@ -82,6 +82,23 @@ export default function AdminCompetitions() {
     enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
   });
 
+  // Fetch teams for team competitions
+  const { data: teams = [] } = useQuery<Array<{
+    id: string;
+    teamName: string;
+    pegNumber: number;
+    memberCount: number;
+    members: Array<{
+      userId: string;
+      name: string;
+      avatar: string;
+      isPrimary: boolean;
+    }>;
+  }>>({
+    queryKey: [`/api/competitions/${selectedCompetition?.id}/teams`],
+    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && (isPegAssignmentOpen || isWeighInOpen),
+  });
+
   // Fetch all users for adding to competition
   const { data: allUsers = [] } = useQuery<Array<{
     id: string;
@@ -211,27 +228,57 @@ export default function AdminCompetitions() {
     },
   });
 
+  const updateTeamPegMutation = useMutation({
+    mutationFn: async ({ teamId, pegNumber }: { teamId: string; pegNumber: number }) => {
+      return await apiRequest("PUT", `/api/admin/teams/${teamId}/peg`, { pegNumber });
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/teams`] });
+      }
+      toast({
+        title: "Peg assigned",
+        description: "Team peg has been updated successfully.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to assign peg to team",
+        variant: "destructive",
+      });
+    },
+  });
+
   const submitWeightMutation = useMutation({
-    mutationFn: async (data: { competitionId: string; userId: string; pegNumber: number; weight: string }) => {
+    mutationFn: async (data: { competitionId: string; userId?: string; teamId?: string; pegNumber: number; weight: string }) => {
       return await apiRequest("POST", "/api/admin/leaderboard", data);
     },
     onSuccess: (data, variables) => {
       if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
         // Invalidate participant entries if they are viewing the same participant
-        if (selectedParticipant && selectedParticipant.userId === variables.userId) {
+        if (selectedParticipant && variables.userId && selectedParticipant.userId === variables.userId) {
           queryClient.invalidateQueries({ 
             queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${variables.userId}/entries`] 
           });
         }
       }
-      const participant = participants.find(p => p.pegNumber === variables.pegNumber);
-      const anglerName = participant?.name || `Peg ${variables.pegNumber}`;
+      
+      // Get display name based on competition mode
+      let displayName = `Peg ${variables.pegNumber}`;
+      if (selectedCompetition?.competitionMode === "team" && variables.teamId) {
+        const team = teams.find(t => t.id === variables.teamId);
+        displayName = team?.teamName || displayName;
+      } else if (variables.userId) {
+        const participant = participants.find(p => p.userId === variables.userId);
+        displayName = participant?.name || displayName;
+      }
       
       const newEntry = {
         peg: variables.pegNumber,
         weight: parseFloat(variables.weight),
-        angler: anglerName,
+        angler: displayName,
         time: new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', timeZone: 'Europe/London' })
       };
       
@@ -245,7 +292,7 @@ export default function AdminCompetitions() {
       
       toast({
         title: "Weight recorded",
-        description: `${formatWeight(variables.weight)} recorded for ${anglerName} (Peg ${variables.pegNumber})`,
+        description: `${formatWeight(variables.weight)} recorded for ${displayName} (Peg ${variables.pegNumber})`,
       });
     },
     onError: () => {
@@ -707,28 +754,51 @@ export default function AdminCompetitions() {
       return;
     }
     
-    // Find angler assigned to this peg from participants
-    const participant = participants.find(p => p.pegNumber === pegNumber);
-    
-    if (!participant) {
-      toast({
-        title: "Error",
-        description: `No angler assigned to peg ${pegNumber}`,
-        variant: "destructive",
-      });
-      return;
-    }
-    
     // Convert to total ounces for storage
     const totalOunces = convertToOunces(pounds, ounces);
     
-    // Submit to database (weight stored as total ounces in string format)
-    submitWeightMutation.mutate({
-      competitionId: selectedCompetition.id,
-      userId: participant.userId,
-      pegNumber: pegNumber,
-      weight: totalOunces.toString(),
-    });
+    // Handle team competitions
+    if (selectedCompetition.competitionMode === "team") {
+      // Find team assigned to this peg
+      const team = teams.find(t => t.pegNumber === pegNumber);
+      
+      if (!team) {
+        toast({
+          title: "Error",
+          description: `No team assigned to peg ${pegNumber}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Submit to database with teamId instead of userId
+      submitWeightMutation.mutate({
+        competitionId: selectedCompetition.id,
+        teamId: team.id,
+        pegNumber: pegNumber,
+        weight: totalOunces.toString(),
+      });
+    } else {
+      // Find angler assigned to this peg from participants
+      const participant = participants.find(p => p.pegNumber === pegNumber);
+      
+      if (!participant) {
+        toast({
+          title: "Error",
+          description: `No angler assigned to peg ${pegNumber}`,
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Submit to database (weight stored as total ounces in string format)
+      submitWeightMutation.mutate({
+        competitionId: selectedCompetition.id,
+        userId: participant.userId,
+        pegNumber: pegNumber,
+        weight: totalOunces.toString(),
+      });
+    }
   };
 
   const filteredCompetitions = competitions.filter(
@@ -1369,7 +1439,9 @@ export default function AdminCompetitions() {
           <DialogHeader>
             <DialogTitle>Peg Assignment - {selectedCompetition?.name}</DialogTitle>
             <DialogDescription>
-              Assign anglers to pegs for this competition
+              {selectedCompetition?.competitionMode === "team" 
+                ? "Assign teams to pegs for this competition"
+                : "Assign anglers to pegs for this competition"}
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
@@ -1377,7 +1449,9 @@ export default function AdminCompetitions() {
               <CardHeader>
                 <CardTitle>Auto-Assign Pegs</CardTitle>
                 <CardDescription>
-                  Automatically assign registered anglers to available pegs
+                  {selectedCompetition?.competitionMode === "team"
+                    ? "Automatically assign registered teams to available pegs"
+                    : "Automatically assign registered anglers to available pegs"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -1393,7 +1467,115 @@ export default function AdminCompetitions() {
               </CardContent>
             </Card>
 
-            {selectedCompetition && participants.filter(p => p.pegNumber > 0).length > 0 && (
+            {selectedCompetition?.competitionMode === "team" && teams.filter(t => t.pegNumber > 0).length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Current Team Assignments</CardTitle>
+                  <CardDescription>
+                    {teams.filter(t => t.pegNumber > 0).length} teams assigned
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Peg</TableHead>
+                        <TableHead>Team</TableHead>
+                        <TableHead>Members</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {teams
+                        .filter(t => t.pegNumber > 0)
+                        .sort((a, b) => a.pegNumber - b.pegNumber)
+                        .map((team) => (
+                          <TableRow key={team.id}>
+                            <TableCell>
+                              {editingPegParticipantId === team.id ? (
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    value={editPegNumber}
+                                    onChange={(e) => setEditPegNumber(e.target.value)}
+                                    className="w-20 h-8"
+                                    data-testid={`input-edit-team-peg-${team.id}`}
+                                  />
+                                  <Button
+                                    size="sm"
+                                    onClick={() => {
+                                      const pegNum = parseInt(editPegNumber);
+                                      const maxPegs = selectedCompetition?.pegsTotal || 0;
+                                      
+                                      if (isNaN(pegNum) || pegNum < 1 || pegNum > maxPegs) {
+                                        toast({
+                                          title: "Invalid peg number",
+                                          description: `Please enter a number between 1 and ${maxPegs}`,
+                                          variant: "destructive",
+                                        });
+                                        return;
+                                      }
+                                      
+                                      updateTeamPegMutation.mutate({ 
+                                        teamId: team.id, 
+                                        pegNumber: pegNum 
+                                      });
+                                      setEditingPegParticipantId(null);
+                                      setEditPegNumber("");
+                                    }}
+                                    disabled={!editPegNumber || updateTeamPegMutation.isPending}
+                                    data-testid={`button-save-team-peg-${team.id}`}
+                                  >
+                                    Save
+                                  </Button>
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    onClick={() => {
+                                      setEditingPegParticipantId(null);
+                                      setEditPegNumber("");
+                                    }}
+                                    data-testid={`button-cancel-team-peg-${team.id}`}
+                                  >
+                                    Cancel
+                                  </Button>
+                                </div>
+                              ) : (
+                                <Badge variant="outline" className="font-mono">
+                                  {team.pegNumber}
+                                </Badge>
+                              )}
+                            </TableCell>
+                            <TableCell className="font-semibold">{team.teamName}</TableCell>
+                            <TableCell>
+                              <div className="text-sm text-muted-foreground">
+                                {team.memberCount} member{team.memberCount !== 1 ? 's' : ''}
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              {editingPegParticipantId !== team.id && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  onClick={() => {
+                                    setEditingPegParticipantId(team.id);
+                                    setEditPegNumber(team.pegNumber.toString());
+                                  }}
+                                  data-testid={`button-edit-team-peg-${team.id}`}
+                                >
+                                  <Pencil className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                    </TableBody>
+                  </Table>
+                </CardContent>
+              </Card>
+            )}
+
+            {selectedCompetition?.competitionMode === "individual" && participants.filter(p => p.pegNumber > 0).length > 0 && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Assignments</CardTitle>
@@ -1570,9 +1752,13 @@ export default function AdminCompetitions() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>View Participant Entries</CardTitle>
+                  <CardTitle>
+                    {selectedCompetition?.competitionMode === "team" ? "View Team Entries" : "View Participant Entries"}
+                  </CardTitle>
                   <DialogDescription>
-                    Select a peg to view all weight entries for that participant
+                    {selectedCompetition?.competitionMode === "team" 
+                      ? "Select a peg to view all weight entries for that team"
+                      : "Select a peg to view all weight entries for that participant"}
                   </DialogDescription>
                 </CardHeader>
                 <CardContent>
@@ -1587,14 +1773,25 @@ export default function AdminCompetitions() {
                         data-testid="select-view-peg"
                       >
                         <option value="">-- Select Peg --</option>
-                        {participants
-                          .filter(p => p.pegNumber > 0)
-                          .sort((a, b) => a.pegNumber - b.pegNumber)
-                          .map((p) => (
-                            <option key={p.id} value={p.pegNumber}>
-                              Peg {p.pegNumber} - {p.name}
-                            </option>
-                          ))}
+                        {selectedCompetition?.competitionMode === "team" ? (
+                          teams
+                            .filter(t => t.pegNumber > 0)
+                            .sort((a, b) => a.pegNumber - b.pegNumber)
+                            .map((t) => (
+                              <option key={t.id} value={t.pegNumber}>
+                                Peg {t.pegNumber} - {t.teamName}
+                              </option>
+                            ))
+                        ) : (
+                          participants
+                            .filter(p => p.pegNumber > 0)
+                            .sort((a, b) => a.pegNumber - b.pegNumber)
+                            .map((p) => (
+                              <option key={p.id} value={p.pegNumber}>
+                                Peg {p.pegNumber} - {p.name}
+                              </option>
+                            ))
+                        )}
                       </select>
                     </div>
 

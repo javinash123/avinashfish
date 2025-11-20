@@ -2899,6 +2899,31 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Admin: Update team peg number
+  app.put("/api/admin/teams/:id/peg", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { pegNumber } = req.body;
+      if (typeof pegNumber !== 'number' || pegNumber < 1) {
+        return res.status(400).json({ message: "Invalid peg number" });
+      }
+
+      const team = await storage.updateTeamPeg(req.params.id, pegNumber);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error updating team peg:", error);
+      res.status(500).json({ message: "Error updating team peg: " + error.message });
+    }
+  });
+
   // Leaderboard routes
   app.get("/api/competitions/:id/leaderboard", async (req, res) => {
     try {
