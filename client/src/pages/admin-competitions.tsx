@@ -112,12 +112,17 @@ export default function AdminCompetitions() {
     enabled: isAnglersOpen,
   });
 
-  // Get userId from selected peg
+  // Get userId from selected peg (for individual competitions)
   const selectedParticipant = selectedPegForView 
     ? participants.find(p => p.pegNumber === selectedPegForView)
     : null;
 
-  // Fetch weight entries for selected participant
+  // Get team from selected peg (for team competitions)
+  const selectedTeam = selectedPegForView && selectedCompetition?.competitionMode === "team"
+    ? teams.find(t => t.pegNumber === selectedPegForView)
+    : null;
+
+  // Fetch weight entries for selected participant (individual competitions)
   const { data: participantEntries } = useQuery<{
     entries: Array<{
       id: string;
@@ -127,7 +132,20 @@ export default function AdminCompetitions() {
     totalWeight: string;
   }>({
     queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/participants/${selectedParticipant?.userId}/entries`],
-    enabled: !!selectedCompetition && !!selectedParticipant,
+    enabled: !!selectedCompetition && !!selectedParticipant && selectedCompetition.competitionMode !== "team",
+  });
+
+  // Fetch weight entries for selected team (team competitions)
+  const { data: teamEntries } = useQuery<{
+    entries: Array<{
+      id: string;
+      weight: string;
+      createdAt: string;
+    }>;
+    totalWeight: string;
+  }>({
+    queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/teams/${selectedTeam?.id}/entries`],
+    enabled: !!selectedCompetition && !!selectedTeam && selectedCompetition.competitionMode === "team",
   });
 
   // Fetch payments for selected competition
@@ -263,6 +281,12 @@ export default function AdminCompetitions() {
             queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${variables.userId}/entries`] 
           });
         }
+        // Invalidate team entries if they are viewing the same team
+        if (selectedTeam && variables.teamId && selectedTeam.id === variables.teamId) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/teams/${variables.teamId}/entries`] 
+          });
+        }
       }
       
       // Get display name based on competition mode
@@ -309,11 +333,18 @@ export default function AdminCompetitions() {
       return await apiRequest("PUT", `/api/admin/leaderboard/${entryId}`, { weight });
     },
     onSuccess: () => {
-      if (selectedCompetition && selectedParticipant) {
+      if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
-        });
+        if (selectedParticipant) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
+          });
+        }
+        if (selectedTeam) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/teams/${selectedTeam.id}/entries`] 
+          });
+        }
       }
       setEditingEntryId(null);
       setEditPounds("");
@@ -337,11 +368,18 @@ export default function AdminCompetitions() {
       return await apiRequest("DELETE", `/api/admin/leaderboard/${entryId}`);
     },
     onSuccess: () => {
-      if (selectedCompetition && selectedParticipant) {
+      if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/leaderboard`] });
-        queryClient.invalidateQueries({ 
-          queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
-        });
+        if (selectedParticipant) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/participants/${selectedParticipant.userId}/entries`] 
+          });
+        }
+        if (selectedTeam) {
+          queryClient.invalidateQueries({ 
+            queryKey: [`/api/admin/competitions/${selectedCompetition.id}/teams/${selectedTeam.id}/entries`] 
+          });
+        }
       }
       toast({
         title: "Weight deleted",
@@ -1795,29 +1833,35 @@ export default function AdminCompetitions() {
                       </select>
                     </div>
 
-                    {selectedPegForView && selectedParticipant && (
+                    {selectedPegForView && (selectedParticipant || selectedTeam) && (
                       <div className="space-y-3">
                         <div className="flex items-center justify-between p-3 bg-muted rounded-md">
                           <div>
-                            <p className="font-semibold">{selectedParticipant.name}</p>
+                            <p className="font-semibold">
+                              {selectedTeam ? selectedTeam.teamName : selectedParticipant?.name}
+                            </p>
                             <p className="text-sm text-muted-foreground">Peg {selectedPegForView}</p>
                           </div>
-                          {participantEntries && (
+                          {(participantEntries || teamEntries) && (
                             <div className="text-right">
                               <p className="text-sm text-muted-foreground">Total Weight</p>
-                              <p className="text-2xl font-bold">{formatWeight(participantEntries.totalWeight)}</p>
+                              <p className="text-2xl font-bold">
+                                {formatWeight((teamEntries?.totalWeight || participantEntries?.totalWeight) || "0")}
+                              </p>
                             </div>
                           )}
                         </div>
 
-                        {participantEntries && participantEntries.entries.length > 0 ? (
+                        {((teamEntries && teamEntries.entries.length > 0) || (participantEntries && participantEntries.entries.length > 0)) ? (
                           <div className="space-y-2">
-                            <p className="text-sm font-medium">Individual Entries ({participantEntries.entries.length})</p>
+                            <p className="text-sm font-medium">
+                              Individual Entries ({(teamEntries?.entries.length || participantEntries?.entries.length) || 0})
+                            </p>
                             <div className="space-y-1">
-                              {participantEntries.entries.map((entry, index) => (
+                              {(teamEntries?.entries || participantEntries?.entries || []).map((entry, index) => (
                                 <div key={entry.id} className="flex items-center justify-between gap-2 p-2 border rounded-md">
                                   <span className="text-sm text-muted-foreground">
-                                    Entry #{participantEntries.entries.length - index}
+                                    Entry #{((teamEntries?.entries || participantEntries?.entries)?.length || 0) - index}
                                   </span>
                                   {editingEntryId === entry.id ? (
                                     <div className="flex items-center gap-2">

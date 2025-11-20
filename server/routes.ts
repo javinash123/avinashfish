@@ -3042,6 +3042,33 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Get all weight entries for a team in a competition (admin only)
+  app.get("/api/admin/competitions/:competitionId/teams/:teamId/entries", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { competitionId, teamId } = req.params;
+      const entries = await storage.getTeamLeaderboardEntries(competitionId, teamId);
+      
+      // Calculate total weight
+      const totalWeight = entries.reduce((sum, entry) => {
+        const weight = parseFloat(entry.weight.toString().replace(/[^\d.-]/g, ''));
+        return sum + weight;
+      }, 0);
+
+      res.json({
+        entries,
+        totalWeight: totalWeight.toString(),
+      });
+    } catch (error: any) {
+      console.error("Error fetching team entries:", error);
+      res.status(500).json({ message: "Error fetching team entries: " + error.message });
+    }
+  });
+
   app.get("/api/admin/competitions/:id/payments", async (req, res) => {
     try {
       const adminId = req.session?.adminId;

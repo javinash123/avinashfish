@@ -1202,7 +1202,39 @@ export class MongoDBStorage implements IStorage {
       .find({ competitionId, userId })
       .sort({ createdAt: -1 })
       .toArray();
-    return entries;
+    
+    // Normalize MongoDB documents to plain JavaScript objects
+    return entries.map(entry => ({
+      id: entry.id,
+      competitionId: entry.competitionId,
+      userId: entry.userId,
+      teamId: entry.teamId ?? null,
+      pegNumber: entry.pegNumber,
+      weight: entry.weight.toString(),
+      position: entry.position ?? null,
+      createdAt: new Date(entry.createdAt),
+      updatedAt: new Date(entry.updatedAt),
+    }));
+  }
+
+  async getTeamLeaderboardEntries(competitionId: string, teamId: string): Promise<LeaderboardEntry[]> {
+    const entries = await this.leaderboardEntries
+      .find({ competitionId, teamId })
+      .sort({ createdAt: -1 })
+      .toArray();
+    
+    // Normalize MongoDB documents to plain JavaScript objects
+    return entries.map(entry => ({
+      id: entry.id,
+      competitionId: entry.competitionId,
+      userId: entry.userId,
+      teamId: entry.teamId ?? null,
+      pegNumber: entry.pegNumber,
+      weight: entry.weight.toString(),
+      position: entry.position ?? null,
+      createdAt: new Date(entry.createdAt),
+      updatedAt: new Date(entry.updatedAt),
+    }));
   }
 
   async createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry> {
@@ -1321,6 +1353,40 @@ export class MongoDBStorage implements IStorage {
   async getTeamByInviteCode(inviteCode: string): Promise<Team | undefined> {
     const team = await this.teams.findOne({ inviteCode });
     return team || undefined;
+  }
+
+  async updateTeamPeg(teamId: string, pegNumber: number): Promise<Team | undefined> {
+    const team = await this.teams.findOne({ id: teamId });
+    if (!team) return undefined;
+
+    // Check if this peg is already assigned to another team in the same competition
+    const existingTeamPegAssignment = await this.teams.findOne({
+      competitionId: team.competitionId,
+      id: { $ne: teamId },
+      pegNumber,
+    });
+
+    if (existingTeamPegAssignment) {
+      throw new Error('Peg is already assigned to another team');
+    }
+
+    // Check if this peg is already assigned to an individual participant in the same competition
+    const existingParticipantPegAssignment = await this.competitionParticipants.findOne({
+      competitionId: team.competitionId,
+      pegNumber,
+    });
+
+    if (existingParticipantPegAssignment) {
+      throw new Error('Peg is already assigned to a participant');
+    }
+
+    await this.teams.updateOne(
+      { id: teamId },
+      { $set: { pegNumber } }
+    );
+
+    const updatedTeam = await this.teams.findOne({ id: teamId });
+    return updatedTeam || undefined;
   }
 
   // Team Member methods

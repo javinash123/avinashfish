@@ -121,6 +121,7 @@ export interface IStorage {
   getLeaderboard(competitionId: string): Promise<LeaderboardEntry[]>;
   getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]>;
   getParticipantLeaderboardEntries(competitionId: string, userId: string): Promise<LeaderboardEntry[]>;
+  getTeamLeaderboardEntries(competitionId: string, teamId: string): Promise<LeaderboardEntry[]>;
   createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry>;
   updateLeaderboardEntry(id: string, updates: UpdateLeaderboardEntry): Promise<LeaderboardEntry | undefined>;
   deleteLeaderboardEntry(id: string): Promise<boolean>;
@@ -1303,6 +1304,16 @@ export class MemStorage implements IStorage {
     });
   }
 
+  async getTeamLeaderboardEntries(competitionId: string, teamId: string): Promise<LeaderboardEntry[]> {
+    const entries = Array.from(this.leaderboardEntries.values())
+      .filter((entry) => entry.competitionId === competitionId && entry.teamId === teamId);
+    
+    // Sort by creation time (most recent first)
+    return entries.sort((a, b) => {
+      return b.createdAt.getTime() - a.createdAt.getTime();
+    });
+  }
+
   async createLeaderboardEntry(insertEntry: InsertLeaderboardEntry): Promise<LeaderboardEntry> {
     const id = randomUUID();
     const entry: LeaderboardEntry = {
@@ -1430,6 +1441,40 @@ export class MemStorage implements IStorage {
     return Array.from(this.teams.values()).find(
       (team) => team.inviteCode === inviteCode
     );
+  }
+
+  async updateTeamPeg(teamId: string, pegNumber: number): Promise<Team | undefined> {
+    const team = this.teams.get(teamId);
+    if (!team) return undefined;
+
+    // Check if this peg is already assigned to another team in the same competition
+    const existingTeamPegAssignment = Array.from(this.teams.values()).find(
+      (t) => t.competitionId === team.competitionId && 
+             t.id !== teamId && 
+             t.pegNumber === pegNumber
+    );
+
+    if (existingTeamPegAssignment) {
+      throw new Error('Peg is already assigned to another team');
+    }
+
+    // Check if this peg is already assigned to an individual participant in the same competition
+    const existingParticipantPegAssignment = Array.from(this.competitionParticipants.values()).find(
+      (p) => p.competitionId === team.competitionId && 
+             p.pegNumber === pegNumber
+    );
+
+    if (existingParticipantPegAssignment) {
+      throw new Error('Peg is already assigned to a participant');
+    }
+
+    const updatedTeam: Team = {
+      ...team,
+      pegNumber,
+    };
+
+    this.teams.set(teamId, updatedTeam);
+    return updatedTeam;
   }
 
   // Team Member methods
