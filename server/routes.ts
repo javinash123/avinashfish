@@ -685,6 +685,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     try {
       const { id } = req.params;
       
+      if (!req.staff) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
       const result = updateStaffSchema.safeParse(req.body);
       
       if (!result.success) {
@@ -733,6 +737,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     try {
       const { id } = req.params;
       
+      if (!req.staff) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      
       // Only allow updating own password or if admin
       if (id !== req.staff.id && req.staff.role !== 'admin') {
         return res.status(403).json({ message: "Access denied" });
@@ -773,6 +781,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.delete("/api/admin/staff/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
     try {
       const { id } = req.params;
+      
+      if (!req.staff) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
       
       // Prevent staff from deleting themselves
       if (id === req.staff.id) {

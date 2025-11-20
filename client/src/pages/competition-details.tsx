@@ -6,6 +6,16 @@ import { PegMap } from "@/components/peg-map";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
   Calendar,
   MapPin,
   Users,
@@ -14,6 +24,9 @@ import {
   Clock,
   ArrowLeft,
   Loader2,
+  UserPlus,
+  Copy,
+  Check,
 } from "lucide-react";
 import { Link, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -22,6 +35,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Skeleton } from "@/components/ui/skeleton";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
+import { useState } from "react";
 
 export default function CompetitionDetails() {
   const { id } = useParams();
@@ -46,6 +60,17 @@ export default function CompetitionDetails() {
   const { data: user } = useQuery({
     queryKey: ["/api/user/me"],
   });
+
+  const { data: userTeam, refetch: refetchUserTeam } = useQuery<any>({
+    queryKey: [`/api/competitions/${id}/my-team`],
+    enabled: !!user && competition?.competitionMode === "team",
+  });
+
+  const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
+  const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
+  const [teamName, setTeamName] = useState("");
+  const [createdTeam, setCreatedTeam] = useState<any>(null);
+  const [copiedInvite, setCopiedInvite] = useState(false);
 
   const handleBookPeg = () => {
     if (!competition) return;
@@ -104,6 +129,121 @@ export default function CompetitionDetails() {
       toast({
         title: "Success",
         description: "You've left the competition",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const createTeamMutation = useMutation({
+    mutationFn: async (name: string) => {
+      const response = await apiRequest("POST", `/api/teams/create`, {
+        competitionId: id,
+        teamName: name,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to create team");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setCreatedTeam(data);
+      setTeamName("");
+      refetchUserTeam();
+      toast({
+        title: "Team created!",
+        description: "Share the invite code with your team members",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleCreateTeam = () => {
+    if (!teamName.trim()) {
+      toast({
+        title: "Error",
+        description: "Please enter a team name",
+        variant: "destructive",
+      });
+      return;
+    }
+    createTeamMutation.mutate(teamName);
+  };
+
+  const copyInviteCode = async (code: string) => {
+    try {
+      await navigator.clipboard.writeText(code);
+      setCopiedInvite(true);
+      toast({
+        title: "Copied!",
+        description: "Invite code copied to clipboard",
+      });
+      setTimeout(() => setCopiedInvite(false), 2000);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to copy code",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const leaveTeamMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/teams/leave`, {
+        competitionId: id,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to leave team");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchUserTeam();
+      setIsManageTeamOpen(false);
+      toast({
+        title: "Left team",
+        description: "You have left the team",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const regenerateInviteMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", `/api/teams/regenerate-invite`, {
+        competitionId: id,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to regenerate invite code");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchUserTeam();
+      toast({
+        title: "Code regenerated",
+        description: "New invite code has been generated",
       });
     },
     onError: (error: Error) => {
@@ -290,44 +430,90 @@ export default function CompetitionDetails() {
                       </Button>
                     </Link>
                   ) : user ? (
-                    isJoined ? (
-                      <Button 
-                        variant="outline" 
-                        className="w-full" 
-                        size="lg" 
-                        onClick={() => leaveMutation.mutate()}
-                        disabled={leaveMutation.isPending}
-                        data-testid="button-leave-competition"
-                      >
-                        {leaveMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Leaving...
-                          </>
-                        ) : (
-                          "Leave Competition"
-                        )}
-                      </Button>
-                    ) : (
-                      <Button 
-                        className="w-full" 
-                        size="lg" 
-                        onClick={handleBookPeg}
-                        disabled={joinMutation.isPending || competition.pegsBooked >= competition.pegsTotal}
-                        data-testid="button-book-peg"
-                      >
-                        {joinMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-                            Joining...
-                          </>
-                        ) : (
-                          <>
+                    competition.competitionMode === "team" ? (
+                      userTeam ? (
+                        <div className="space-y-3">
+                          <div className="bg-card rounded-md border p-4">
+                            <div className="flex items-center justify-between gap-2 mb-2">
+                              <div className="flex items-center gap-2">
+                                <Users className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-semibold">{userTeam.teamName}</span>
+                              </div>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                onClick={() => setIsManageTeamOpen(true)}
+                                data-testid="button-manage-team"
+                              >
+                                Manage
+                              </Button>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              {userTeam.members.length} / {competition.maxTeamMembers || 4} members
+                            </p>
+                          </div>
+                          <Button 
+                            className="w-full" 
+                            size="lg" 
+                            onClick={handleBookPeg}
+                            disabled={competition.pegsBooked >= competition.pegsTotal}
+                            data-testid="button-book-team-peg"
+                          >
                             <Coins className="mr-2 h-5 w-5" />
-                            Book Your Peg
-                          </>
-                        )}
-                      </Button>
+                            Book Team Peg
+                          </Button>
+                        </div>
+                      ) : (
+                        <Button 
+                          className="w-full" 
+                          size="lg" 
+                          onClick={() => setIsCreateTeamOpen(true)}
+                          data-testid="button-create-team"
+                        >
+                          <UserPlus className="mr-2 h-5 w-5" />
+                          Create Team
+                        </Button>
+                      )
+                    ) : (
+                      isJoined ? (
+                        <Button 
+                          variant="outline" 
+                          className="w-full" 
+                          size="lg" 
+                          onClick={() => leaveMutation.mutate()}
+                          disabled={leaveMutation.isPending}
+                          data-testid="button-leave-competition"
+                        >
+                          {leaveMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Leaving...
+                            </>
+                          ) : (
+                            "Leave Competition"
+                          )}
+                        </Button>
+                      ) : (
+                        <Button 
+                          className="w-full" 
+                          size="lg" 
+                          onClick={handleBookPeg}
+                          disabled={joinMutation.isPending || competition.pegsBooked >= competition.pegsTotal}
+                          data-testid="button-book-peg"
+                        >
+                          {joinMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                              Joining...
+                            </>
+                          ) : (
+                            <>
+                              <Coins className="mr-2 h-5 w-5" />
+                              Book Your Peg
+                            </>
+                          )}
+                        </Button>
+                      )
                     )
                   ) : (
                     <Link href="/login">
@@ -419,6 +605,243 @@ export default function CompetitionDetails() {
           </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={isCreateTeamOpen} onOpenChange={setIsCreateTeamOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Create Your Team</DialogTitle>
+            <DialogDescription>
+              Create a team and get an invite code to share with your teammates
+            </DialogDescription>
+          </DialogHeader>
+          
+          {!createdTeam ? (
+            <div className="grid gap-4 py-4">
+              <div className="grid gap-2">
+                <Label htmlFor="teamName">Team Name</Label>
+                <Input
+                  id="teamName"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="The Carpmasters"
+                  data-testid="input-team-name"
+                  onKeyPress={(e) => {
+                    if (e.key === 'Enter') {
+                      handleCreateTeam();
+                    }
+                  }}
+                />
+              </div>
+            </div>
+          ) : (
+            <div className="grid gap-4 py-4">
+              <div className="bg-primary/10 rounded-md p-4 text-center space-y-3">
+                <div className="flex items-center justify-center gap-2 text-primary">
+                  <Check className="h-5 w-5" />
+                  <span className="font-semibold">Team Created!</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Share this code with your teammates
+                </p>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Invite Code</Label>
+                <div className="flex gap-2">
+                  <Input
+                    value={createdTeam.inviteCode}
+                    readOnly
+                    className="font-mono text-lg text-center"
+                    data-testid="input-invite-code"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => copyInviteCode(createdTeam.inviteCode)}
+                    data-testid="button-copy-invite"
+                  >
+                    {copiedInvite ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground text-center">
+                  Team members can join using this code
+                </p>
+              </div>
+              
+              <div className="bg-card rounded-md border p-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Users className="h-4 w-4 text-muted-foreground" />
+                  <span className="font-semibold">{createdTeam.teamName}</span>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  {createdTeam.members.length} / {competition?.maxTeamMembers || 4} members
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            {!createdTeam ? (
+              <>
+                <Button 
+                  variant="outline" 
+                  onClick={() => {
+                    setIsCreateTeamOpen(false);
+                    setTeamName("");
+                  }}
+                  data-testid="button-cancel-team"
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  onClick={handleCreateTeam}
+                  disabled={createTeamMutation.isPending || !teamName.trim()}
+                  data-testid="button-submit-team"
+                >
+                  {createTeamMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Creating...
+                    </>
+                  ) : (
+                    "Create Team"
+                  )}
+                </Button>
+              </>
+            ) : (
+              <Button 
+                className="w-full" 
+                onClick={() => {
+                  setIsCreateTeamOpen(false);
+                  setCreatedTeam(null);
+                }}
+                data-testid="button-done"
+              >
+                Done
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isManageTeamOpen} onOpenChange={setIsManageTeamOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Manage Team</DialogTitle>
+            <DialogDescription>
+              View and manage your team for this competition
+            </DialogDescription>
+          </DialogHeader>
+          
+          {userTeam && (
+            <div className="grid gap-4 py-4">
+              <div className="space-y-2">
+                <Label>Team Name</Label>
+                <div className="font-semibold text-lg">{userTeam.teamName}</div>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Team Members ({userTeam.members.length}/{competition?.maxTeamMembers || 4})</Label>
+                <div className="space-y-2">
+                  {userTeam.members.map((member: any, index: number) => (
+                    <div 
+                      key={member.userId} 
+                      className="flex items-center gap-3 p-3 rounded-md border"
+                      data-testid={`team-member-${index}`}
+                    >
+                      <Avatar>
+                        <AvatarImage src={member.avatar} />
+                        <AvatarFallback>
+                          {member.name.split(" ").map((n: string) => n[0]).join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                      <div className="flex-1 min-w-0">
+                        <div className="font-medium truncate">{member.name}</div>
+                        {member.isPrimary && (
+                          <Badge variant="secondary" className="text-xs">Primary</Badge>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              <div className="space-y-2">
+                <div className="flex items-center justify-between">
+                  <Label>Invite Code</Label>
+                  {userTeam.isPrimaryMember && (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => regenerateInviteMutation.mutate()}
+                      disabled={regenerateInviteMutation.isPending}
+                      data-testid="button-regenerate-invite"
+                    >
+                      {regenerateInviteMutation.isPending ? (
+                        <Loader2 className="h-3 w-3 animate-spin" />
+                      ) : (
+                        "Regenerate"
+                      )}
+                    </Button>
+                  )}
+                </div>
+                <div className="flex gap-2">
+                  <Input
+                    value={userTeam.inviteCode}
+                    readOnly
+                    className="font-mono text-center"
+                    data-testid="input-team-invite-code"
+                  />
+                  <Button
+                    size="icon"
+                    variant="outline"
+                    onClick={() => copyInviteCode(userTeam.inviteCode)}
+                    data-testid="button-copy-team-invite"
+                  >
+                    {copiedInvite ? (
+                      <Check className="h-4 w-4" />
+                    ) : (
+                      <Copy className="h-4 w-4" />
+                    )}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Share this code with teammates to invite them
+                </p>
+              </div>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsManageTeamOpen(false)}
+              data-testid="button-close-manage"
+            >
+              Close
+            </Button>
+            <Button 
+              variant="destructive"
+              onClick={() => leaveTeamMutation.mutate()}
+              disabled={leaveTeamMutation.isPending}
+              data-testid="button-leave-team"
+            >
+              {leaveTeamMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Leaving...
+                </>
+              ) : (
+                "Leave Team"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

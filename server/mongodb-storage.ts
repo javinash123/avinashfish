@@ -159,6 +159,11 @@ export class MongoDBStorage implements IStorage {
           status: "active",
           memberSince: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
           createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
+          resetToken: null,
+          resetTokenExpiry: null,
+          emailVerified: false,
+          verificationToken: null,
+          verificationTokenExpiry: null,
         },
         {
           id: randomUUID(),
@@ -181,6 +186,11 @@ export class MongoDBStorage implements IStorage {
           status: "active",
           memberSince: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
           createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
+          resetToken: null,
+          resetTokenExpiry: null,
+          emailVerified: false,
+          verificationToken: null,
+          verificationTokenExpiry: null,
         },
         {
           id: randomUUID(),
@@ -203,6 +213,11 @@ export class MongoDBStorage implements IStorage {
           status: "active",
           memberSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
           createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
+          resetToken: null,
+          resetTokenExpiry: null,
+          emailVerified: false,
+          verificationToken: null,
+          verificationTokenExpiry: null,
         },
         {
           id: randomUUID(),
@@ -225,6 +240,11 @@ export class MongoDBStorage implements IStorage {
           status: "active",
           memberSince: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
           createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
+          resetToken: null,
+          resetTokenExpiry: null,
+          emailVerified: false,
+          verificationToken: null,
+          verificationTokenExpiry: null,
         },
         {
           id: randomUUID(),
@@ -247,6 +267,11 @@ export class MongoDBStorage implements IStorage {
           status: "active",
           memberSince: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
           createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
+          resetToken: null,
+          resetTokenExpiry: null,
+          emailVerified: false,
+          verificationToken: null,
+          verificationTokenExpiry: null,
         },
       ];
       await this.users.insertMany(sampleUsers);
@@ -285,10 +310,13 @@ export class MongoDBStorage implements IStorage {
           pegsBooked: 18,
           entryFee: "45",
           prizePool: "800",
+          prizeType: "pool",
           status: "upcoming",
           type: "Championship",
           rules: ["Standard match rules apply", "Barbless hooks only", "Keep nets mandatory"],
           imageUrl: null,
+          competitionMode: "individual",
+          maxTeamMembers: null,
           createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
         },
         {
@@ -304,10 +332,13 @@ export class MongoDBStorage implements IStorage {
           pegsBooked: 8,
           entryFee: "25",
           prizePool: "300",
+          prizeType: "pool",
           status: "upcoming",
           type: "Open Match",
           rules: ["All methods allowed", "No bloodworm or joker"],
           imageUrl: null,
+          competitionMode: "individual",
+          maxTeamMembers: null,
           createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
         },
         {
@@ -323,10 +354,13 @@ export class MongoDBStorage implements IStorage {
           pegsBooked: 5,
           entryFee: "35",
           prizePool: "600",
+          prizeType: "pool",
           status: "upcoming",
           type: "Open Match",
           rules: ["Barbless hooks only", "All pegs fishable"],
           imageUrl: null,
+          competitionMode: "individual",
+          maxTeamMembers: null,
           createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         },
       ];
@@ -507,9 +541,19 @@ export class MongoDBStorage implements IStorage {
       favouriteMethod: user.favouriteMethod ?? null,
       favouriteSpecies: user.favouriteSpecies ?? null,
       location: user.location ?? null,
+      youtubeUrl: user.youtubeUrl ?? null,
+      facebookUrl: user.facebookUrl ?? null,
+      twitterUrl: user.twitterUrl ?? null,
+      instagramUrl: user.instagramUrl ?? null,
+      tiktokUrl: user.tiktokUrl ?? null,
       status: "active",
       memberSince: new Date(),
       createdAt: new Date(),
+      resetToken: null,
+      resetTokenExpiry: null,
+      emailVerified: false,
+      verificationToken: null,
+      verificationTokenExpiry: null,
     };
     await this.users.insertOne(newUser);
     return newUser;
@@ -555,12 +599,12 @@ export class MongoDBStorage implements IStorage {
   }
 
   async setPasswordResetToken(email: string, token: string, expiry: Date): Promise<User | undefined> {
-    const { value } = await this.users.findOneAndUpdate(
+    const result = await this.users.findOneAndUpdate(
       { email },
       { $set: { resetToken: token, resetTokenExpiry: expiry } },
       { returnDocument: "after" }
     );
-    return value ?? undefined;
+    return result || undefined;
   }
 
   async getUserByResetToken(token: string): Promise<User | undefined> {
@@ -575,21 +619,21 @@ export class MongoDBStorage implements IStorage {
   }
 
   async clearPasswordResetToken(userId: string): Promise<User | undefined> {
-    const { value } = await this.users.findOneAndUpdate(
+    const result = await this.users.findOneAndUpdate(
       { id: userId },
       { $set: { resetToken: null, resetTokenExpiry: null } },
       { returnDocument: "after" }
     );
-    return value ?? undefined;
+    return result || undefined;
   }
 
   async setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined> {
-    const { value } = await this.users.findOneAndUpdate(
+    const result = await this.users.findOneAndUpdate(
       { id: userId },
       { $set: { verificationToken: token, verificationTokenExpiry: expiry, emailVerified: false } },
       { returnDocument: "after" }
     );
-    return value ?? undefined;
+    return result || undefined;
   }
 
   async getUserByVerificationToken(token: string): Promise<User | undefined> {
@@ -604,12 +648,12 @@ export class MongoDBStorage implements IStorage {
   }
 
   async verifyUserEmail(userId: string): Promise<User | undefined> {
-    const { value } = await this.users.findOneAndUpdate(
+    const result = await this.users.findOneAndUpdate(
       { id: userId },
       { $set: { emailVerified: true, verificationToken: null, verificationTokenExpiry: null } },
       { returnDocument: "after" }
     );
-    return value ?? undefined;
+    return result || undefined;
   }
 
   // User gallery methods
@@ -826,6 +870,7 @@ export class MongoDBStorage implements IStorage {
       id: randomUUID(),
       ...news,
       competition: news.competition ?? null,
+      featured: news.featured ?? false,
       createdAt: new Date(),
     };
     await this.news.insertOne(newNews);
@@ -863,6 +908,7 @@ export class MongoDBStorage implements IStorage {
       competition: image.competition ?? null,
       angler: image.angler ?? null,
       weight: image.weight ?? null,
+      featured: image.featured ?? false,
       createdAt: new Date(),
     };
     await this.galleryImages.insertOne(newImage);
@@ -903,6 +949,9 @@ export class MongoDBStorage implements IStorage {
       endDate: competition.endDate ?? null,
       endTime: competition.endTime ?? null,
       imageUrl: competition.imageUrl ?? null,
+      prizeType: competition.prizeType ?? "pool",
+      competitionMode: competition.competitionMode ?? "individual",
+      maxTeamMembers: competition.maxTeamMembers ?? null,
       createdAt: new Date(),
     };
     await this.competitions.insertOne(newCompetition);
@@ -1160,6 +1209,7 @@ export class MongoDBStorage implements IStorage {
     const newEntry: LeaderboardEntry = {
       id: randomUUID(),
       ...entry,
+      teamId: entry.teamId ?? null,
       position: entry.position ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1186,6 +1236,7 @@ export class MongoDBStorage implements IStorage {
     const payment: Payment = {
       id: randomUUID(),
       ...insertPayment,
+      teamId: insertPayment.teamId ?? null,
       currency: insertPayment.currency || "gbp",
       createdAt: new Date(),
     };
@@ -1232,6 +1283,8 @@ export class MongoDBStorage implements IStorage {
     const newTeam: Team = {
       id,
       ...team,
+      pegNumber: team.pegNumber ?? null,
+      paymentStatus: team.paymentStatus ?? "pending",
       createdAt: new Date(),
     };
     await this.teams.insertOne(newTeam as any);
@@ -1276,6 +1329,7 @@ export class MongoDBStorage implements IStorage {
     const newMember: TeamMember = {
       id,
       ...member,
+      status: member.status ?? "pending",
       joinedAt: new Date(),
     };
     await this.teamMembers.insertOne(newMember as any);

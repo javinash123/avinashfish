@@ -341,7 +341,7 @@ export const competitionParticipants = pgTable("competition_participants", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").notNull(),
   userId: varchar("user_id").notNull(),
-  pegNumber: integer("peg_number").notNull(),
+  pegNumber: integer("peg_number"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

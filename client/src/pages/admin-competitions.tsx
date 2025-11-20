@@ -393,6 +393,8 @@ export default function AdminCompetitions() {
     type: "",
     description: "",
     imageUrl: "",
+    competitionMode: "individual",
+    maxTeamMembers: "",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -442,6 +444,8 @@ export default function AdminCompetitions() {
       type: "",
       description: "",
       imageUrl: "",
+      competitionMode: "individual",
+      maxTeamMembers: "",
     });
     setImageFile(null);
     setImagePreview("");
@@ -478,6 +482,10 @@ export default function AdminCompetitions() {
       prizeType: formData.prizeType,
       status: "upcoming",
       description: formData.description,
+      competitionMode: formData.competitionMode,
+      maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
+        ? parseInt(formData.maxTeamMembers) 
+        : null,
       type: formData.type,
       imageUrl: imageUrl || null,
     });
@@ -516,6 +524,10 @@ export default function AdminCompetitions() {
         pegsTotal: parseInt(formData.pegsTotal),
         entryFee: formData.entryFee,
         prizePool: formData.prizePool,
+        competitionMode: formData.competitionMode,
+        maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
+          ? parseInt(formData.maxTeamMembers) 
+          : null,
         prizeType: formData.prizeType,
         type: formData.type,
         description: formData.description,
@@ -547,6 +559,8 @@ export default function AdminCompetitions() {
       type: competition.type,
       description: competition.description,
       imageUrl: competition.imageUrl || "",
+      competitionMode: competition.competitionMode || "individual",
+      maxTeamMembers: competition.maxTeamMembers?.toString() || "",
     });
     setImagePreview(competition.imageUrl || "");
     setIsEditOpen(true);
@@ -965,6 +979,37 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
+                <Label htmlFor="competitionMode">Competition Mode</Label>
+                <Select
+                  value={formData.competitionMode}
+                  onValueChange={(value) => setFormData({ ...formData, competitionMode: value })}
+                >
+                  <SelectTrigger data-testid="select-competition-mode">
+                    <SelectValue placeholder="Select mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.competitionMode === "team" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="maxTeamMembers">Max Team Members</Label>
+                  <Input
+                    id="maxTeamMembers"
+                    type="number"
+                    min="2"
+                    value={formData.maxTeamMembers}
+                    onChange={(e) => setFormData({ ...formData, maxTeamMembers: e.target.value })}
+                    placeholder="4"
+                    data-testid="input-max-team-members"
+                  />
+                </div>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
                 <Label htmlFor="date">Start Date</Label>
                 <Input
                   id="date"
@@ -1151,6 +1196,37 @@ export default function AdminCompetitions() {
                   data-testid="input-edit-venue"
                 />
               </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="edit-competitionMode">Competition Mode</Label>
+                <Select
+                  value={formData.competitionMode}
+                  onValueChange={(value) => setFormData({ ...formData, competitionMode: value })}
+                >
+                  <SelectTrigger data-testid="select-edit-competition-mode">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="individual">Individual</SelectItem>
+                    <SelectItem value="team">Team</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              {formData.competitionMode === "team" && (
+                <div className="grid gap-2">
+                  <Label htmlFor="edit-maxTeamMembers">Max Team Members</Label>
+                  <Input
+                    id="edit-maxTeamMembers"
+                    type="number"
+                    min="2"
+                    value={formData.maxTeamMembers}
+                    onChange={(e) => setFormData({ ...formData, maxTeamMembers: e.target.value })}
+                    placeholder="4"
+                    data-testid="input-edit-max-team-members"
+                  />
+                </div>
+              )}
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
