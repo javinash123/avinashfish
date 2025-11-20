@@ -117,7 +117,6 @@ export function AnglerFormDialog({
                   value={formData.email}
                   onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                   required
-                  disabled={isEdit}
                   data-testid="input-email"
                 />
               </div>
@@ -128,7 +127,6 @@ export function AnglerFormDialog({
                   value={formData.username}
                   onChange={(e) => setFormData({ ...formData, username: e.target.value })}
                   required
-                  disabled={isEdit}
                   data-testid="input-username"
                 />
               </div>

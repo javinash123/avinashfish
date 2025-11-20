@@ -2,7 +2,7 @@
 
 [x] 1. Install the required packages
 [x] 2. Restart the workflow to see if the project is working
-[x] 3. Verify the project is working using the feedback tool
+[x] 3. Verify the project is working using the screenshot tool
 [x] 4. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
 
 ## November 20, 2025 - Team Competition Feature Implementation
@@ -32,6 +32,14 @@
 [x] Update leaderboard displays to show team names for team competitions
 [x] Test backward compatibility with individual competitions
 [x] Final architect review of complete implementation
+
+## November 20, 2025 - Production Bug Fixes
+
+### Issues Reported
+[ ] Fix competition creation failure
+[ ] Fix news article popup not opening initially and not closing properly
+[ ] Change "venue name" to "lake name" in competition creation
+[ ] Enable admin to change user email addresses and usernames
 
 ### Summary
 ✅ **100% of team competition infrastructure implemented**

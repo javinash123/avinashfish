@@ -175,10 +175,11 @@ export default function AdminCompetitions() {
         description: "Competition has been created successfully.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Competition creation error:", error);
       toast({
         title: "Error",
-        description: "Failed to create competition",
+        description: error?.message || "Failed to create competition",
         variant: "destructive",
       });
     },
@@ -195,10 +196,11 @@ export default function AdminCompetitions() {
         description: "Competition has been updated successfully.",
       });
     },
-    onError: () => {
+    onError: (error: any) => {
+      console.error("Competition update error:", error);
       toast({
         title: "Error",
-        description: "Failed to update competition",
+        description: error?.message || "Failed to update competition",
         variant: "destructive",
       });
     },
@@ -553,7 +555,7 @@ export default function AdminCompetitions() {
       }
     }
     
-    createMutation.mutate({
+    const competitionData = {
       name: formData.name,
       date: formData.date,
       endDate: formData.endDate || null,
@@ -573,7 +575,11 @@ export default function AdminCompetitions() {
         : null,
       type: formData.type,
       imageUrl: imageUrl || null,
-    });
+    };
+    
+    console.log('[COMPETITION DEBUG] Creating competition with data:', competitionData);
+    
+    createMutation.mutate(competitionData);
     setIsCreateOpen(false);
     resetForm();
   };
@@ -913,7 +919,7 @@ export default function AdminCompetitions() {
               <TableRow>
                 <TableHead>Competition</TableHead>
                 <TableHead>Date & Time</TableHead>
-                <TableHead>Venue</TableHead>
+                <TableHead>Lake</TableHead>
                 <TableHead>Pegs</TableHead>
                 <TableHead>Entry Fee</TableHead>
                 <TableHead>Status</TableHead>
@@ -1075,7 +1081,7 @@ export default function AdminCompetitions() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="venue">Venue</Label>
+                <Label htmlFor="venue">Lake Name</Label>
                 <Input
                   id="venue"
                   value={formData.venue}
@@ -1296,7 +1302,7 @@ export default function AdminCompetitions() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="edit-venue">Venue</Label>
+                <Label htmlFor="edit-venue">Lake Name</Label>
                 <Input
                   id="edit-venue"
                   value={formData.venue}

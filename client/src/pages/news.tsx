@@ -26,16 +26,20 @@ export default function News() {
 
   // Handle deep linking - auto-open article from URL parameter and browser navigation
   useEffect(() => {
+    console.log('[NEWS DEBUG] useEffect triggered', { articlesCount: newsArticles.length, location });
     if (newsArticles.length > 0) {
       const urlParams = new URLSearchParams(window.location.search);
       const articleId = urlParams.get('article');
+      console.log('[NEWS DEBUG] articleId from URL:', articleId);
       
       if (articleId) {
         const article = newsArticles.find(a => a.id === articleId);
-        if (article && (!selectedArticle || selectedArticle.id !== articleId)) {
+        console.log('[NEWS DEBUG] Found article:', article);
+        if (article) {
           setSelectedArticle(article);
         }
-      } else if (selectedArticle) {
+      } else {
+        console.log('[NEWS DEBUG] No articleId, clearing selection');
         setSelectedArticle(null);
       }
     }
@@ -43,10 +47,12 @@ export default function News() {
 
   // Update URL when article is opened/closed using wouter
   const handleArticleOpen = (article: News) => {
+    console.log('[NEWS DEBUG] handleArticleOpen called for article:', article.id);
     setLocation(`/news?article=${article.id}`);
   };
 
   const handleArticleClose = () => {
+    console.log('[NEWS DEBUG] handleArticleClose called');
     setLocation('/news');
   };
 
