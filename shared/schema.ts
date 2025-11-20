@@ -326,11 +326,29 @@ export const competitions = pgTable("competitions", {
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({
   id: true,
   createdAt: true,
-});
+}).extend({
+  competitionMode: z.enum(['individual', 'team']).default('individual'),
+  maxTeamMembers: z.number().int().positive().optional(),
+}).refine(
+  (data) => {
+    // If team mode, maxTeamMembers must be provided and >= 2
+    if (data.competitionMode === 'team') {
+      return data.maxTeamMembers !== undefined && data.maxTeamMembers >= 2;
+    }
+    return true;
+  },
+  {
+    message: "Team competitions must have a maximum team size of at least 2 members",
+    path: ["maxTeamMembers"],
+  }
+);
 
 export const updateCompetitionSchema = createInsertSchema(competitions).omit({
   id: true,
   createdAt: true,
+}).extend({
+  competitionMode: z.enum(['individual', 'team']).optional(),
+  maxTeamMembers: z.number().int().positive().optional(),
 }).partial();
 
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
