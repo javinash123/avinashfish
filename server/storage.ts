@@ -98,6 +98,7 @@ export interface IStorage {
   isUserInCompetition(competitionId: string, userId: string): Promise<boolean>;
   getAvailablePegs(competitionId: string): Promise<number[]>;
   updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined>;
+  updateTeamPeg(teamId: string, pegNumber: number): Promise<Team | undefined>;
   
   // Team methods
   createTeam(team: InsertTeam): Promise<Team>;

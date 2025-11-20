@@ -2276,9 +2276,45 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
-  // Competition Participant routes
+  // Competition Participant routes (returns teams for team competitions, individuals for individual competitions)
   app.get("/api/competitions/:id/participants", async (req, res) => {
     try {
+      const competition = await storage.getCompetition(req.params.id);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // For team competitions, return teams
+      if (competition.competitionMode === "team") {
+        const teams = await storage.getTeamsByCompetition(req.params.id);
+        
+        // Enrich teams with member data and payment status
+        const enrichedTeams = await Promise.all(
+          teams.map(async (team) => {
+            const members = await storage.getTeamMembers(team.id);
+            const acceptedMembers = members.filter(m => m.status === "accepted");
+            const captain = await storage.getUser(team.createdBy);
+            
+            return {
+              id: team.id,
+              userId: team.id, // Use team ID as userId for compatibility with admin UI
+              pegNumber: team.pegNumber,
+              name: team.name,
+              username: captain?.username || "",
+              club: captain?.club || "",
+              avatar: captain?.avatar || "",
+              joinedAt: team.createdAt,
+              memberCount: acceptedMembers.length,
+              paymentStatus: team.paymentStatus,
+              isTeam: true,
+            };
+          })
+        );
+        
+        return res.json(enrichedTeams);
+      }
+
+      // For individual competitions, return participants
       const participants = await storage.getCompetitionParticipants(req.params.id);
       
       // Enrich participants with user data
@@ -2294,6 +2330,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             club: user?.club || "",
             avatar: user?.avatar || "",
             joinedAt: participant.joinedAt,
+            isTeam: false,
           };
         })
       );
