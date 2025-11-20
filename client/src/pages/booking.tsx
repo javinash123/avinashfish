@@ -32,10 +32,12 @@ const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
 
 function PaymentForm({ 
   competitionId,
+  teamId,
   totalAmount, 
   onSuccess 
 }: { 
   competitionId: string;
+  teamId?: string | null;
   totalAmount: number; 
   onSuccess: () => void;
 }) {
@@ -71,10 +73,17 @@ function PaymentForm({
         setIsProcessing(false);
       } else if (paymentIntent && paymentIntent.status === 'succeeded') {
         // Call backend to confirm payment and join competition atomically
-        const response = await apiRequest("POST", "/api/confirm-payment-and-join", {
+        const requestBody: any = {
           paymentIntentId: paymentIntent.id,
           competitionId,
-        });
+        };
+        
+        // Include teamId if this is a team booking
+        if (teamId) {
+          requestBody.teamId = teamId;
+        }
+        
+        const response = await apiRequest("POST", "/api/confirm-payment-and-join", requestBody);
 
         if (!response.ok) {
           const data = await response.json();
@@ -83,7 +92,7 @@ function PaymentForm({
 
         toast({
           title: "Payment Successful",
-          description: "Your peg has been booked!",
+          description: teamId ? "Your team peg has been booked!" : "Your peg has been booked!",
         });
         onSuccess();
       }
@@ -137,14 +146,56 @@ export default function Booking() {
     enabled: !!competitionId,
   });
 
+  // Fetch user data
+  const { data: user } = useQuery({
+    queryKey: ["/api/user/me"],
+  });
+
+  // Fetch user's team if this is a team competition
+  const { data: userTeam, isLoading: teamLoading } = useQuery<any>({
+    queryKey: [`/api/competitions/${competitionId}/my-team`],
+    enabled: !!user && !!competition && competition.competitionMode === "team",
+  });
+
   // IMPORTANT: Always call useEffect before any conditional returns to avoid "Rendered more hooks" error
   useEffect(() => {
     if (acceptTerms && !clientSecret && !paymentError && competition) {
       console.log('[Booking] Creating payment intent for competition:', competition.id);
-      // Don't send amount - server calculates it from authoritative pricing data
-      apiRequest("POST", "/api/create-payment-intent", {
+      
+      // For team competitions, verify user has a team
+      if (competition.competitionMode === "team" && !userTeam) {
+        setPaymentError("You must be part of a team to book this competition. Please create or join a team first.");
+        toast({
+          title: "Team Required",
+          description: "Please create or join a team before booking.",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      // For team competitions, verify user is the team creator
+      if (competition.competitionMode === "team" && userTeam && user && userTeam.createdBy !== (user as any).id) {
+        setPaymentError("Only the team creator can make payment for the team.");
+        toast({
+          title: "Permission Denied",
+          description: "Only the team creator can complete the booking and payment.",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Prepare payment intent request
+      const requestBody: any = {
         competitionId: competition.id,
-      })
+      };
+      
+      // Include teamId for team competitions
+      if (competition.competitionMode === "team" && userTeam) {
+        requestBody.teamId = userTeam.id;
+      }
+      
+      // Don't send amount - server calculates it from authoritative pricing data
+      apiRequest("POST", "/api/create-payment-intent", requestBody)
         .then((res) => {
           if (!res.ok) {
             return res.json().then(data => {
@@ -172,7 +223,7 @@ export default function Booking() {
           });
         });
     }
-  }, [acceptTerms, clientSecret, paymentError, competition]);
+  }, [acceptTerms, clientSecret, paymentError, competition, userTeam, user]);
 
   if (!competitionId) {
     return (
@@ -192,7 +243,7 @@ export default function Booking() {
     );
   }
 
-  if (competitionLoading || !competition) {
+  if (competitionLoading || !competition || (competition.competitionMode === "team" && teamLoading)) {
     return (
       <div className="min-h-screen bg-background py-8">
         <div className="container mx-auto px-4 lg:px-8">
@@ -391,6 +442,7 @@ export default function Booking() {
                     <Elements stripe={stripePromise} options={{ clientSecret }}>
                       <PaymentForm 
                         competitionId={competition.id}
+                        teamId={competition.competitionMode === "team" ? userTeam?.id : null}
                         totalAmount={totalAmount}
                         onSuccess={() => setBookingComplete(true)}
                       />
