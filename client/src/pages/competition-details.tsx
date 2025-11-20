@@ -66,6 +66,11 @@ export default function CompetitionDetails() {
     enabled: !!user && competition?.competitionMode === "team",
   });
 
+  const { data: allTeams = [], isLoading: teamsLoading } = useQuery<any[]>({
+    queryKey: [`/api/competitions/${id}/teams`],
+    enabled: competition?.competitionMode === "team",
+  });
+
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [teamName, setTeamName] = useState("");
@@ -338,9 +343,26 @@ export default function CompetitionDetails() {
               </div>
             </div>
 
-            <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-4" data-testid="text-competition-name">
-              {competition.name}
-            </h1>
+            <div className="flex flex-wrap items-center gap-3 mb-4">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold" data-testid="text-competition-name">
+                {competition.name}
+              </h1>
+              <Badge 
+                variant="outline"
+                className={competition.competitionMode === "team" ? "bg-purple-50 text-purple-700 border-purple-300" : "bg-blue-50 text-blue-700 border-blue-300"}
+                data-testid="badge-competition-mode"
+              >
+                {competition.competitionMode === "team" ? (
+                  <>
+                    <Users className="h-3 w-3 mr-1" />
+                    Team Competition
+                    {competition.maxTeamMembers && ` (Max ${competition.maxTeamMembers} members)`}
+                  </>
+                ) : (
+                  "Individual Competition"
+                )}
+              </Badge>
+            </div>
             <p className="text-muted-foreground text-base sm:text-lg mb-6">
               {competition.description}
             </p>
@@ -452,16 +474,31 @@ export default function CompetitionDetails() {
                               {userTeam.members.length} / {competition.maxTeamMembers || 4} members
                             </p>
                           </div>
-                          <Button 
-                            className="w-full" 
-                            size="lg" 
-                            onClick={handleBookPeg}
-                            disabled={competition.pegsBooked >= competition.pegsTotal}
-                            data-testid="button-book-team-peg"
-                          >
-                            <Coins className="mr-2 h-5 w-5" />
-                            Book Team Peg
-                          </Button>
+                          {userTeam.isCaptain ? (
+                            <Button 
+                              className="w-full" 
+                              size="lg" 
+                              onClick={handleBookPeg}
+                              disabled={competition.pegsBooked >= competition.pegsTotal || userTeam.paymentStatus === "succeeded"}
+                              data-testid="button-book-team-peg"
+                            >
+                              {userTeam.paymentStatus === "succeeded" ? (
+                                <>
+                                  <Check className="mr-2 h-5 w-5" />
+                                  Peg Booked
+                                </>
+                              ) : (
+                                <>
+                                  <Coins className="mr-2 h-5 w-5" />
+                                  Book Team Peg
+                                </>
+                              )}
+                            </Button>
+                          ) : (
+                            <div className="text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-md">
+                              Only the team captain can book a peg for the team.
+                            </div>
+                          )}
                         </div>
                       ) : (
                         <Button 
@@ -532,9 +569,14 @@ export default function CompetitionDetails() {
           </div>
         </div>
 
-        <Tabs defaultValue="participants" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 h-auto" data-testid="tabs-competition">
-            <TabsTrigger value="participants" className="text-xs sm:text-sm px-2 sm:px-4">Participants</TabsTrigger>
+        <Tabs defaultValue={competition.competitionMode === "team" ? "teams" : "participants"} className="w-full">
+          <TabsList className={`grid w-full ${competition.competitionMode === "team" ? "grid-cols-3" : "grid-cols-2"} h-auto`} data-testid="tabs-competition">
+            {competition.competitionMode === "team" && (
+              <TabsTrigger value="teams" className="text-xs sm:text-sm px-2 sm:px-4">Teams</TabsTrigger>
+            )}
+            <TabsTrigger value="participants" className="text-xs sm:text-sm px-2 sm:px-4">
+              {competition.competitionMode === "team" ? "All Participants" : "Participants"}
+            </TabsTrigger>
             <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-4">Leaderboard</TabsTrigger>
           </TabsList>
 
@@ -596,6 +638,115 @@ export default function CompetitionDetails() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {competition.competitionMode === "team" && (
+            <TabsContent value="teams" className="mt-6">
+              <Card>
+                <CardContent className="p-6">
+                  {user && !userTeam ? (
+                    <div className="mb-6">
+                      <Button
+                        onClick={() => setIsCreateTeamOpen(true)}
+                        className="w-full sm:w-auto"
+                        data-testid="button-create-team"
+                      >
+                        <UserPlus className="mr-2 h-4 w-4" />
+                        Create a Team
+                      </Button>
+                    </div>
+                  ) : null}
+
+                  {teamsLoading ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {Array.from({ length: 3 }).map((_, i) => (
+                        <Skeleton key={i} className="h-32 w-full" />
+                      ))}
+                    </div>
+                  ) : allTeams.length > 0 ? (
+                    <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+                      {allTeams.map((team: any) => (
+                        <div
+                          key={team.id}
+                          className="p-4 rounded-lg border hover-elevate"
+                          data-testid={`team-${team.id}`}
+                        >
+                          <div className="flex items-start justify-between mb-3">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-lg">{team.name}</h3>
+                              <Badge 
+                                variant="outline"
+                                className="mt-1 text-xs"
+                              >
+                                {team.memberCount || 0} / {competition.maxTeamMembers || 'N/A'} members
+                              </Badge>
+                            </div>
+                            {team.pegNumber && (
+                              <Badge variant="default" className="font-mono">
+                                Peg {team.pegNumber}
+                              </Badge>
+                            )}
+                          </div>
+                          
+                          {team.members && team.members.length > 0 && (
+                            <div className="space-y-2">
+                              <div className="text-xs text-muted-foreground">Team Members:</div>
+                              {team.members.slice(0, 3).map((member: any, idx: number) => (
+                                <div key={idx} className="flex items-center gap-2 text-sm">
+                                  <Avatar className="h-6 w-6">
+                                    <AvatarImage src={member.avatar} />
+                                    <AvatarFallback className="text-xs">
+                                      {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                    </AvatarFallback>
+                                  </Avatar>
+                                  <span className="truncate">{member.name}</span>
+                                  {member.role === "captain" && (
+                                    <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
+                                  )}
+                                </div>
+                              ))}
+                              {team.members.length > 3 && (
+                                <div className="text-xs text-muted-foreground">
+                                  +{team.members.length - 3} more
+                                </div>
+                              )}
+                            </div>
+                          )}
+                          
+                          {userTeam && userTeam.id === team.id && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-full mt-3"
+                              onClick={() => setIsManageTeamOpen(true)}
+                              data-testid="button-manage-team"
+                            >
+                              Manage Team
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-12">
+                      <Users className="h-16 w-16 mx-auto text-muted-foreground/50 mb-4" />
+                      <p className="text-muted-foreground mb-4">
+                        No teams have been created yet. Be the first to form a team!
+                      </p>
+                      {user && !userTeam ? (
+                        <Button
+                          onClick={() => setIsCreateTeamOpen(true)}
+                          data-testid="button-create-first-team"
+                        >
+                          <UserPlus className="mr-2 h-4 w-4" />
+                          Create First Team
+                        </Button>
+                      ) : null}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="leaderboard" className="mt-6">
             <LeaderboardTable 

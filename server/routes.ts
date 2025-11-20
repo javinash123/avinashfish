@@ -2548,6 +2548,60 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Get user's team for a specific competition
+  app.get("/api/competitions/:id/my-team", async (req, res) => {
+    const userId = req.session?.userId;
+    if (!userId) {
+      return res.status(401).json({ message: "Not authenticated" });
+    }
+
+    try {
+      const competitionId = req.params.id;
+
+      // Get user's teams and find the one for this competition
+      const userTeams = await storage.getUserTeams(userId);
+      const team = userTeams.find(t => t.competitionId === competitionId);
+
+      if (!team) {
+        return res.status(404).json({ message: "You don't have a team for this competition" });
+      }
+
+      // Get team members
+      const members = await storage.getTeamMembers(team.id);
+      const acceptedMembers = members.filter(m => m.status === "accepted");
+
+      // Enrich with member details
+      const enrichedMembers = await Promise.all(
+        acceptedMembers.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            id: member.id,
+            userId: member.userId,
+            name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+            avatar: user?.avatar,
+            role: member.userId === team.createdBy ? "captain" : "member",
+            joinedAt: member.joinedAt,
+          };
+        })
+      );
+
+      res.json({
+        id: team.id,
+        name: team.name,
+        inviteCode: team.inviteCode,
+        teamName: team.name,
+        createdBy: team.createdBy,
+        paymentStatus: team.paymentStatus,
+        pegNumber: team.pegNumber,
+        members: enrichedMembers,
+        isCaptain: team.createdBy === userId,
+      });
+    } catch (error: any) {
+      console.error("Error fetching user team:", error);
+      res.status(500).json({ message: "Error fetching team: " + error.message });
+    }
+  });
+
   // Get all teams for a competition
   app.get("/api/competitions/:id/teams", async (req, res) => {
     try {
