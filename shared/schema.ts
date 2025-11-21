@@ -326,6 +326,9 @@ export const competitions = pgTable("competitions", {
 export const insertCompetitionSchema = createInsertSchema(competitions).omit({
   id: true,
   createdAt: true,
+  pegsBooked: true,
+  status: true,
+  prizeType: true,
 }).extend({
   competitionMode: z.enum(['individual', 'team']).default('individual'),
   maxTeamMembers: z.number().int().positive().optional(),

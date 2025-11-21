@@ -48,11 +48,13 @@ export default function News() {
   // Update URL when article is opened/closed using wouter
   const handleArticleOpen = (article: News) => {
     console.log('[NEWS DEBUG] handleArticleOpen called for article:', article.id);
+    setSelectedArticle(article);
     setLocation(`/news?article=${article.id}`);
   };
 
   const handleArticleClose = () => {
     console.log('[NEWS DEBUG] handleArticleClose called');
+    setSelectedArticle(null);
     setLocation('/news');
   };
 
@@ -221,7 +223,7 @@ export default function News() {
         )}
       </div>
 
-      <Dialog open={!!selectedArticle} onOpenChange={(open) => !open && handleArticleClose()}>
+      <Dialog open={!!selectedArticle} onOpenChange={(open) => { if (!open) handleArticleClose(); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-news-detail">
           {selectedArticle && (() => {
             // Generate shareable URL for this specific article

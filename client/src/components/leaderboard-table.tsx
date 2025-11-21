@@ -61,13 +61,13 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
 
   return (
     <Card>
-      <div>
+      <div className="overflow-x-auto">
         <Table>
           <TableHeader>
             <TableRow>
-              <TableHead className="w-16 sm:w-20">Pos</TableHead>
-              <TableHead className="w-auto">Angler</TableHead>
-              <TableHead className="text-center w-14 sm:w-16">Peg</TableHead>
+              <TableHead className="w-12 sm:w-16">Pos</TableHead>
+              <TableHead className="min-w-48 sm:min-w-auto">Angler</TableHead>
+              <TableHead className="text-center w-12 sm:w-14">Peg</TableHead>
               <TableHead className="text-right w-20 sm:w-24">Weight</TableHead>
             </TableRow>
           </TableHeader>

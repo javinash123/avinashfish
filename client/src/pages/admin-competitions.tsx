@@ -555,7 +555,7 @@ export default function AdminCompetitions() {
       }
     }
     
-    const competitionData = {
+    const competitionData: any = {
       name: formData.name,
       date: formData.date,
       endDate: formData.endDate || null,
@@ -563,19 +563,17 @@ export default function AdminCompetitions() {
       endTime: formData.endTime || null,
       venue: formData.venue,
       pegsTotal: parseInt(formData.pegsTotal),
-      pegsBooked: 0,
       entryFee: formData.entryFee,
       prizePool: formData.prizePool,
-      prizeType: formData.prizeType,
-      status: "upcoming",
       description: formData.description,
       competitionMode: formData.competitionMode,
-      maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
-        ? parseInt(formData.maxTeamMembers) 
-        : null,
       type: formData.type,
       imageUrl: imageUrl || null,
     };
+    
+    if (formData.competitionMode === "team" && formData.maxTeamMembers) {
+      competitionData.maxTeamMembers = parseInt(formData.maxTeamMembers);
+    }
     
     console.log('[COMPETITION DEBUG] Creating competition with data:', competitionData);
     
@@ -1457,6 +1455,9 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-image">Competition Image</Label>
+              <p className="text-sm text-muted-foreground mb-2">
+                Recommended dimensions: 1200 x 400 pixels (3:1 aspect ratio) for optimal display on competition listings
+              </p>
               <Input
                 id="edit-image"
                 type="file"
@@ -1511,30 +1512,35 @@ export default function AdminCompetitions() {
               </CardContent>
             </Card>
 
-            {selectedCompetition?.competitionMode === "team" && teams.filter(t => t.pegNumber > 0).length > 0 && (
+            {selectedCompetition?.competitionMode === "team" && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Team Assignments</CardTitle>
                   <CardDescription>
-                    {teams.filter(t => t.pegNumber > 0).length} teams assigned
+                    {teams.filter(t => t.pegNumber > 0).length} / {teams.length} teams assigned
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Peg</TableHead>
-                        <TableHead>Team</TableHead>
-                        <TableHead>Members</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {teams
-                        .filter(t => t.pegNumber > 0)
-                        .sort((a, b) => a.pegNumber - b.pegNumber)
-                        .map((team) => (
-                          <TableRow key={team.id}>
+                  {teams.filter(t => t.pegNumber > 0).length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No teams assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Peg</TableHead>
+                          <TableHead>Team</TableHead>
+                          <TableHead>Members</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teams
+                          .filter(t => t.pegNumber > 0)
+                          .sort((a, b) => a.pegNumber - b.pegNumber)
+                          .map((team) => (
+                            <TableRow key={team.id}>
                             <TableCell>
                               {editingPegParticipantId === team.id ? (
                                 <div className="flex items-center gap-2">
@@ -1613,31 +1619,37 @@ export default function AdminCompetitions() {
                             </TableCell>
                           </TableRow>
                         ))}
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             )}
 
-            {selectedCompetition?.competitionMode === "individual" && participants.filter(p => p.pegNumber > 0).length > 0 && (
+            {selectedCompetition?.competitionMode === "individual" && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Assignments</CardTitle>
                   <CardDescription>
-                    {participants.filter(p => p.pegNumber > 0).length} pegs assigned
+                    {participants.filter(p => p.pegNumber > 0).length} / {participants.length} pegs assigned
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Peg</TableHead>
-                        <TableHead>Angler</TableHead>
-                        <TableHead className="text-right">Actions</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {participants
+                  {participants.filter(p => p.pegNumber > 0).length === 0 ? (
+                    <div className="text-center py-8 text-muted-foreground">
+                      <p>No anglers assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Peg</TableHead>
+                          <TableHead>Angler</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {participants
                         .filter(p => p.pegNumber > 0)
                         .sort((a, b) => a.pegNumber - b.pegNumber)
                         .map((participant) => (
@@ -1715,8 +1727,9 @@ export default function AdminCompetitions() {
                             </TableCell>
                           </TableRow>
                         ))}
-                    </TableBody>
-                  </Table>
+                      </TableBody>
+                    </Table>
+                  )}
                 </CardContent>
               </Card>
             )}
@@ -1819,11 +1832,11 @@ export default function AdminCompetitions() {
                         <option value="">-- Select Peg --</option>
                         {selectedCompetition?.competitionMode === "team" ? (
                           teams
-                            .filter(t => t.pegNumber > 0)
-                            .sort((a, b) => a.pegNumber - b.pegNumber)
+                            .filter(t => t.pegNumber !== null && t.pegNumber > 0)
+                            .sort((a, b) => (a.pegNumber || 0) - (b.pegNumber || 0))
                             .map((t) => (
                               <option key={t.id} value={t.pegNumber}>
-                                Peg {t.pegNumber} - {t.teamName}
+                                Peg {t.pegNumber} - {t.name}
                               </option>
                             ))
                         ) : (

@@ -73,7 +73,9 @@ export default function CompetitionDetails() {
 
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
+  const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
   const [teamName, setTeamName] = useState("");
+  const [joinInviteCode, setJoinInviteCode] = useState("");
   const [createdTeam, setCreatedTeam] = useState<any>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
@@ -147,9 +149,8 @@ export default function CompetitionDetails() {
 
   const createTeamMutation = useMutation({
     mutationFn: async (name: string) => {
-      const response = await apiRequest("POST", `/api/teams/create`, {
-        competitionId: id,
-        teamName: name,
+      const response = await apiRequest("POST", `/api/competitions/${id}/teams`, {
+        name: name,
       });
       if (!response.ok) {
         const data = await response.json();
@@ -249,6 +250,36 @@ export default function CompetitionDetails() {
       toast({
         title: "Code regenerated",
         description: "New invite code has been generated",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const joinTeamMutation = useMutation({
+    mutationFn: async (inviteCode: string) => {
+      const response = await apiRequest("POST", `/api/teams/join`, {
+        inviteCode: inviteCode.trim(),
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to join team");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      setJoinInviteCode("");
+      setIsJoinTeamOpen(false);
+      refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/teams`] });
+      toast({
+        title: "Success!",
+        description: "You've successfully joined the team",
       });
     },
     onError: (error: Error) => {
@@ -644,14 +675,20 @@ export default function CompetitionDetails() {
               <Card>
                 <CardContent className="p-6">
                   {user && !userTeam ? (
-                    <div className="mb-6">
+                    <div className="mb-6 flex gap-3 flex-wrap">
                       <Button
                         onClick={() => setIsCreateTeamOpen(true)}
-                        className="w-full sm:w-auto"
                         data-testid="button-create-team"
                       >
                         <UserPlus className="mr-2 h-4 w-4" />
                         Create a Team
+                      </Button>
+                      <Button
+                        variant="outline"
+                        onClick={() => setIsJoinTeamOpen(true)}
+                        data-testid="button-join-team"
+                      >
+                        Join with Code
                       </Button>
                     </div>
                   ) : null}
@@ -829,7 +866,7 @@ export default function CompetitionDetails() {
                   <span className="font-semibold">{createdTeam.teamName}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  {createdTeam.members.length} / {competition?.maxTeamMembers || 4} members
+                  1 / {competition?.maxTeamMembers || 4} members
                 </p>
               </div>
             </div>
@@ -875,6 +912,62 @@ export default function CompetitionDetails() {
                 Done
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isJoinTeamOpen} onOpenChange={setIsJoinTeamOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Join a Team</DialogTitle>
+            <DialogDescription>
+              Enter the invite code to join your teammate's team
+            </DialogDescription>
+          </DialogHeader>
+          
+          <div className="grid gap-4 py-4">
+            <div className="grid gap-2">
+              <Label htmlFor="inviteCode">Invite Code</Label>
+              <Input
+                id="inviteCode"
+                value={joinInviteCode}
+                onChange={(e) => setJoinInviteCode(e.target.value)}
+                placeholder="e.g., ABC123"
+                data-testid="input-join-invite-code"
+                onKeyPress={(e) => {
+                  if (e.key === 'Enter' && joinInviteCode.trim()) {
+                    joinTeamMutation.mutate(joinInviteCode);
+                  }
+                }}
+              />
+              <p className="text-xs text-muted-foreground">
+                Ask your teammate to share the invite code from their team
+              </p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => setIsJoinTeamOpen(false)}
+              data-testid="button-cancel-join"
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={() => joinTeamMutation.mutate(joinInviteCode)}
+              disabled={!joinInviteCode.trim() || joinTeamMutation.isPending}
+              data-testid="button-submit-join"
+            >
+              {joinTeamMutation.isPending ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Joining...
+                </>
+              ) : (
+                "Join Team"
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

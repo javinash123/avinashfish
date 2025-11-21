@@ -317,21 +317,27 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         });
       }
 
-      // Get payment record
-      const payment = await storage.getPaymentByIntentId(paymentIntentId);
-      if (!payment) {
-        return res.status(404).json({ message: "Payment not found" });
-      }
+      // Handle free competitions (no payment required)
+      let payment: any = null;
+      const isFreeCompetition = paymentIntentId === "free-competition";
+      
+      if (!isFreeCompetition) {
+        // Get payment record for paid competitions
+        payment = await storage.getPaymentByIntentId(paymentIntentId);
+        if (!payment) {
+          return res.status(404).json({ message: "Payment not found" });
+        }
 
-      // Verify payment belongs to this user and competition
-      if (payment.userId !== userId || payment.competitionId !== competitionId) {
-        return res.status(403).json({ message: "Payment verification failed" });
+        // Verify payment belongs to this user and competition
+        if (payment.userId !== userId || payment.competitionId !== competitionId) {
+          return res.status(403).json({ message: "Payment verification failed" });
+        }
       }
 
       // Validate teamId if provided
       if (teamId) {
-        // Verify payment was created for this team
-        if (payment.teamId !== teamId) {
+        // For paid competitions, verify payment was created for this team
+        if (!isFreeCompetition && payment && payment.teamId !== teamId) {
           return res.status(400).json({ message: "Payment was not created for this team" });
         }
 
@@ -379,7 +385,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       // Handle team bookings
       if (teamId) {
-        const team = await storage.getTeam(teamId)!;
+        const team = await storage.getTeam(teamId);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
+
         const competition = await storage.getCompetition(competitionId);
         
         if (!competition) {
@@ -392,7 +402,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           const existingParticipants = await storage.getCompetitionParticipants(competitionId);
           const existingTeams = await storage.getTeamsByCompetition(competitionId);
           const assignedPegs = new Set([
-            ...existingParticipants.map(p => p.pegNumber),
+            ...existingParticipants.map(p => p.pegNumber).filter(p => p !== null),
             ...existingTeams.filter(t => t.pegNumber).map(t => t.pegNumber!)
           ]);
           
@@ -409,23 +419,54 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           return res.status(400).json({ message: "No available pegs for this competition. Please contact support for refund." });
         }
 
+        console.log(`[TEAM BOOKING] Assigning peg ${availablePeg} to team ${teamId} for competition ${competitionId}`);
+
         // NOW mark payment as succeeded (only after confirming peg availability)
-        await storage.updatePaymentStatus(payment.id, "succeeded");
+        // For paid competitions, update payment status in database
+        if (!isFreeCompetition) {
+          await storage.updatePaymentStatus(payment.id, "succeeded");
+        }
 
         // Update team with payment success and peg assignment
-        await storage.updateTeam(teamId, { 
+        const updatedTeam = await storage.updateTeam(teamId, { 
           paymentStatus: "succeeded",
           pegNumber: availablePeg 
         });
+
+        console.log(`[TEAM BOOKING] Team updated:`, JSON.stringify(updatedTeam));
+
+        // Create participant entries for all team members with the assigned peg
+        const teamMembers = await storage.getTeamMembers(teamId);
+        const acceptedMembers = teamMembers.filter(m => m.status === "accepted");
+        
+        console.log(`[TEAM BOOKING] Found ${acceptedMembers.length} accepted team members to add as participants`);
+        
+        for (const member of acceptedMembers) {
+          // Check if participant already exists to avoid duplicates
+          const existingParticipants = await storage.getCompetitionParticipants(competitionId);
+          const alreadyExists = existingParticipants.some(p => p.userId === member.userId);
+          
+          if (!alreadyExists) {
+            // Create participant entry with the team's assigned peg
+            await storage.joinCompetition({
+              competitionId,
+              userId: member.userId,
+              pegNumber: availablePeg
+            });
+            console.log(`[TEAM BOOKING] Added participant ${member.userId} to peg ${availablePeg}`);
+          }
+        }
 
         // Increment pegsBooked for the competition
         await storage.updateCompetition(competitionId, {
           pegsBooked: competition.pegsBooked + 1
         });
 
+        console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + 1}`);
+
         res.json({ 
           success: true,
-          team: { ...team, pegNumber: availablePeg, paymentStatus: "succeeded" },
+          team: updatedTeam || { ...team, pegNumber: availablePeg, paymentStatus: "succeeded" },
           pegNumber: availablePeg,
           message: `Payment confirmed for team successfully. Team assigned to peg ${availablePeg}.` 
         });
@@ -2820,6 +2861,21 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         role: "member",
         status: "accepted",
       });
+
+      // If the team has already paid and has a peg assigned, create a participant entry for this new member
+      if (team.paymentStatus === "succeeded" && team.pegNumber) {
+        const existingParticipants = await storage.getCompetitionParticipants(team.competitionId);
+        const alreadyExists = existingParticipants.some(p => p.userId === userId);
+        
+        if (!alreadyExists) {
+          // Create participant entry with the team's assigned peg
+          await storage.joinCompetition({
+            competitionId: team.competitionId,
+            userId,
+            pegNumber: team.pegNumber
+          });
+        }
+      }
 
       res.json({ message: "Successfully joined team", member });
     } catch (error: any) {

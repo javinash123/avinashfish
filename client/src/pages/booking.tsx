@@ -14,7 +14,7 @@ import {
 import { useRoute, useLocation } from "wouter";
 import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { type Competition } from "@shared/schema";
@@ -94,6 +94,14 @@ function PaymentForm({
           title: "Payment Successful",
           description: teamId ? "Your team peg has been booked!" : "Your peg has been booked!",
         });
+
+        // Invalidate the teams query cache so admin panel sees updated team with peg assignment
+        if (teamId) {
+          await queryClient.invalidateQueries({ 
+            queryKey: [`/api/competitions/${competitionId}/teams`] 
+          });
+        }
+
         onSuccess();
       }
     } catch (err: any) {
@@ -160,7 +168,7 @@ export default function Booking() {
   // IMPORTANT: Always call useEffect before any conditional returns to avoid "Rendered more hooks" error
   useEffect(() => {
     if (acceptTerms && !clientSecret && !paymentError && competition) {
-      console.log('[Booking] Creating payment intent for competition:', competition.id);
+      const entryFee = parseFloat(competition.entryFee);
       
       // For team competitions, verify user has a team
       if (competition.competitionMode === "team" && !userTeam) {
@@ -183,6 +191,57 @@ export default function Booking() {
         });
         return;
       }
+      
+      // Handle free competitions (no payment required)
+      if (entryFee === 0) {
+        console.log('[Booking] Free competition detected, joining without payment');
+        const requestBody: any = {
+          paymentIntentId: "free-competition",
+          competitionId: competition.id,
+        };
+        
+        if (competition.competitionMode === "team" && userTeam) {
+          requestBody.teamId = userTeam.id;
+        }
+        
+        apiRequest("POST", "/api/confirm-payment-and-join", requestBody)
+          .then((res) => {
+            if (!res.ok) {
+              return res.json().then(data => {
+                throw new Error(data.message || "Failed to complete booking");
+              });
+            }
+            return res.json();
+          })
+          .then(() => {
+            toast({
+              title: "Booking Confirmed",
+              description: competition.competitionMode === "team" ? "Your team has been registered!" : "You have been registered!",
+            });
+            
+            // Invalidate teams cache for admin panel
+            if (competition.competitionMode === "team" && userTeam) {
+              queryClient.invalidateQueries({ 
+                queryKey: [`/api/competitions/${competition.id}/teams`] 
+              });
+            }
+            
+            setBookingComplete(true);
+          })
+          .catch((error) => {
+            console.error('[Booking] Free booking error:', error);
+            setPaymentError(error.message || "Failed to complete booking");
+            toast({
+              title: "Booking Error",
+              description: error.message || "An unexpected error occurred",
+              variant: "destructive",
+            });
+          });
+        return;
+      }
+      
+      // Paid competitions: create payment intent
+      console.log('[Booking] Creating payment intent for competition:', competition.id);
       
       // Prepare payment intent request
       const requestBody: any = {
@@ -402,12 +461,6 @@ export default function Booking() {
                     </div>
                   </div>
 
-                  <Alert>
-                    <Info className="h-4 w-4" />
-                    <AlertDescription>
-                      Peg numbers will be assigned randomly 24 hours before the competition and sent to your email.
-                    </AlertDescription>
-                  </Alert>
                 </CardContent>
               </Card>
 
