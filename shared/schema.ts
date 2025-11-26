@@ -318,6 +318,9 @@ export const competitions = pgTable("competitions", {
   type: text("type").notNull(),
   rules: text("rules").array(),
   imageUrl: text("image_url"),
+  thumbnailUrl: text("thumbnail_url"),
+  thumbnailUrlMd: text("thumbnail_url_md"),
+  thumbnailUrlLg: text("thumbnail_url_lg"),
   competitionMode: text("competition_mode").notNull().default("individual"),
   maxTeamMembers: integer("max_team_members"),
   teamPegAssignmentMode: text("team_peg_assignment_mode").notNull().default("team"),
@@ -334,6 +337,10 @@ export const insertCompetitionSchema = createInsertSchema(competitions).omit({
   competitionMode: z.enum(['individual', 'team']).default('individual'),
   maxTeamMembers: z.number().int().positive().optional(),
   teamPegAssignmentMode: z.enum(['team', 'members']).default('team'),
+  imageUrl: z.string().optional().nullable(),
+  thumbnailUrl: z.string().optional().nullable(),
+  thumbnailUrlMd: z.string().optional().nullable(),
+  thumbnailUrlLg: z.string().optional().nullable(),
 }).refine(
   (data) => {
     // If team mode, maxTeamMembers must be provided and >= 2
@@ -355,6 +362,10 @@ export const updateCompetitionSchema = createInsertSchema(competitions).omit({
   competitionMode: z.enum(['individual', 'team']).optional(),
   maxTeamMembers: z.number().int().positive().nullish(),
   teamPegAssignmentMode: z.enum(['team', 'members']).optional(),
+  imageUrl: z.string().optional().nullable(),
+  thumbnailUrl: z.string().optional().nullable(),
+  thumbnailUrlMd: z.string().optional().nullable(),
+  thumbnailUrlLg: z.string().optional().nullable(),
 }).partial();
 
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;

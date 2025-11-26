@@ -45,11 +45,15 @@ export function CompetitionCard({
 
   return (
     <Card className="overflow-hidden hover-elevate transition-all duration-200" data-testid={`card-competition-${name}`}>
-      <div className="relative h-48 bg-gradient-to-br from-primary/20 to-chart-2/20 overflow-hidden">
+      <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}>
         {imageUrl ? (
-          <img src={imageUrl} alt={name} className="w-full h-full object-cover" />
+          <img 
+            src={imageUrl} 
+            alt={name} 
+            className="w-full h-full object-cover object-center" 
+          />
         ) : (
-          <div className="absolute inset-0 flex items-center justify-center">
+          <div className="flex items-center justify-center">
             <div className="text-primary/20">
               <MapPin className="h-20 w-20" />
             </div>

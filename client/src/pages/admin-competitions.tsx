@@ -500,14 +500,14 @@ export default function AdminCompetitions() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  const uploadImage = async (file: File): Promise<string> => {
-    const formData = new FormData();
-    formData.append('image', file);
-    formData.append('type', 'competitions');
+  const uploadImage = async (file: File): Promise<{ url: string }> => {
+    const formDataToSend = new FormData();
+    formDataToSend.append('image', file);
+    formDataToSend.append('type', 'competitions');
     
     const response = await fetch('/api/upload', {
       method: 'POST',
-      body: formData,
+      body: formDataToSend,
     });
     
     if (!response.ok) {
@@ -515,7 +515,7 @@ export default function AdminCompetitions() {
     }
     
     const data = await response.json();
-    return data.url;
+    return { url: data.url };
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -559,7 +559,8 @@ export default function AdminCompetitions() {
     // Upload image if a file was selected
     if (imageFile) {
       try {
-        imageUrl = await uploadImage(imageFile);
+        const uploadResult = await uploadImage(imageFile);
+        imageUrl = uploadResult.url;
       } catch (error) {
         toast({
           title: "Error",
@@ -609,7 +610,8 @@ export default function AdminCompetitions() {
     // Upload image if a new file was selected
     if (imageFile) {
       try {
-        imageUrl = await uploadImage(imageFile);
+        const uploadResult = await uploadImage(imageFile);
+        imageUrl = uploadResult.url;
       } catch (error) {
         toast({
           title: "Error",

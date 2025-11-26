@@ -39,13 +39,24 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
   const getPositionBadge = (position: number) => {
     if (position <= 3) {
       return (
-        <div className="flex items-center gap-2">
-          <Trophy className={`h-5 w-5 ${getMedalColor(position)}`} />
-          <span className="font-bold">{position}</span>
+        <div className="flex items-center gap-1">
+          <Trophy className={`h-4 w-4 sm:h-5 sm:w-5 ${getMedalColor(position)}`} />
+          <span className="font-bold text-xs sm:text-sm">{position}</span>
         </div>
       );
     }
-    return <span className="font-medium">{position}</span>;
+    return <span className="font-medium text-xs sm:text-sm">{position}</span>;
+  };
+
+  const formatWeightCompact = (totalOunces: number | string) => {
+    const ounces = typeof totalOunces === 'string' ? parseWeight(totalOunces) : totalOunces;
+    
+    if (isNaN(ounces) || ounces === 0) {
+      return "0lb 0oz";
+    }
+    
+    const { pounds, ounces: oz } = convertFromOunces(Math.round(ounces));
+    return `${pounds}lb ${oz}oz`;
   };
 
   const formatWeightTwoRows = (totalOunces: number | string) => {
@@ -61,80 +72,82 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
 
   return (
     <Card>
-      <div className="overflow-x-auto">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead className="w-12 sm:w-16">Pos</TableHead>
-              <TableHead className="min-w-48 sm:min-w-auto">Angler</TableHead>
-              <TableHead className="text-center w-12 sm:w-14">Peg</TableHead>
-              <TableHead className="text-right w-20 sm:w-24">Weight</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {entries.map((entry, index) => {
-              const weight = formatWeightTwoRows(entry.weight);
-              return (
-                <TableRow
-                  key={`${entry.position}-${entry.pegNumber}`}
-                  className={`${index % 2 === 0 ? "bg-muted/30" : ""} ${
-                    entry.position <= 3 ? "font-medium" : ""
-                  }`}
-                  data-testid={`row-leaderboard-${entry.position}`}
-                >
-                  <TableCell data-testid={`text-position-${entry.position}`} className="py-2 sm:py-3 px-2 sm:px-4">
-                    {getPositionBadge(entry.position)}
-                  </TableCell>
-                  <TableCell className="py-2 sm:py-3 px-2 sm:px-4">
-                    <div className="flex items-center gap-2 sm:gap-3">
-                      <Avatar className="h-7 w-7 sm:h-8 sm:w-8 shrink-0">
-                        <AvatarImage src={entry.anglerAvatar} />
-                        <AvatarFallback className="text-xs sm:text-sm">
-                          {entry.anglerName
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")}
-                        </AvatarFallback>
-                      </Avatar>
-                      <div className="min-w-0">
-                        {entry.username ? (
-                          <Link href={`/profile/${entry.username}`}>
-                            <div className="font-medium hover:underline cursor-pointer text-sm sm:text-base truncate" data-testid={`text-angler-${entry.position}`}>
-                              {entry.anglerName}
-                            </div>
-                          </Link>
-                        ) : (
-                          <div className="font-medium text-sm sm:text-base truncate" data-testid={`text-angler-${entry.position}`}>
+      <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead className="w-10 sm:w-16 px-1 sm:px-4">Pos</TableHead>
+            <TableHead className="px-1 sm:px-4">Angler</TableHead>
+            <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Peg</TableHead>
+            <TableHead className="text-right w-16 sm:w-24 px-1 sm:px-4">Weight</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {entries.map((entry, index) => {
+            const weight = formatWeightTwoRows(entry.weight);
+            const weightCompact = formatWeightCompact(entry.weight);
+            return (
+              <TableRow
+                key={`${entry.position}-${entry.pegNumber}`}
+                className={`${index % 2 === 0 ? "bg-muted/30" : ""} ${
+                  entry.position <= 3 ? "font-medium" : ""
+                }`}
+                data-testid={`row-leaderboard-${entry.position}`}
+              >
+                <TableCell data-testid={`text-position-${entry.position}`} className="py-2 px-1 sm:px-4">
+                  {getPositionBadge(entry.position)}
+                </TableCell>
+                <TableCell className="py-2 px-1 sm:px-4">
+                  <div className="flex items-center gap-1.5 sm:gap-3">
+                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+                      <AvatarImage src={entry.anglerAvatar} className="object-cover" />
+                      <AvatarFallback className="text-xs sm:text-sm">
+                        {entry.anglerName
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")}
+                      </AvatarFallback>
+                    </Avatar>
+                    <div className="min-w-0 flex-1">
+                      {entry.username ? (
+                        <Link href={`/profile/${entry.username}`}>
+                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
                           </div>
-                        )}
-                        {entry.club && (
-                          <div className="text-xs sm:text-sm text-muted-foreground hidden sm:block truncate">{entry.club}</div>
-                        )}
-                      </div>
+                        </Link>
+                      ) : (
+                        <div className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
+                          {entry.anglerName}
+                        </div>
+                      )}
+                      {entry.club && (
+                        <div className="text-[10px] sm:text-sm text-muted-foreground hidden sm:block truncate">{entry.club}</div>
+                      )}
                     </div>
-                  </TableCell>
-                  <TableCell className="text-center py-2 sm:py-3 px-2 sm:px-4">
-                    <Badge variant="outline" className="font-mono text-xs sm:text-sm" data-testid={`badge-peg-${entry.position}`}>
-                      {entry.pegNumber}
-                    </Badge>
-                  </TableCell>
-                  <TableCell className="text-right py-2 sm:py-3 px-2 sm:px-4">
-                    <div className="flex flex-col items-end" data-testid={`text-weight-${entry.position}`}>
-                      <span className="font-mono font-bold text-sm sm:text-lg leading-tight">
-                        {weight.pounds}
-                      </span>
-                      <span className="font-mono font-bold text-xs sm:text-base leading-tight text-muted-foreground">
-                        {weight.ounces}
-                      </span>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              );
-            })}
-          </TableBody>
-        </Table>
-      </div>
+                  </div>
+                </TableCell>
+                <TableCell className="text-center py-2 px-1 sm:px-4">
+                  <Badge variant="outline" className="font-mono text-[10px] sm:text-sm px-1.5 sm:px-2" data-testid={`badge-peg-${entry.position}`}>
+                    {entry.pegNumber}
+                  </Badge>
+                </TableCell>
+                <TableCell className="text-right py-2 px-1 sm:px-4">
+                  <div className="hidden sm:flex flex-col items-end" data-testid={`text-weight-${entry.position}`}>
+                    <span className="font-mono font-bold text-lg leading-tight">
+                      {weight.pounds}
+                    </span>
+                    <span className="font-mono font-bold text-base leading-tight text-muted-foreground">
+                      {weight.ounces}
+                    </span>
+                  </div>
+                  <div className="sm:hidden font-mono font-bold text-xs leading-tight" data-testid={`text-weight-mobile-${entry.position}`}>
+                    {weightCompact}
+                  </div>
+                </TableCell>
+              </TableRow>
+            );
+          })}
+        </TableBody>
+      </Table>
       {isLive && (
         <div className="p-4 border-t flex items-center justify-center gap-2 text-sm text-muted-foreground">
           <div className="h-2 w-2 rounded-full bg-chart-4 animate-pulse" />

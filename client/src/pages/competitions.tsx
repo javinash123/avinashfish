@@ -35,6 +35,9 @@ export default function Competitions() {
     prizeType: comp.prizeType || "pool",
     status: getCompetitionStatus(comp),
     imageUrl: comp.imageUrl || undefined,
+    thumbnailUrl: (comp as any).thumbnailUrl || undefined,
+    thumbnailUrlMd: (comp as any).thumbnailUrlMd || undefined,
+    thumbnailUrlLg: (comp as any).thumbnailUrlLg || undefined,
   }));
 
   const filteredCompetitions = competitions.filter((comp) => {

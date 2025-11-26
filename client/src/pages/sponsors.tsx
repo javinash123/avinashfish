@@ -106,117 +106,117 @@ export default function Sponsors() {
         </div>
 
         {/* Why Sponsor Section */}
-        <div className="bg-muted/30 border-y py-16">
+        <section className="bg-muted/30 border-y py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <h2 className="text-3xl font-bold mb-6 text-center">Why Sponsor Peg Slam?</h2>
             <p className="text-lg text-muted-foreground mb-8 text-center max-w-3xl mx-auto">
               Partner with the UK's premier fishing competition platform and connect with thousands of passionate anglers across the country.
             </p>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-12 max-w-4xl mx-auto">
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Star className="h-5 w-5 text-primary" />
-                      Reach Your Audience
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      Connect directly with dedicated match anglers, recreational fishers, and fishing enthusiasts through our platform and live events.
-                    </p>
-                  </CardContent>
-                </Card>
+            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Star className="h-5 w-5 text-primary" />
+                    Reach Your Audience
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Connect directly with dedicated match anglers, recreational fishers, and fishing enthusiasts through our platform and live events.
+                  </p>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Award className="h-5 w-5 text-primary" />
-                      Brand Visibility
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      Showcase your brand across our digital platform, competition materials, and at prestigious fishing venues throughout the UK.
-                    </p>
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Award className="h-5 w-5 text-primary" />
+                    Brand Visibility
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Showcase your brand across our digital platform, competition materials, and at prestigious fishing venues throughout the UK.
+                  </p>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Handshake className="h-5 w-5 text-primary" />
-                      Community Support
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      Support the growth of competitive fishing in the UK and help create memorable experiences for anglers of all skill levels.
-                    </p>
-                  </CardContent>
-                </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Handshake className="h-5 w-5 text-primary" />
+                    Community Support
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Support the growth of competitive fishing in the UK and help create memorable experiences for anglers of all skill levels.
+                  </p>
+                </CardContent>
+              </Card>
 
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <ExternalLink className="h-5 w-5 text-primary" />
-                      Marketing Opportunities
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-muted-foreground">
-                      Benefit from social media exposure, event branding, product placement, and direct engagement opportunities with your target market.
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ExternalLink className="h-5 w-5 text-primary" />
+                    Marketing Opportunities
+                  </CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-muted-foreground">
+                    Benefit from social media exposure, event branding, product placement, and direct engagement opportunities with your target market.
+                  </p>
+                </CardContent>
+              </Card>
+            </div>
 
             <div className="bg-card border rounded-lg p-8 max-w-4xl mx-auto">
               <h3 className="text-2xl font-bold mb-4">Sponsorship Tiers</h3>
               <div className="space-y-4">
                 <div className="border-l-4 border-primary pl-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Star className="h-5 w-5 text-primary" />
-                      <h4 className="text-xl font-semibold">Platinum Sponsors</h4>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Premium exposure with featured placement, event naming rights, exclusive branding opportunities, and comprehensive marketing packages.
-                    </p>
+                  <div className="flex items-center gap-2 mb-2">
+                    <Star className="h-5 w-5 text-primary" />
+                    <h4 className="text-xl font-semibold">Platinum Sponsors</h4>
                   </div>
+                  <p className="text-muted-foreground">
+                    Premium exposure with featured placement, event naming rights, exclusive branding opportunities, and comprehensive marketing packages.
+                  </p>
+                </div>
 
-                  <div className="border-l-4 border-yellow-500 pl-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="h-5 w-5 text-yellow-500" />
-                      <h4 className="text-xl font-semibold">Gold Sponsors</h4>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Prominent branding across platform and events, social media features, logo placement, and partnership announcements.
-                    </p>
+                <div className="border-l-4 border-yellow-500 pl-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="h-5 w-5 text-yellow-500" />
+                    <h4 className="text-xl font-semibold">Gold Sponsors</h4>
                   </div>
+                  <p className="text-muted-foreground">
+                    Prominent branding across platform and events, social media features, logo placement, and partnership announcements.
+                  </p>
+                </div>
 
-                  <div className="border-l-4 border-slate-400 pl-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Award className="h-5 w-5 text-slate-400" />
-                      <h4 className="text-xl font-semibold">Silver Sponsors</h4>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Website presence, event materials inclusion, and recognition across our growing fishing community.
-                    </p>
+                <div className="border-l-4 border-slate-400 pl-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Award className="h-5 w-5 text-slate-400" />
+                    <h4 className="text-xl font-semibold">Silver Sponsors</h4>
                   </div>
+                  <p className="text-muted-foreground">
+                    Website presence, event materials inclusion, and recognition across our growing fishing community.
+                  </p>
+                </div>
 
-                  <div className="border-l-4 border-primary pl-4">
-                    <div className="flex items-center gap-2 mb-2">
-                      <Handshake className="h-5 w-5 text-primary" />
-                      <h4 className="text-xl font-semibold">Partners</h4>
-                    </div>
-                    <p className="text-muted-foreground">
-                      Join our network of valued partners supporting UK fishing competitions with brand visibility and community engagement.
-                    </p>
+                <div className="border-l-4 border-primary pl-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <Handshake className="h-5 w-5 text-primary" />
+                    <h4 className="text-xl font-semibold">Partners</h4>
                   </div>
+                  <p className="text-muted-foreground">
+                    Join our network of valued partners supporting UK fishing competitions with brand visibility and community engagement.
+                  </p>
                 </div>
               </div>
+            </div>
 
-            <div className="mt-8 text-center max-w-4xl mx-auto">
+            <div className="mt-8 text-center">
               <h3 className="text-xl font-semibold mb-4">Interested in Sponsoring?</h3>
               <p className="text-muted-foreground mb-6">
                 Contact us to discuss partnership opportunities and custom sponsorship packages tailored to your business goals.
@@ -229,7 +229,7 @@ export default function Sponsors() {
               </Button>
             </div>
           </div>
-        </div>
+        </section>
 
         <div className="container mx-auto px-4 lg:px-8 py-12">
           <div className="text-center py-16">
@@ -523,132 +523,130 @@ export default function Sponsors() {
       </div>
 
       {/* Why Sponsor Section */}
-      <div className="bg-muted/30 border-y py-16">
+      <section className="bg-muted/30 border-y py-16">
         <div className="container mx-auto px-4 lg:px-8">
-          <div className="max-w-4xl mx-auto">
-            <h2 className="text-3xl font-bold mb-6 text-center">Why Sponsor Peg Slam?</h2>
-            <p className="text-lg text-muted-foreground mb-8 text-center">
-              Partner with the UK's premier fishing competition platform and connect with thousands of passionate anglers across the country.
-            </p>
+          <h2 className="text-3xl font-bold mb-6 text-center">Why Sponsor Peg Slam?</h2>
+          <p className="text-lg text-muted-foreground mb-8 text-center max-w-3xl mx-auto">
+            Partner with the UK's premier fishing competition platform and connect with thousands of passionate anglers across the country.
+          </p>
 
-            <div className="grid md:grid-cols-2 gap-6 mb-12">
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Star className="h-5 w-5 text-primary" />
-                    Reach Your Audience
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Connect directly with dedicated match anglers, recreational fishers, and fishing enthusiasts through our platform and live events.
-                  </p>
-                </CardContent>
-              </Card>
+          <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Star className="h-5 w-5 text-primary" />
+                  Reach Your Audience
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Connect directly with dedicated match anglers, recreational fishers, and fishing enthusiasts through our platform and live events.
+                </p>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Award className="h-5 w-5 text-primary" />
-                    Brand Visibility
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Showcase your brand across our digital platform, competition materials, and at prestigious fishing venues throughout the UK.
-                  </p>
-                </CardContent>
-              </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Award className="h-5 w-5 text-primary" />
+                  Brand Visibility
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Showcase your brand across our digital platform, competition materials, and at prestigious fishing venues throughout the UK.
+                </p>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <Handshake className="h-5 w-5 text-primary" />
-                    Community Support
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Support the growth of competitive fishing in the UK and help create memorable experiences for anglers of all skill levels.
-                  </p>
-                </CardContent>
-              </Card>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Handshake className="h-5 w-5 text-primary" />
+                  Community Support
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Support the growth of competitive fishing in the UK and help create memorable experiences for anglers of all skill levels.
+                </p>
+              </CardContent>
+            </Card>
 
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <ExternalLink className="h-5 w-5 text-primary" />
-                    Marketing Opportunities
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground">
-                    Benefit from social media exposure, event branding, product placement, and direct engagement opportunities with your target market.
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <ExternalLink className="h-5 w-5 text-primary" />
+                  Marketing Opportunities
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-muted-foreground">
+                  Benefit from social media exposure, event branding, product placement, and direct engagement opportunities with your target market.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
 
-            <div className="bg-card border rounded-lg p-8">
-              <h3 className="text-2xl font-bold mb-4">Sponsorship Tiers</h3>
-              <div className="space-y-4">
-                <div className="border-l-4 border-primary pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Star className="h-5 w-5 text-primary" />
-                    <h4 className="text-xl font-semibold">Platinum Sponsors</h4>
-                  </div>
-                  <p className="text-muted-foreground">
-                    Premium exposure with featured placement, event naming rights, exclusive branding opportunities, and comprehensive marketing packages.
-                  </p>
+          <div className="bg-card border rounded-lg p-8 max-w-4xl mx-auto">
+            <h3 className="text-2xl font-bold mb-4">Sponsorship Tiers</h3>
+            <div className="space-y-4">
+              <div className="border-l-4 border-primary pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Star className="h-5 w-5 text-primary" />
+                  <h4 className="text-xl font-semibold">Platinum Sponsors</h4>
                 </div>
+                <p className="text-muted-foreground">
+                  Premium exposure with featured placement, event naming rights, exclusive branding opportunities, and comprehensive marketing packages.
+                </p>
+              </div>
 
-                <div className="border-l-4 border-yellow-500 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="h-5 w-5 text-yellow-500" />
-                    <h4 className="text-xl font-semibold">Gold Sponsors</h4>
-                  </div>
-                  <p className="text-muted-foreground">
-                    Prominent branding across platform and events, social media features, logo placement, and partnership announcements.
-                  </p>
+              <div className="border-l-4 border-yellow-500 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="h-5 w-5 text-yellow-500" />
+                  <h4 className="text-xl font-semibold">Gold Sponsors</h4>
                 </div>
+                <p className="text-muted-foreground">
+                  Prominent branding across platform and events, social media features, logo placement, and partnership announcements.
+                </p>
+              </div>
 
-                <div className="border-l-4 border-slate-400 pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Award className="h-5 w-5 text-slate-400" />
-                    <h4 className="text-xl font-semibold">Silver Sponsors</h4>
-                  </div>
-                  <p className="text-muted-foreground">
-                    Website presence, event materials inclusion, and recognition across our growing fishing community.
-                  </p>
+              <div className="border-l-4 border-slate-400 pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Award className="h-5 w-5 text-slate-400" />
+                  <h4 className="text-xl font-semibold">Silver Sponsors</h4>
                 </div>
+                <p className="text-muted-foreground">
+                  Website presence, event materials inclusion, and recognition across our growing fishing community.
+                </p>
+              </div>
 
-                <div className="border-l-4 border-primary pl-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <Handshake className="h-5 w-5 text-primary" />
-                    <h4 className="text-xl font-semibold">Partners</h4>
-                  </div>
-                  <p className="text-muted-foreground">
-                    Join our network of valued partners supporting UK fishing competitions with brand visibility and community engagement.
-                  </p>
+              <div className="border-l-4 border-primary pl-4">
+                <div className="flex items-center gap-2 mb-2">
+                  <Handshake className="h-5 w-5 text-primary" />
+                  <h4 className="text-xl font-semibold">Partners</h4>
                 </div>
+                <p className="text-muted-foreground">
+                  Join our network of valued partners supporting UK fishing competitions with brand visibility and community engagement.
+                </p>
               </div>
             </div>
+          </div>
 
-            <div className="mt-8 text-center">
-              <h3 className="text-xl font-semibold mb-4">Interested in Sponsoring?</h3>
-              <p className="text-muted-foreground mb-6">
-                Contact us to discuss partnership opportunities and custom sponsorship packages tailored to your business goals.
-              </p>
-              <Button asChild size="lg">
-                <a href="/contact" data-testid="button-become-sponsor">
-                  <Mail className="mr-2 h-4 w-4" />
-                  Become a Sponsor
-                </a>
-              </Button>
-            </div>
+          <div className="mt-8 text-center">
+            <h3 className="text-xl font-semibold mb-4">Interested in Sponsoring?</h3>
+            <p className="text-muted-foreground mb-6">
+              Contact us to discuss partnership opportunities and custom sponsorship packages tailored to your business goals.
+            </p>
+            <Button asChild size="lg">
+              <a href="/contact" data-testid="button-become-sponsor">
+                <Mail className="mr-2 h-4 w-4" />
+                Become a Sponsor
+              </a>
+            </Button>
           </div>
         </div>
-      </div>
+      </section>
 
       {/* Sponsor Peg Slam Section */}
       <div className="container mx-auto px-4 lg:px-8 py-12">

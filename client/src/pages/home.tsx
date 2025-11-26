@@ -87,6 +87,9 @@ export default function Home() {
       prizeType: comp.prizeType || "pool",
       status: "upcoming" as const,
       imageUrl: comp.imageUrl || undefined,
+      thumbnailUrl: (comp as any).thumbnailUrl || undefined,
+      thumbnailUrlMd: (comp as any).thumbnailUrlMd || undefined,
+      thumbnailUrlLg: (comp as any).thumbnailUrlLg || undefined,
     }));
 
   // Get all live competitions
@@ -171,10 +174,7 @@ export default function Home() {
         <section className="py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Newspaper className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured News</h2>
-              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold">Pegslam News</h2>
               <Link href="/news">
                 <Button variant="outline" data-testid="button-view-all-news">
                   View All

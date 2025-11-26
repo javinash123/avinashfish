@@ -3,6 +3,7 @@ import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
+import { generateThumbnails } from "./thumbnail-generator";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
@@ -126,7 +127,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   };
 
   // File upload endpoint
-  app.post("/api/upload", upload.single('image'), (req, res) => {
+  app.post("/api/upload", upload.single('image'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ message: "No file uploaded" });
@@ -3245,6 +3246,27 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Error fetching competition payments:", error);
       res.status(500).json({ message: "Error fetching payments: " + error.message });
+    }
+  });
+
+  // MongoDB Diagnostics endpoint (admin only)
+  app.get("/api/admin/diagnostics", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const mongoDbStorage = storage as any;
+      if (!mongoDbStorage.getDiagnostics) {
+        return res.status(400).json({ message: "Diagnostics not available - not using MongoDB storage" });
+      }
+
+      const diagnostics = await mongoDbStorage.getDiagnostics();
+      res.json(diagnostics);
+    } catch (error: any) {
+      console.error("Error running diagnostics:", error);
+      res.status(500).json({ message: "Error running diagnostics: " + error.message });
     }
   });
 

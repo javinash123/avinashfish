@@ -176,9 +176,9 @@ app.use((req, res, next) => {
   });
 
   if (app.get("env") === "development") {
-    await setupVite(app, server);
+    await setupVite(app, server, storage);
   } else {
-    serveStatic(app);
+    serveStatic(app, storage);
   }
 
   const port = parseInt(process.env.PORT || '5000', 10);

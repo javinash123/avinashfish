@@ -72,7 +72,34 @@ Preferred communication style: Simple, everyday language.
 - `PORT=5000`
 - `ALLOWED_ORIGINS=<comma-separated-domains>`
 
-## Recent Changes (Nov 24, 2025)
+## Recent Changes (Nov 26, 2025)
+
+### Sponsor Page Layout Fix
+- Fixed "Why Sponsor Peg Slam?" section layout - now uses full-width 4-column grid (lg:grid-cols-4)
+- Removed centered max-width container that was limiting the layout
+- Cards now span the full page width for better visual impact
+
+### Mobile-Optimized Leaderboard Tables
+- Updated leaderboard table component for mobile-friendly display without horizontal scrolling
+- Reduced padding on mobile (px-1 sm:px-4)
+- Smaller avatars on mobile (h-6 w-6 sm:h-8 sm:w-8)
+- Compact font sizes on mobile (text-xs sm:text-base)
+- Single-line weight display on mobile (e.g., "12lb 8oz" instead of two separate lines)
+- Max-width truncation for angler names on mobile (max-w-[80px])
+
+### Homepage "Pegslam News" Section
+- Removed Newspaper icon from before "Pegslam News" heading
+
+### Server-Side Open Graph Meta Tags for News Sharing
+- Created `server/og-meta.ts` utility for generating and injecting OG meta tags
+- Modified `server/vite.ts` to intercept `/news?article=<id>` URLs and inject dynamic meta tags
+- Works for both development (Vite) and production (static serving)
+- Meta tags injected server-side so social media crawlers can read them without JavaScript
+- Includes: og:title, og:description, og:image, og:url, og:type, og:site_name
+- Also includes Twitter Card meta tags for proper Twitter/X sharing
+- When sharing a news article URL on Facebook, Twitter, WhatsApp, etc., proper preview with title, image, and description will now display
+
+## Previous Changes (Nov 24, 2025)
 
 ### Featured News Category-Based Display
 - Updated featured news logic to show: 1 Announcement, 1 Match Report, 1 News Article

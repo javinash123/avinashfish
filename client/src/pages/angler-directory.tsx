@@ -144,9 +144,9 @@ export default function AnglerDirectory() {
                   <Card className="hover-elevate h-full">
                     <CardContent className="p-6">
                       <div className="flex flex-col items-center text-center">
-                        <Avatar className="h-20 w-20 mb-4">
-                          <AvatarImage src={angler.avatar || undefined} alt={`${angler.firstName} ${angler.lastName}`} />
-                          <AvatarFallback>
+                        <Avatar className="h-24 w-24 mb-4">
+                          <AvatarImage src={angler.avatar || undefined} alt={`${angler.firstName} ${angler.lastName}`} className="object-cover" />
+                          <AvatarFallback className="text-2xl">
                             {angler.firstName[0]}{angler.lastName[0]}
                           </AvatarFallback>
                         </Avatar>

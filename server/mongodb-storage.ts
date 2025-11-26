@@ -974,29 +974,37 @@ export class MongoDBStorage implements IStorage {
 
   // Competition Participant methods
   async getCompetitionParticipants(competitionId: string): Promise<CompetitionParticipant[]> {
-    return await this.competitionParticipants.find({ competitionId }).toArray();
+    return await this.competitionParticipants.find({ competitionId }, { readPreference: 'primary' }).toArray();
   }
 
   async getUserParticipations(userId: string): Promise<CompetitionParticipant[]> {
-    return await this.competitionParticipants.find({ userId }).toArray();
+    return await this.competitionParticipants.find({ userId }, { readPreference: 'primary' }).toArray();
   }
 
   async getAllParticipants(): Promise<CompetitionParticipant[]> {
-    return await this.competitionParticipants.find({}).toArray();
+    return await this.competitionParticipants.find({}, { readPreference: 'primary' }).toArray();
   }
 
   async joinCompetition(insertParticipant: InsertCompetitionParticipant): Promise<CompetitionParticipant> {
     const { competitionId, userId } = insertParticipant;
     
+    console.log(`[PARTICIPANT_JOIN] Starting join process - competitionId: ${competitionId}, userId: ${userId}`);
+    
     // Get the competition to ensure it exists
     const competition = await this.getCompetition(competitionId);
     if (!competition) {
+      console.error(`[PARTICIPANT_JOIN] Competition not found: ${competitionId}`);
       throw new Error("Competition not found");
     }
     
+    console.log(`[PARTICIPANT_JOIN] Competition found: ${competition.id}, pegs total: ${competition.pegsTotal}`);
+    
     // If a specific peg was requested, validate and try to assign it
     if (insertParticipant.pegNumber !== undefined && insertParticipant.pegNumber !== null) {
+      console.log(`[PARTICIPANT_JOIN] Specific peg requested: ${insertParticipant.pegNumber}`);
+      
       if (insertParticipant.pegNumber < 1 || insertParticipant.pegNumber > competition.pegsTotal) {
+        console.error(`[PARTICIPANT_JOIN] Invalid peg number: ${insertParticipant.pegNumber}`);
         throw new Error(`Peg ${insertParticipant.pegNumber} is not valid for this competition`);
       }
       
@@ -1009,14 +1017,28 @@ export class MongoDBStorage implements IStorage {
       };
       
       try {
+        console.log(`[PARTICIPANT_JOIN] Inserting participant:`, newParticipant);
         await this.competitionParticipants.insertOne(newParticipant);
+        console.log(`[PARTICIPANT_JOIN] Participant inserted successfully`);
+        
+        console.log(`[PARTICIPANT_JOIN] Updating competition pegs booked count`);
         await this.competitions.updateOne(
           { id: competitionId },
           { $inc: { pegsBooked: 1 } }
         );
+        console.log(`[PARTICIPANT_JOIN] Competition updated successfully`);
+        
         return newParticipant;
       } catch (error: any) {
+        console.error(`[PARTICIPANT_JOIN_ERROR] Error during specific peg assignment:`, {
+          code: error.code,
+          message: error.message,
+          name: error.name,
+          fullError: error
+        });
+        
         if (error.code === 11000) {
+          console.error(`[PARTICIPANT_JOIN_ERROR] Duplicate key error - peg may already be assigned`);
           throw new Error(`Peg ${insertParticipant.pegNumber} is already assigned to another angler`);
         }
         throw error;
@@ -1025,18 +1047,22 @@ export class MongoDBStorage implements IStorage {
     
     // For automatic assignment, use an optimistic loop with MongoDB's unique index
     // to handle concurrent joins gracefully
+    console.log(`[PARTICIPANT_JOIN] Starting automatic peg assignment`);
     let attempts = 0;
     const maxTotalAttempts = competition.pegsTotal; // Try all pegs if necessary
     
     while (attempts < maxTotalAttempts) {
       attempts++;
+      console.log(`[PARTICIPANT_JOIN] Automatic assignment attempt ${attempts}/${maxTotalAttempts}`);
       
       // Get currently booked pegs
       const participants = await this.getCompetitionParticipants(competitionId);
       const bookedPegs = new Set(participants.map(p => p.pegNumber).filter(p => p !== null));
+      console.log(`[PARTICIPANT_JOIN] Booked pegs: ${Array.from(bookedPegs).sort((a, b) => a - b).join(', ')} (${bookedPegs.size}/${competition.pegsTotal})`);
       
       // Check if competition is full
       if (bookedPegs.size >= competition.pegsTotal) {
+        console.error(`[PARTICIPANT_JOIN] Competition is full`);
         throw new Error("No available pegs - competition is full");
       }
       
@@ -1049,12 +1075,14 @@ export class MongoDBStorage implements IStorage {
       }
       
       if (availablePegs.length === 0) {
+        console.error(`[PARTICIPANT_JOIN] No available pegs found`);
         throw new Error("No available pegs - competition is full");
       }
       
       // Pick a random available peg to reduce contention
       const randomIndex = Math.floor(Math.random() * availablePegs.length);
       const pegToTry = availablePegs[randomIndex];
+      console.log(`[PARTICIPANT_JOIN] Attempting to assign peg ${pegToTry} (${availablePegs.length} available)`);
       
       const newParticipant: CompetitionParticipant = {
         id: randomUUID(),
@@ -1066,32 +1094,44 @@ export class MongoDBStorage implements IStorage {
       
       try {
         // Try to insert - MongoDB's unique index will prevent duplicates
+        console.log(`[PARTICIPANT_JOIN] Inserting participant with peg ${pegToTry}`);
         await this.competitionParticipants.insertOne(newParticipant);
+        console.log(`[PARTICIPANT_JOIN] Participant inserted successfully`);
         
         // Success! Update the pegs booked count
+        console.log(`[PARTICIPANT_JOIN] Updating competition pegs booked count`);
         await this.competitions.updateOne(
           { id: competitionId },
           { $inc: { pegsBooked: 1 } }
         );
+        console.log(`[PARTICIPANT_JOIN] Competition updated successfully`);
         
         return newParticipant;
       } catch (error: any) {
         // Duplicate key error means this peg was just taken by another request
         // Loop again to try a different peg
         if (error.code === 11000) {
+          console.log(`[PARTICIPANT_JOIN] Duplicate key error - peg ${pegToTry} was taken, retrying...`);
           // On the last attempt, give up and return a helpful error
           if (attempts >= maxTotalAttempts) {
+            console.error(`[PARTICIPANT_JOIN_ERROR] Max attempts reached after duplicate key errors`);
             throw new Error("Unable to reserve a peg due to high demand. Please try again in a moment.");
           }
           // Otherwise, continue to next attempt
           continue;
         }
         // For other errors, throw immediately
+        console.error(`[PARTICIPANT_JOIN_ERROR] Non-duplicate error during automatic assignment:`, {
+          code: error.code,
+          message: error.message,
+          name: error.name
+        });
         throw error;
       }
     }
     
     // Should not reach here, but just in case
+    console.error(`[PARTICIPANT_JOIN_ERROR] Exited loop without result after ${maxTotalAttempts} attempts`);
     throw new Error("Unable to assign a peg after multiple attempts. Please try again.");
   }
 
@@ -1448,5 +1488,88 @@ export class MongoDBStorage implements IStorage {
   async isUserInTeam(teamId: string, userId: string): Promise<boolean> {
     const member = await this.teamMembers.findOne({ teamId, userId, status: "accepted" });
     return !!member;
+  }
+
+  // Diagnostic methods for debugging MongoDB issues
+  async getDiagnostics(): Promise<{
+    mongoConnection: boolean;
+    indexStatus: { [key: string]: any };
+    writePermissionTest: boolean;
+    collectionStats: { [key: string]: any };
+    error?: string;
+  }> {
+    try {
+      console.log("[DIAGNOSTICS] Starting MongoDB diagnostics...");
+      
+      // Test connection
+      const mongoConnection = this.client !== null;
+      console.log(`[DIAGNOSTICS] MongoDB connection: ${mongoConnection}`);
+
+      // Get index information
+      const indexStatus: { [key: string]: any } = {};
+      try {
+        const participantIndexes = await this.competitionParticipants.listIndexes().toArray();
+        indexStatus.competitionParticipants = participantIndexes.map(idx => ({
+          name: idx.name,
+          key: idx.key,
+          unique: idx.unique || false
+        }));
+        console.log(`[DIAGNOSTICS] Found ${participantIndexes.length} indexes on competitionParticipants`);
+      } catch (err) {
+        console.error("[DIAGNOSTICS] Error fetching indexes:", err);
+        indexStatus.error = String(err);
+      }
+
+      // Test write permission with a test document
+      let writePermissionTest = false;
+      try {
+        const testDoc = {
+          _id: `diagnostic_test_${Date.now()}`,
+          timestamp: new Date(),
+          purpose: "permission_test"
+        };
+        await this.competitionParticipants.insertOne(testDoc as any);
+        // Clean up test document
+        await this.competitionParticipants.deleteOne({ _id: testDoc._id });
+        writePermissionTest = true;
+        console.log("[DIAGNOSTICS] Write permission test: SUCCESS");
+      } catch (err) {
+        console.error("[DIAGNOSTICS] Write permission test FAILED:", err);
+      }
+
+      // Get collection statistics
+      const collectionStats: { [key: string]: any } = {};
+      try {
+        const participantStats = await this.db?.collection('competitionParticipants').stats();
+        collectionStats.competitionParticipants = {
+          count: participantStats?.count || 0,
+          avgObjSize: participantStats?.avgObjSize || 0,
+          storageSize: participantStats?.storageSize || 0
+        };
+        console.log(`[DIAGNOSTICS] competitionParticipants collection: ${participantStats?.count || 0} documents`);
+      } catch (err) {
+        console.error("[DIAGNOSTICS] Error fetching collection stats:", err);
+        collectionStats.error = String(err);
+      }
+
+      const diagnostics = {
+        mongoConnection,
+        indexStatus,
+        writePermissionTest,
+        collectionStats
+      };
+
+      console.log("[DIAGNOSTICS] Diagnostics complete:", diagnostics);
+      return diagnostics;
+    } catch (error: any) {
+      console.error("[DIAGNOSTICS] Error during diagnostics:", error);
+      return {
+        mongoConnection: false,
+        indexStatus: {},
+        writePermissionTest: false,
+        collectionStats: {},
+        error: error.message
+      };
+    }
   }
 }

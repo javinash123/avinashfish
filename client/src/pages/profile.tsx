@@ -380,9 +380,9 @@ export default function Profile() {
             <div className="flex flex-col md:flex-row gap-6">
               <div className="flex flex-col items-center md:items-start">
                 <div className="relative mb-4">
-                  <Avatar className="h-32 w-32" data-testid="avatar-profile">
+                  <Avatar className="h-48 w-48" data-testid="avatar-profile">
                     {displayUser.avatar && <AvatarImage src={displayUser.avatar} alt={`${displayUser.firstName} ${displayUser.lastName}`} className="object-cover" />}
-                    <AvatarFallback className="text-3xl">
+                    <AvatarFallback className="text-5xl">
                       {displayUser.firstName[0]}{displayUser.lastName[0]}
                     </AvatarFallback>
                   </Avatar>
@@ -448,27 +448,39 @@ export default function Profile() {
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
                   {displayUser.club && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <UserIcon className="h-4 w-4 text-muted-foreground" />
-                      <span data-testid="text-club">{displayUser.club}</span>
+                    <div className="flex items-start gap-2 text-sm">
+                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Club</p>
+                        <span data-testid="text-club">{displayUser.club}</span>
+                      </div>
                     </div>
                   )}
                   {displayUser.location && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <MapPin className="h-4 w-4 text-muted-foreground" />
-                      <span data-testid="text-location">{displayUser.location}</span>
+                    <div className="flex items-start gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Location</p>
+                        <span data-testid="text-location">{displayUser.location}</span>
+                      </div>
                     </div>
                   )}
                   {displayUser.favouriteMethod && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Target className="h-4 w-4 text-muted-foreground" />
-                      <span data-testid="text-method">{displayUser.favouriteMethod}</span>
+                    <div className="flex items-start gap-2 text-sm">
+                      <Target className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Fishing Method</p>
+                        <span data-testid="text-method">{displayUser.favouriteMethod}</span>
+                      </div>
                     </div>
                   )}
                   {displayUser.favouriteSpecies && (
-                    <div className="flex items-center gap-2 text-sm">
-                      <Fish className="h-4 w-4 text-muted-foreground" />
-                      <span data-testid="text-species">{displayUser.favouriteSpecies}</span>
+                    <div className="flex items-start gap-2 text-sm">
+                      <Fish className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Favorite Species</p>
+                        <span data-testid="text-species">{displayUser.favouriteSpecies}</span>
+                      </div>
                     </div>
                   )}
                 </div>

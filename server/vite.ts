@@ -5,6 +5,7 @@ import { createServer as createViteServer, createLogger } from "vite";
 import { type Server } from "http";
 import viteConfig from "../vite.config";
 import { nanoid } from "nanoid";
+import { injectMetaTagsIntoHtml } from "./og-meta";
 
 const viteLogger = createLogger();
 
@@ -19,7 +20,7 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-export async function setupVite(app: Express, server: Server) {
+export async function setupVite(app: Express, server: Server, storage?: any) {
   const serverOptions = {
     middlewareMode: true,
     hmr: { server },
@@ -52,12 +53,41 @@ export async function setupVite(app: Express, server: Server) {
         "index.html",
       );
 
-      // always reload the index.html file from disk incase it changes
       let template = await fs.promises.readFile(clientTemplate, "utf-8");
       template = template.replace(
         `src="/src/main.tsx"`,
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
+      
+      const urlObj = new URL(url, `http://${req.headers.host}`);
+      const articleId = urlObj.searchParams.get('article');
+      const basePath = process.env.EXPRESS_BASE_PATH || '';
+      const pathWithoutBase = basePath ? url.replace(basePath, '') : url;
+      
+      if (pathWithoutBase.startsWith('/news') && articleId && storage) {
+        try {
+          const article = await storage.getNews(articleId);
+          if (article) {
+            const baseUrl = `${req.protocol}://${req.headers.host}`;
+            let imageUrl = article.image || '';
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            template = injectMetaTagsIntoHtml(template, {
+              title: article.title,
+              description: article.excerpt || article.content?.substring(0, 160) || '',
+              image: imageUrl,
+              url: `${baseUrl}/news?article=${articleId}`,
+              type: 'article',
+              siteName: 'Peg Slam',
+            });
+          }
+        } catch (err) {
+          log(`Error fetching news article for OG meta: ${err}`);
+        }
+      }
+      
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
     } catch (e) {
@@ -67,7 +97,7 @@ export async function setupVite(app: Express, server: Server) {
   });
 }
 
-export function serveStatic(app: Express) {
+export function serveStatic(app: Express, storage?: any) {
   const distPath = path.resolve(import.meta.dirname, "public");
   const basePath = process.env.EXPRESS_BASE_PATH || '';
 
@@ -79,8 +109,44 @@ export function serveStatic(app: Express) {
 
   app.use(basePath, express.static(distPath));
 
-  // fall through to index.html if the file doesn't exist
-  app.use(`${basePath}/*`, (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+  app.use(`${basePath}/*`, async (req, res) => {
+    const url = req.originalUrl;
+    const indexPath = path.resolve(distPath, "index.html");
+    
+    try {
+      let template = await fs.promises.readFile(indexPath, "utf-8");
+      
+      const urlObj = new URL(url, `http://${req.headers.host}`);
+      const articleId = urlObj.searchParams.get('article');
+      const pathWithoutBase = basePath ? url.replace(basePath, '') : url;
+      
+      if (pathWithoutBase.startsWith('/news') && articleId && storage) {
+        try {
+          const article = await storage.getNews(articleId);
+          if (article) {
+            const baseUrl = `${req.protocol}://${req.headers.host}`;
+            let imageUrl = article.image || '';
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            template = injectMetaTagsIntoHtml(template, {
+              title: article.title,
+              description: article.excerpt || article.content?.substring(0, 160) || '',
+              image: imageUrl,
+              url: `${baseUrl}/news?article=${articleId}`,
+              type: 'article',
+              siteName: 'Peg Slam',
+            });
+          }
+        } catch (err) {
+          log(`Error fetching news article for OG meta: ${err}`);
+        }
+      }
+      
+      res.status(200).set({ "Content-Type": "text/html" }).end(template);
+    } catch (e) {
+      res.sendFile(indexPath);
+    }
   });
 }
