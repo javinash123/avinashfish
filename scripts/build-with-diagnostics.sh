@@ -112,14 +112,14 @@ if [ ! -f "dist/index.js" ]; then
     exit 1
 fi
 
-if [ ! -f "dist/index.html" ]; then
-    echo "❌ ERROR: dist/index.html not found!"
+if [ ! -f "dist/public/index.html" ]; then
+    echo "❌ ERROR: dist/public/index.html not found!"
     exit 1
 fi
 
 # Get file sizes
 BACKEND_SIZE=$(du -h dist/index.js | cut -f1)
-FRONTEND_SIZE=$(du -sh dist/assets 2>/dev/null | cut -f1 || echo "N/A")
+FRONTEND_SIZE=$(du -sh dist/public/assets 2>/dev/null | cut -f1 || echo "N/A")
 
 echo "✓ Build verification passed"
 echo "  - Backend bundle: $BACKEND_SIZE"

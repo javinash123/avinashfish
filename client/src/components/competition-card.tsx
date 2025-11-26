@@ -16,6 +16,9 @@ interface CompetitionCardProps {
   prizeType?: string;
   status: "upcoming" | "live" | "completed";
   imageUrl?: string;
+  thumbnailUrl?: string;
+  thumbnailUrlMd?: string;
+  thumbnailUrlLg?: string;
 }
 
 export function CompetitionCard({
@@ -30,7 +33,11 @@ export function CompetitionCard({
   prizeType = "pool",
   status,
   imageUrl,
+  thumbnailUrl,
+  thumbnailUrlMd,
+  thumbnailUrlLg,
 }: CompetitionCardProps) {
+  const displayImage = thumbnailUrlMd || thumbnailUrl || imageUrl;
   const statusColors = {
     upcoming: "bg-accent text-accent-foreground",
     live: "bg-chart-4 text-white animate-pulse",
@@ -46,12 +53,24 @@ export function CompetitionCard({
   return (
     <Card className="overflow-hidden hover-elevate transition-all duration-200" data-testid={`card-competition-${name}`}>
       <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 overflow-hidden flex items-center justify-center" style={{ aspectRatio: '16 / 9' }}>
-        {imageUrl ? (
-          <img 
-            src={imageUrl} 
-            alt={name} 
-            className="w-full h-full object-cover object-center" 
-          />
+        {displayImage ? (
+          <picture>
+            {thumbnailUrlLg && (
+              <source media="(min-width: 1024px)" srcSet={thumbnailUrlLg} type="image/webp" />
+            )}
+            {thumbnailUrlMd && (
+              <source media="(min-width: 640px)" srcSet={thumbnailUrlMd} type="image/webp" />
+            )}
+            {thumbnailUrl && (
+              <source srcSet={thumbnailUrl} type="image/webp" />
+            )}
+            <img 
+              src={displayImage} 
+              alt={name} 
+              className="w-full h-full object-cover object-center" 
+              loading="lazy"
+            />
+          </picture>
         ) : (
           <div className="flex items-center justify-center">
             <div className="text-primary/20">

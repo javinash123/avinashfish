@@ -3,7 +3,7 @@ import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
-import { generateThumbnails } from "./thumbnail-generator";
+import { generateCompetitionThumbnails } from "./thumbnail-generator";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
@@ -163,11 +163,36 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       
       const fileUrl = `/attached-assets/uploads/${type}/${fileName}`;
 
-      res.json({ 
-        url: fileUrl,
-        filename: fileName,
-        message: "File uploaded successfully" 
-      });
+      // Generate thumbnails for competition images
+      if (type === 'competitions') {
+        try {
+          const thumbnails = await generateCompetitionThumbnails(targetPath, targetDir, fileName);
+          console.log('Generated competition thumbnails:', thumbnails);
+          
+          res.json({ 
+            url: fileUrl,
+            filename: fileName,
+            thumbnailUrl: thumbnails.thumbnailUrl,
+            thumbnailUrlMd: thumbnails.thumbnailUrlMd,
+            thumbnailUrlLg: thumbnails.thumbnailUrlLg,
+            message: "File uploaded successfully with thumbnails" 
+          });
+        } catch (thumbnailError) {
+          console.error("Thumbnail generation error:", thumbnailError);
+          // Still return success but without thumbnails
+          res.json({ 
+            url: fileUrl,
+            filename: fileName,
+            message: "File uploaded successfully (thumbnail generation failed)" 
+          });
+        }
+      } else {
+        res.json({ 
+          url: fileUrl,
+          filename: fileName,
+          message: "File uploaded successfully" 
+        });
+      }
     } catch (error: any) {
       console.error("File upload error:", error);
       // Clean up temp file if it exists
@@ -2592,8 +2617,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin participant management routes
   app.post("/api/admin/competitions/:id/participants", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
@@ -2624,8 +2649,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/participants/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 

@@ -500,7 +500,12 @@ export default function AdminCompetitions() {
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
 
-  const uploadImage = async (file: File): Promise<{ url: string }> => {
+  const uploadImage = async (file: File): Promise<{ 
+    url: string; 
+    thumbnailUrl?: string; 
+    thumbnailUrlMd?: string; 
+    thumbnailUrlLg?: string;
+  }> => {
     const formDataToSend = new FormData();
     formDataToSend.append('image', file);
     formDataToSend.append('type', 'competitions');
@@ -515,7 +520,12 @@ export default function AdminCompetitions() {
     }
     
     const data = await response.json();
-    return { url: data.url };
+    return { 
+      url: data.url,
+      thumbnailUrl: data.thumbnailUrl,
+      thumbnailUrlMd: data.thumbnailUrlMd,
+      thumbnailUrlLg: data.thumbnailUrlLg,
+    };
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -555,12 +565,18 @@ export default function AdminCompetitions() {
 
   const handleCreate = async () => {
     let imageUrl = formData.imageUrl;
+    let thumbnailUrl: string | null = null;
+    let thumbnailUrlMd: string | null = null;
+    let thumbnailUrlLg: string | null = null;
     
     // Upload image if a file was selected
     if (imageFile) {
       try {
         const uploadResult = await uploadImage(imageFile);
         imageUrl = uploadResult.url;
+        thumbnailUrl = uploadResult.thumbnailUrl || null;
+        thumbnailUrlMd = uploadResult.thumbnailUrlMd || null;
+        thumbnailUrlLg = uploadResult.thumbnailUrlLg || null;
       } catch (error) {
         toast({
           title: "Error",
@@ -586,6 +602,9 @@ export default function AdminCompetitions() {
       competitionMode: formData.competitionMode,
       type: formData.type,
       imageUrl: imageUrl || null,
+      thumbnailUrl: thumbnailUrl,
+      thumbnailUrlMd: thumbnailUrlMd,
+      thumbnailUrlLg: thumbnailUrlLg,
     };
     
     if (formData.competitionMode === "team") {
@@ -606,12 +625,18 @@ export default function AdminCompetitions() {
     if (!selectedCompetition) return;
 
     let imageUrl = formData.imageUrl;
+    let thumbnailUrl: string | null | undefined = undefined;
+    let thumbnailUrlMd: string | null | undefined = undefined;
+    let thumbnailUrlLg: string | null | undefined = undefined;
     
     // Upload image if a new file was selected
     if (imageFile) {
       try {
         const uploadResult = await uploadImage(imageFile);
         imageUrl = uploadResult.url;
+        thumbnailUrl = uploadResult.thumbnailUrl || null;
+        thumbnailUrlMd = uploadResult.thumbnailUrlMd || null;
+        thumbnailUrlLg = uploadResult.thumbnailUrlLg || null;
       } catch (error) {
         toast({
           title: "Error",
@@ -622,28 +647,37 @@ export default function AdminCompetitions() {
       }
     }
 
+    const updateData: any = {
+      name: formData.name,
+      date: formData.date,
+      endDate: formData.endDate || null,
+      time: formData.time,
+      endTime: formData.endTime || null,
+      venue: formData.venue,
+      pegsTotal: parseInt(formData.pegsTotal),
+      entryFee: formData.entryFee,
+      prizePool: formData.prizePool,
+      competitionMode: formData.competitionMode,
+      maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
+        ? parseInt(formData.maxTeamMembers) 
+        : null,
+      teamPegAssignmentMode: formData.competitionMode === "team" ? formData.teamPegAssignmentMode : undefined,
+      prizeType: formData.prizeType,
+      type: formData.type,
+      description: formData.description,
+      imageUrl: imageUrl || null,
+    };
+
+    // Only include thumbnail URLs if a new image was uploaded
+    if (imageFile) {
+      updateData.thumbnailUrl = thumbnailUrl;
+      updateData.thumbnailUrlMd = thumbnailUrlMd;
+      updateData.thumbnailUrlLg = thumbnailUrlLg;
+    }
+
     updateMutation.mutate({
       id: selectedCompetition.id,
-      data: {
-        name: formData.name,
-        date: formData.date,
-        endDate: formData.endDate || null,
-        time: formData.time,
-        endTime: formData.endTime || null,
-        venue: formData.venue,
-        pegsTotal: parseInt(formData.pegsTotal),
-        entryFee: formData.entryFee,
-        prizePool: formData.prizePool,
-        competitionMode: formData.competitionMode,
-        maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
-          ? parseInt(formData.maxTeamMembers) 
-          : null,
-        teamPegAssignmentMode: formData.competitionMode === "team" ? formData.teamPegAssignmentMode : undefined,
-        prizeType: formData.prizeType,
-        type: formData.type,
-        description: formData.description,
-        imageUrl: imageUrl || null,
-      },
+      data: updateData,
     });
     setIsEditOpen(false);
     setSelectedCompetition(null);

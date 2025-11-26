@@ -74,6 +74,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes (Nov 26, 2025)
 
+### Competition Image Thumbnail System
+- Created `server/thumbnail-generator.ts` for automatic thumbnail generation using sharp library
+- Generates 3 responsive sizes in WebP format: Small (442x248), Medium (602x338), Large (884x497)
+- Upload route automatically generates thumbnails for competition images (type='competitions')
+- Competition cards now use `<picture>` element with srcset for optimal image loading
+- Schema updated with `thumbnailUrl`, `thumbnailUrlMd`, `thumbnailUrlLg` fields
+- Both MemStorage and MongoDBStorage updated to include thumbnail fields
+- Backward compatible - existing competitions without thumbnails still display original image
+
+### Admin Panel Authentication Fix
+- Fixed admin panel route for adding anglers to competitions
+- Route now checks for both `staffId` (new) and `adminId` (legacy) session fields
+- Ensures backward compatibility with existing admin sessions on production MongoDB
+
 ### Sponsor Page Layout Fix
 - Fixed "Why Sponsor Peg Slam?" section layout - now uses full-width 4-column grid (lg:grid-cols-4)
 - Removed centered max-width container that was limiting the layout

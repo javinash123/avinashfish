@@ -1035,8 +1035,15 @@ export class MemStorage implements IStorage {
       pegsBooked: insertCompetition.pegsBooked ?? 0,
       rules: insertCompetition.rules ?? null,
       imageUrl: insertCompetition.imageUrl ?? null,
+      thumbnailUrl: insertCompetition.thumbnailUrl ?? null,
+      thumbnailUrlMd: insertCompetition.thumbnailUrlMd ?? null,
+      thumbnailUrlLg: insertCompetition.thumbnailUrlLg ?? null,
       endDate: insertCompetition.endDate ?? null,
       endTime: insertCompetition.endTime ?? null,
+      prizeType: insertCompetition.prizeType ?? "pool",
+      competitionMode: insertCompetition.competitionMode ?? "individual",
+      maxTeamMembers: insertCompetition.maxTeamMembers ?? null,
+      teamPegAssignmentMode: insertCompetition.teamPegAssignmentMode ?? "team",
       createdAt: new Date(),
     };
     this.competitions.set(id, competition);
