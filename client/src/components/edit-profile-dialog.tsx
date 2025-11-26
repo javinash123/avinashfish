@@ -18,6 +18,8 @@ interface EditProfileDialogProps {
 
 export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialogProps) {
   const { toast } = useToast();
+  const [username, setUsername] = useState(user.username || "");
+  const [email, setEmail] = useState(user.email || "");
   const [bio, setBio] = useState(user.bio || "");
   const [club, setClub] = useState(user.club || "");
   const [location, setLocation] = useState(user.location || "");
@@ -47,11 +49,6 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/user/me"] });
-      toast({
-        title: "Profile updated",
-        description: "Your profile has been updated successfully.",
-      });
-      onOpenChange(false);
     },
     onError: (error: any) => {
       toast({
@@ -62,20 +59,70 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
     },
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const updateUsernameMutation = useMutation({
+    mutationFn: async (data: { username: string }) => {
+      const response = await apiRequest("PUT", "/api/user/username", data);
+      return response.json();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update username",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async (data: { email: string }) => {
+      const response = await apiRequest("PUT", "/api/user/email", data);
+      return response.json();
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    updateProfileMutation.mutate({
-      bio,
-      club,
-      location,
-      favouriteMethod,
-      favouriteSpecies,
-      youtubeUrl,
-      facebookUrl,
-      twitterUrl,
-      instagramUrl,
-      tiktokUrl,
-    });
+    
+    try {
+      // Update username if changed
+      if (username !== user.username) {
+        await updateUsernameMutation.mutateAsync({ username });
+      }
+
+      // Update email if changed
+      if (email !== user.email) {
+        await updateEmailMutation.mutateAsync({ email });
+      }
+
+      // Update other profile fields
+      updateProfileMutation.mutate({
+        bio,
+        club,
+        location,
+        favouriteMethod,
+        favouriteSpecies,
+        youtubeUrl,
+        facebookUrl,
+        twitterUrl,
+        instagramUrl,
+        tiktokUrl,
+      });
+
+      toast({
+        title: "Profile updated",
+        description: "Your profile has been updated successfully.",
+      });
+      onOpenChange(false);
+    } catch (error: any) {
+      // Error already shown by mutation error handler
+    }
   };
 
   return (
@@ -88,6 +135,28 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
           </DialogDescription>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="username">Username</Label>
+            <Input
+              id="username"
+              placeholder="Your username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              data-testid="input-username"
+            />
+            <p className="text-xs text-muted-foreground">Letters, numbers, and underscores only. 3-20 characters.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              placeholder="Your email address"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              data-testid="input-email"
+            />
+          </div>
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
             <Textarea
@@ -204,10 +273,10 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
             </Button>
             <Button
               type="submit"
-              disabled={updateProfileMutation.isPending}
+              disabled={updateProfileMutation.isPending || updateUsernameMutation.isPending || updateEmailMutation.isPending}
               data-testid="button-save"
             >
-              {updateProfileMutation.isPending && (
+              {(updateProfileMutation.isPending || updateUsernameMutation.isPending || updateEmailMutation.isPending) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Save Changes

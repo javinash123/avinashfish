@@ -1,0 +1,25 @@
+this website and admin panel are deployed on an aws ec2 instance having amazon linux os and is live using mongodb, so all the changes should be made in such a way that when i deploy new code it should keep working on server nothing should break
+
+	When admin creates a competition we need to add a option whether its an individual competition or Team competition. Now if its a individual competition then our complete system is already working, but now if its a teams competition then mention how many members can be part of a team in that competition. Now on website when angler logs in then should get an option to create a team and send invite to other anglers to be part of there team. Angler creating the team will be the primary member of that team and then that member can book the peg in the teams competition and make the payment. After that complete flow should work depending on individual or team, if its team then peg will be assigned to the team, weight will be assigned to the team. And in team members of that team in there profile  there should be a seperate section show casing there team competition details like we show for individual.
+
+	Partially Implemented (Needs Completion):
+
+    Admin Peg Allocation - UI updated for teams, but missing updateTeamPeg storage implementation
+    Admin Weigh-in - Weight submission supports teams, but viewing team entries needs additional state management
+
+Remaining Work (Critical Issues Identified by Architect):
+
+Issue 1: Storage Method Missing
+The updateTeamPeg method is declared in the IStorage interface but not implemented in MemStorage or MongoDBStorage. This will cause 500 errors when admins try to assign pegs to teams.
+
+Fix Needed:
+
+    Add updateTeamPeg implementation to both MemStorage and MongoDBStorage classes
+
+Issue 2: Weigh-in View Team Entries
+The weigh-in dialog can submit weights for teams, but viewing/editing team entries doesn't work because it still uses selectedParticipant state which only tracks individuals.
+
+Fix Needed:
+
+    Add separate state for viewing team entries (selectedTeamId, team weight entries query)
+    Update the "View Entries" section to conditionally use team or participant data based on competition mode

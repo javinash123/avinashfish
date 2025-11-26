@@ -148,21 +148,21 @@ export function Footer() {
             </p>
             <div className="flex flex-wrap gap-4 justify-center md:justify-end">
               <Link 
-                href="/privacy-policy" 
+                href="/privacy-policy"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1"
                 data-testid="link-footer-privacy"
               >
                 Privacy Policy
               </Link>
               <Link 
-                href="/terms-conditions" 
+                href="/terms-conditions"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1"
                 data-testid="link-footer-terms"
               >
                 Terms & Conditions
               </Link>
               <Link 
-                href="/cookie-policy" 
+                href="/cookie-policy"
                 className="text-sm text-muted-foreground hover:text-foreground transition-colors hover-elevate active-elevate-2 rounded px-2 py-1"
                 data-testid="link-footer-cookies"
               >

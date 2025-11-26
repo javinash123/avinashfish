@@ -88,8 +88,14 @@ export default function CompetitionDetails() {
     if (!isNaN(entryFee) && entryFee > 0) {
       window.location.href = `/booking/${id}`;
     } else {
-      // Free competition - allow direct join
-      joinMutation.mutate();
+      // Free competition
+      if (competition.competitionMode === "team") {
+        // For team competitions, use team booking
+        freeTeamBookingMutation.mutate();
+      } else {
+        // For individual competitions, use individual join
+        joinMutation.mutate();
+      }
     }
   };
 
@@ -109,6 +115,41 @@ export default function CompetitionDetails() {
       toast({
         title: "Success!",
         description: "You've successfully joined the competition",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const freeTeamBookingMutation = useMutation({
+    mutationFn: async () => {
+      if (!userTeam?.id) {
+        throw new Error("You must be part of a team to book this competition");
+      }
+      const response = await apiRequest("POST", "/api/confirm-payment-and-join", {
+        paymentIntentId: "free-competition",
+        competitionId: id,
+        teamId: userTeam.id,
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to book team peg");
+      }
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/participants`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/teams`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}`] });
+      toast({
+        title: "Success!",
+        description: "Team peg booked successfully!",
       });
     },
     onError: (error: Error) => {
@@ -158,10 +199,12 @@ export default function CompetitionDetails() {
       }
       return response.json();
     },
-    onSuccess: (data) => {
+    onSuccess: async (data) => {
       setCreatedTeam(data);
       setTeamName("");
-      refetchUserTeam();
+      setIsCreateTeamOpen(false);
+      await refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/my-team`] });
       toast({
         title: "Team created!",
         description: "Share the invite code with your team members",
@@ -208,18 +251,21 @@ export default function CompetitionDetails() {
 
   const leaveTeamMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/teams/leave`, {
-        competitionId: id,
-      });
+      if (!userTeam?.id) {
+        throw new Error("Team information not available");
+      }
+      const response = await apiRequest("DELETE", `/api/teams/${userTeam.id}/leave`, {});
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || "Failed to leave team");
       }
       return response.json();
     },
-    onSuccess: () => {
-      refetchUserTeam();
+    onSuccess: async () => {
       setIsManageTeamOpen(false);
+      await refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/my-team`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/teams`] });
       toast({
         title: "Left team",
         description: "You have left the team",
@@ -272,10 +318,11 @@ export default function CompetitionDetails() {
       }
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       setJoinInviteCode("");
       setIsJoinTeamOpen(false);
-      refetchUserTeam();
+      await refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/my-team`] });
       queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/teams`] });
       toast({
         title: "Success!",
@@ -459,22 +506,23 @@ export default function CompetitionDetails() {
                       £{competition.entryFee}
                     </div>
                   </div>
-                  <div className="flex items-center gap-2 text-chart-3">
-                    <Trophy className="h-5 w-5" />
-                    <div>
-                      {(competition.prizeType === "pool" || !competition.prizeType) ? (
-                        <>
-                          <span className="font-bold text-lg">£{competition.prizePool}</span>
-                          <span className="text-sm ml-1">Prize Pool</span>
-                        </>
-                      ) : (
-                        <>
-                          <span className="font-bold text-lg">{competition.prizePool}</span>
-                          <span className="text-sm ml-1">Prize</span>
-                        </>
-                      )}
+                  {competition.prizeType !== "other" && (
+                    <div className="flex items-center gap-2 text-chart-3">
+                      <Trophy className="h-5 w-5" />
+                      <div>
+                        <span className="font-bold text-lg">£{competition.prizePool}</span>
+                        <span className="text-sm ml-1">Prize Pool</span>
+                      </div>
                     </div>
-                  </div>
+                  )}
+                  {competition.prizeType === "other" && (
+                    <div className="flex items-center gap-2 text-chart-3">
+                      <Trophy className="h-5 w-5" />
+                      <div>
+                        <span className="font-bold text-lg">{competition.prizePool}</span>
+                      </div>
+                    </div>
+                  )}
                   {competitionStatus === "completed" ? (
                     <Link href="#leaderboard">
                       <Button className="w-full" size="lg" data-testid="button-view-result">
@@ -1017,7 +1065,7 @@ export default function CompetitionDetails() {
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label>Invite Code</Label>
-                  {userTeam.isPrimaryMember && (
+                  {userTeam.isCaptain && (
                     <Button
                       size="sm"
                       variant="ghost"

@@ -19,6 +19,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -45,6 +54,7 @@ export default function AdminSponsors() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedSponsor, setSelectedSponsor] = useState<Sponsor | null>(null);
+  const [sponsorToDelete, setSponsorToDelete] = useState<Sponsor | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -223,12 +233,8 @@ export default function AdminSponsors() {
     }
   };
 
-  const handleDelete = (id: string, name: string) => {
-    deleteMutation.mutate(id);
-    toast({
-      title: "Sponsor removed",
-      description: `${name} has been removed from sponsors.`,
-    });
+  const handleDelete = (sponsor: Sponsor) => {
+    setSponsorToDelete(sponsor);
   };
 
   const openEditDialog = (sponsor: Sponsor) => {
@@ -370,7 +376,7 @@ export default function AdminSponsors() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDelete(sponsor.id, sponsor.name)}
+                  onClick={() => handleDelete(sponsor)}
                   data-testid={`button-delete-sponsor-${sponsor.id}`}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -386,6 +392,35 @@ export default function AdminSponsors() {
           No sponsors added yet
         </div>
       )}
+
+      <AlertDialog open={!!sponsorToDelete} onOpenChange={(open) => !open && setSponsorToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Sponsor</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{sponsorToDelete?.name}" from the sponsors? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (sponsorToDelete) {
+                  deleteMutation.mutate(sponsorToDelete.id);
+                  setSponsorToDelete(null);
+                  toast({
+                    title: "Sponsor removed",
+                    description: `${sponsorToDelete.name} has been removed from sponsors.`,
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">

@@ -320,6 +320,7 @@ export const competitions = pgTable("competitions", {
   imageUrl: text("image_url"),
   competitionMode: text("competition_mode").notNull().default("individual"),
   maxTeamMembers: integer("max_team_members"),
+  teamPegAssignmentMode: text("team_peg_assignment_mode").notNull().default("team"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -328,10 +329,11 @@ export const insertCompetitionSchema = createInsertSchema(competitions).omit({
   createdAt: true,
   pegsBooked: true,
   status: true,
-  prizeType: true,
 }).extend({
+  prizeType: z.enum(['pool', 'other']).default('pool'),
   competitionMode: z.enum(['individual', 'team']).default('individual'),
   maxTeamMembers: z.number().int().positive().optional(),
+  teamPegAssignmentMode: z.enum(['team', 'members']).default('team'),
 }).refine(
   (data) => {
     // If team mode, maxTeamMembers must be provided and >= 2
@@ -351,7 +353,8 @@ export const updateCompetitionSchema = createInsertSchema(competitions).omit({
   createdAt: true,
 }).extend({
   competitionMode: z.enum(['individual', 'team']).optional(),
-  maxTeamMembers: z.number().int().positive().optional(),
+  maxTeamMembers: z.number().int().positive().nullish(),
+  teamPegAssignmentMode: z.enum(['team', 'members']).optional(),
 }).partial();
 
 export type InsertCompetition = z.infer<typeof insertCompetitionSchema>;
@@ -439,7 +442,7 @@ export type Payment = typeof payments.$inferSelect;
 export const leaderboardEntries = pgTable("leaderboard_entries", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").notNull(),
-  userId: varchar("user_id").notNull(),
+  userId: varchar("user_id"),
   teamId: varchar("team_id"),
   pegNumber: integer("peg_number").notNull(),
   weight: text("weight").notNull(),
@@ -514,5 +517,15 @@ export const updateUserPasswordSchema = z.object({
   path: ["confirmPassword"],
 });
 
+export const updateUserUsernameSchema = z.object({
+  username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+});
+
+export const updateUserEmailSchema = z.object({
+  email: z.string().email("Please enter a valid email address"),
+});
+
 export type UpdateUserProfile = z.infer<typeof updateUserProfileSchema>;
 export type UpdateUserPassword = z.infer<typeof updateUserPasswordSchema>;
+export type UpdateUserUsername = z.infer<typeof updateUserUsernameSchema>;
+export type UpdateUserEmail = z.infer<typeof updateUserEmailSchema>;

@@ -12,6 +12,7 @@ import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2 } from "
 import { SiFacebook, SiX } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
 import type { News } from "@shared/schema";
+import { updateMetaTags, resetMetaTags } from "@/lib/meta-tags";
 
 export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
@@ -37,10 +38,20 @@ export default function News() {
         console.log('[NEWS DEBUG] Found article:', article);
         if (article) {
           setSelectedArticle(article);
+          // Update meta tags for social sharing
+          const articleUrl = `${window.location.origin}/news?article=${article.id}`;
+          updateMetaTags({
+            title: article.title,
+            description: article.excerpt,
+            image: article.image,
+            url: articleUrl,
+            type: 'article',
+          });
         }
       } else {
         console.log('[NEWS DEBUG] No articleId, clearing selection');
         setSelectedArticle(null);
+        resetMetaTags();
       }
     }
   }, [newsArticles, location]);
@@ -49,12 +60,24 @@ export default function News() {
   const handleArticleOpen = (article: News) => {
     console.log('[NEWS DEBUG] handleArticleOpen called for article:', article.id);
     setSelectedArticle(article);
+    
+    // Update meta tags for social sharing
+    const articleUrl = `${window.location.origin}/news?article=${article.id}`;
+    updateMetaTags({
+      title: article.title,
+      description: article.excerpt,
+      image: article.image,
+      url: articleUrl,
+      type: 'article',
+    });
+    
     setLocation(`/news?article=${article.id}`);
   };
 
   const handleArticleClose = () => {
     console.log('[NEWS DEBUG] handleArticleClose called');
     setSelectedArticle(null);
+    resetMetaTags();
     setLocation('/news');
   };
 

@@ -19,6 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
+import { updateMetaTags } from "@/lib/meta-tags";
 
 export default function Home() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -33,6 +34,43 @@ export default function Home() {
     queryKey: ["/api/gallery/featured"],
   });
 
+  // State for randomly selected featured news by category
+  const [randomFeaturedNews, setRandomFeaturedNews] = useState<News[]>([]);
+
+  // Update featured news when featured news data changes - one from each category
+  useEffect(() => {
+    if (featuredNews.length > 0) {
+      // Group news by category
+      const byCategory = {
+        announcement: featuredNews.filter(n => n.category === 'announcement'),
+        matchReport: featuredNews.filter(n => n.category === 'match-report'),
+        news: featuredNews.filter(n => n.category === 'news'),
+      };
+
+      // Pick one random from each category
+      const selected: News[] = [];
+      
+      if (byCategory.announcement.length > 0) {
+        const randomIdx = Math.floor(Math.random() * byCategory.announcement.length);
+        selected.push(byCategory.announcement[randomIdx]);
+      }
+      
+      if (byCategory.matchReport.length > 0) {
+        const randomIdx = Math.floor(Math.random() * byCategory.matchReport.length);
+        selected.push(byCategory.matchReport[randomIdx]);
+      }
+      
+      if (byCategory.news.length > 0) {
+        const randomIdx = Math.floor(Math.random() * byCategory.news.length);
+        selected.push(byCategory.news[randomIdx]);
+      }
+      
+      setRandomFeaturedNews(selected);
+    } else {
+      setRandomFeaturedNews([]);
+    }
+  }, [featuredNews]);
+
   // Filter upcoming competitions - only show if status is upcoming
   const upcomingCompetitions = competitionsData
     .filter((comp) => getCompetitionStatus(comp) === "upcoming")
@@ -44,8 +82,8 @@ export default function Home() {
       venue: comp.venue,
       pegsTotal: comp.pegsTotal,
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,
-      entryFee: `£${comp.entryFee}`,
-      prizePool: (comp.prizeType === "pool" || !comp.prizeType) ? `£${comp.prizePool}` : comp.prizePool,
+      entryFee: comp.entryFee,
+      prizePool: comp.prizePool,
       prizeType: comp.prizeType || "pool",
       status: "upcoming" as const,
       imageUrl: comp.imageUrl || undefined,
@@ -145,7 +183,7 @@ export default function Home() {
               </Link>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {featuredNews.slice(0, 3).map((news) => {
+              {randomFeaturedNews.map((news) => {
                 const getCategoryBadge = (category: string) => {
                   switch (category) {
                     case "match-report":
@@ -201,7 +239,18 @@ export default function Home() {
                       <Button 
                         variant="ghost" 
                         size="sm" 
-                        onClick={() => window.location.href = `/news#${news.id}`}
+                        onClick={() => {
+                          // Update meta tags for social sharing before navigation
+                          const articleUrl = `${window.location.origin}/news?article=${news.id}`;
+                          updateMetaTags({
+                            title: news.title,
+                            description: news.excerpt,
+                            image: news.image,
+                            url: articleUrl,
+                            type: 'article',
+                          });
+                          window.location.href = `/news?article=${news.id}`;
+                        }}
                         data-testid={`button-read-more-${news.id}`}
                       >
                         Read More

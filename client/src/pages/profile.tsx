@@ -45,6 +45,8 @@ export default function Profile() {
     newPassword: "",
     confirmPassword: "",
   });
+  const [usernameForm, setUsernameForm] = useState("");
+  const [emailForm, setEmailForm] = useState("");
   const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
   const avatarInputRef = useRef<HTMLInputElement>(null);
   
@@ -144,6 +146,92 @@ export default function Profile() {
     },
   });
 
+  const updateUsernameMutation = useMutation({
+    mutationFn: async (data: { username: string }) => {
+      const response = await apiRequest("PUT", "/api/user/username", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Username updated",
+        description: "Your username has been changed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/me"] });
+      setUsernameForm("");
+      setSettingsOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update username",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateEmailMutation = useMutation({
+    mutationFn: async (data: { email: string }) => {
+      const response = await apiRequest("PUT", "/api/user/email", data);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Email updated",
+        description: "Your email has been changed successfully.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/user/me"] });
+      setEmailForm("");
+      setSettingsOpen(false);
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update email",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Initialize form fields when dialog opens
+  useEffect(() => {
+    if (settingsOpen && loggedInUser) {
+      setUsernameForm(loggedInUser.username);
+      setEmailForm(loggedInUser.email);
+      setPasswordForm({ currentPassword: "", newPassword: "", confirmPassword: "" });
+    }
+  }, [settingsOpen, loggedInUser]);
+
+  const handleUpdateUsername = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (usernameForm.trim() === loggedInUser?.username) {
+      toast({
+        title: "No changes",
+        description: "Username is the same as current one.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateUsernameMutation.mutate({ username: usernameForm });
+  };
+
+  const handleUpdateEmail = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (emailForm.trim() === loggedInUser?.email) {
+      toast({
+        title: "No changes",
+        description: "Email is the same as current one.",
+        variant: "destructive",
+      });
+      return;
+    }
+    updateEmailMutation.mutate({ email: emailForm });
+  };
+
+  const handlePasswordUpdate = async (e: React.FormEvent) => {
+    e.preventDefault();
+    updatePasswordMutation.mutate(passwordForm);
+  };
+
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     
@@ -241,43 +329,6 @@ export default function Profile() {
         avatarInputRef.current.value = '';
       }
     }
-  };
-
-  const handlePasswordUpdate = (e: React.FormEvent) => {
-    e.preventDefault();
-    
-    if (!passwordForm.currentPassword || !passwordForm.newPassword || !passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "All fields are required",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword !== passwordForm.confirmPassword) {
-      toast({
-        title: "Error",
-        description: "New passwords do not match",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    if (passwordForm.newPassword.length < 6) {
-      toast({
-        title: "Error",
-        description: "Password must be at least 6 characters long",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    updatePasswordMutation.mutate({
-      currentPassword: passwordForm.currentPassword,
-      newPassword: passwordForm.newPassword,
-      confirmPassword: passwordForm.confirmPassword,
-    });
   };
 
   useEffect(() => {
@@ -884,57 +935,114 @@ export default function Profile() {
 
       {isOwnProfile && (
         <Dialog open={settingsOpen} onOpenChange={setSettingsOpen}>
-          <DialogContent data-testid="dialog-settings">
+          <DialogContent className="max-h-screen overflow-y-auto" data-testid="dialog-settings">
             <DialogHeader>
               <DialogTitle>Account Settings</DialogTitle>
               <DialogDescription>
-                Update your password and security settings
+                Update your username, email, and password
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handlePasswordUpdate} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="currentPassword">Current Password</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={passwordForm.currentPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                  data-testid="input-current-password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="newPassword">New Password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={passwordForm.newPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                  data-testid="input-new-password"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={passwordForm.confirmPassword}
-                  onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                  data-testid="input-confirm-password"
-                />
-              </div>
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setSettingsOpen(false)}
-                  data-testid="button-cancel-settings"
-                >
-                  Cancel
-                </Button>
+            <div className="space-y-6">
+              {/* Update Username */}
+              <form onSubmit={handleUpdateUsername} className="space-y-4 border-b pb-4">
+                <h3 className="font-semibold text-sm">Change Username</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="username">New Username</Label>
+                  <Input
+                    id="username"
+                    value={usernameForm}
+                    onChange={(e) => setUsernameForm(e.target.value)}
+                    placeholder="Enter new username"
+                    data-testid="input-username"
+                  />
+                  <p className="text-xs text-muted-foreground">Letters, numbers, and underscores only. 3-20 characters.</p>
+                </div>
                 <Button
                   type="submit"
+                  size="sm"
+                  disabled={updateUsernameMutation.isPending || usernameForm === loggedInUser?.username}
+                  data-testid="button-update-username"
+                >
+                  {updateUsernameMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Username"
+                  )}
+                </Button>
+              </form>
+
+              {/* Update Email */}
+              <form onSubmit={handleUpdateEmail} className="space-y-4 border-b pb-4">
+                <h3 className="font-semibold text-sm">Change Email</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="email">New Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={emailForm}
+                    onChange={(e) => setEmailForm(e.target.value)}
+                    placeholder="Enter new email"
+                    data-testid="input-email"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="sm"
+                  disabled={updateEmailMutation.isPending || emailForm === loggedInUser?.email}
+                  data-testid="button-update-email"
+                >
+                  {updateEmailMutation.isPending ? (
+                    <>
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      Updating...
+                    </>
+                  ) : (
+                    "Update Email"
+                  )}
+                </Button>
+              </form>
+
+              {/* Update Password */}
+              <form onSubmit={handlePasswordUpdate} className="space-y-4">
+                <h3 className="font-semibold text-sm">Change Password</h3>
+                <div className="space-y-2">
+                  <Label htmlFor="currentPassword">Current Password</Label>
+                  <Input
+                    id="currentPassword"
+                    type="password"
+                    value={passwordForm.currentPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                    data-testid="input-current-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword">New Password</Label>
+                  <Input
+                    id="newPassword"
+                    type="password"
+                    value={passwordForm.newPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                    data-testid="input-new-password"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword">Confirm New Password</Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    value={passwordForm.confirmPassword}
+                    onChange={(e) => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                    data-testid="input-confirm-password"
+                  />
+                </div>
+                <Button
+                  type="submit"
+                  size="sm"
                   disabled={updatePasswordMutation.isPending}
-                  data-testid="button-save-password"
+                  data-testid="button-update-password"
                 >
                   {updatePasswordMutation.isPending ? (
                     <>
@@ -945,8 +1053,19 @@ export default function Profile() {
                     "Update Password"
                   )}
                 </Button>
-              </DialogFooter>
-            </form>
+              </form>
+            </div>
+
+            <DialogFooter className="mt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setSettingsOpen(false)}
+                data-testid="button-close-settings"
+              >
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       )}

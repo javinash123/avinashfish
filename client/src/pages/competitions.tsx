@@ -30,8 +30,9 @@ export default function Competitions() {
     venue: comp.venue,
     pegsTotal: comp.pegsTotal,
     pegsAvailable: comp.pegsTotal - comp.pegsBooked,
-    entryFee: `£${comp.entryFee}`,
-    prizePool: `£${comp.prizePool}`,
+    entryFee: comp.entryFee,
+    prizePool: comp.prizePool,
+    prizeType: comp.prizeType || "pool",
     status: getCompetitionStatus(comp),
     imageUrl: comp.imageUrl || undefined,
   }));
@@ -73,8 +74,8 @@ export default function Competitions() {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="all">All Competitions</SelectItem>
-              <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="live">Live Now</SelectItem>
+              <SelectItem value="upcoming">Upcoming</SelectItem>
               <SelectItem value="completed">Completed</SelectItem>
             </SelectContent>
           </Select>

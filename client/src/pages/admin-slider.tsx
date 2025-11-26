@@ -9,11 +9,21 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { SliderImage, SiteSettings } from "@shared/schema";
 import { Trash2, Upload } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 export default function AdminSlider() {
   const { toast } = useToast();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [imageToDelete, setImageToDelete] = useState<SliderImage | null>(null);
   const [uploadingSlider, setUploadingSlider] = useState(false);
   const [uploadingLogo, setUploadingLogo] = useState(false);
   const sliderFileInputRef = useRef<HTMLInputElement>(null);
@@ -312,7 +322,7 @@ export default function AdminSlider() {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => deleteImageMutation.mutate(image.id)}
+                          onClick={() => setImageToDelete(image)}
                           disabled={deleteImageMutation.isPending}
                           data-testid={`button-delete-${image.id}`}
                         >
@@ -327,6 +337,31 @@ export default function AdminSlider() {
           </div>
         </CardContent>
       </Card>
+
+      <AlertDialog open={!!imageToDelete} onOpenChange={(open) => !open && setImageToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Slider Image</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this slider image? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (imageToDelete) {
+                  deleteImageMutation.mutate(imageToDelete.id);
+                  setImageToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

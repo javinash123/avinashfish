@@ -33,8 +33,6 @@ export default function TermsConditions() {
             <h2 className="text-2xl font-semibold mb-3">2. Organiser Information</h2>
             <p className="text-muted-foreground leading-relaxed">
               Peg Slam is a UK-based fishing competition organisation promoting angling for juniors, youth, and adults.
-              <br />
-              Contact: 📧 info@pegslam.com
             </p>
           </section>
 
@@ -104,7 +102,7 @@ export default function TermsConditions() {
               </li>
               <li>Adult competitors consent to the use of images by entering an event.</li>
               <li>Parents or guardians must provide consent for any under-18 participant to appear in media.</li>
-              <li>Requests for removal of images can be made via info@pegslam.com.</li>
+              <li>Requests for removal of images can be made via the Contact Us page.</li>
             </ul>
           </section>
 
@@ -184,9 +182,7 @@ export default function TermsConditions() {
           <section data-testid="section-terms-contact">
             <h2 className="text-2xl font-semibold mb-3">17. Contact</h2>
             <p className="text-muted-foreground leading-relaxed">
-              For any questions regarding these Terms and Conditions, please contact:
-              <br />
-              📧 info@pegslam.com
+              For any questions regarding these Terms and Conditions, please <a href="/contact" className="text-primary hover:underline">contact us</a>.
             </p>
           </section>
 

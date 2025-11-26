@@ -157,8 +157,9 @@ export default function AdminDashboard() {
       venue: comp.venue,
       pegsTotal: comp.pegsTotal,
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,
-      entryFee: `£${comp.entryFee}`,
-      prizePool: `£${comp.prizePool}`,
+      entryFee: comp.entryFee,
+      prizePool: comp.prizePool,
+      prizeType: comp.prizeType || "pool",
       status: "live" as const,
     }));
 
@@ -172,8 +173,9 @@ export default function AdminDashboard() {
       venue: comp.venue,
       pegsTotal: comp.pegsTotal,
       pegsAvailable: comp.pegsTotal - comp.pegsBooked,
-      entryFee: `£${comp.entryFee}`,
-      prizePool: `£${comp.prizePool}`,
+      entryFee: comp.entryFee,
+      prizePool: comp.prizePool,
+      prizeType: comp.prizeType || "pool",
       status: "upcoming" as const,
     }));
 

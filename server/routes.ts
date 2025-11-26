@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
@@ -14,7 +14,7 @@ import "./types"; // Import session types
 // Requires STRIPE_SECRET_KEY environment variable
 // Valid keys start with sk_test_ (test mode) or sk_live_ (production mode)
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" }) : null;
+const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" }) : null;
 
 // Validate Stripe key format to catch invalid/placeholder keys early
 if (stripe && stripeKey && !stripeKey.startsWith('sk_')) {
@@ -396,79 +396,86 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           return res.status(404).json({ message: "Competition not found" });
         }
 
-        // Find next available peg for the team BEFORE marking payment succeeded
-        let availablePeg = 0;
+        const pegAssignmentMode = competition.teamPegAssignmentMode || "team";
+        const teamMembers = await storage.getTeamMembers(teamId);
+        const acceptedMembers = teamMembers.filter(m => m.status === "accepted");
+        
+        console.log(`[TEAM BOOKING] Competition ${competitionId} peg assignment mode: ${pegAssignmentMode}`);
+        console.log(`[TEAM BOOKING] Team has ${acceptedMembers.length} accepted members`);
+
+        // Find available pegs based on assignment mode
+        let requiredPegs = pegAssignmentMode === "team" ? 1 : acceptedMembers.length;
+        let availablePegs: number[] = [];
+        
         if (competition.pegsTotal > 0) {
           const existingParticipants = await storage.getCompetitionParticipants(competitionId);
           const existingTeams = await storage.getTeamsByCompetition(competitionId);
           const assignedPegs = new Set([
             ...existingParticipants.map(p => p.pegNumber).filter(p => p !== null),
-            ...existingTeams.filter(t => t.pegNumber).map(t => t.pegNumber!)
+            ...existingTeams.filter(t => t.pegNumber && t.id !== teamId).map(t => t.pegNumber!)
           ]);
           
           for (let peg = 1; peg <= competition.pegsTotal; peg++) {
             if (!assignedPegs.has(peg)) {
-              availablePeg = peg;
-              break;
+              availablePegs.push(peg);
             }
+            if (availablePegs.length >= requiredPegs) break;
           }
         }
 
-        if (availablePeg === 0) {
-          // Don't mark payment as succeeded if no pegs available
-          return res.status(400).json({ message: "No available pegs for this competition. Please contact support for refund." });
+        if (availablePegs.length < requiredPegs) {
+          return res.status(400).json({ message: `Not enough available pegs. Need ${requiredPegs}, found ${availablePegs.length}. Please contact support.` });
         }
 
-        console.log(`[TEAM BOOKING] Assigning peg ${availablePeg} to team ${teamId} for competition ${competitionId}`);
+        console.log(`[TEAM BOOKING] Assigned pegs: ${availablePegs.join(", ")}`);
 
-        // NOW mark payment as succeeded (only after confirming peg availability)
-        // For paid competitions, update payment status in database
+        // Mark payment as succeeded
         if (!isFreeCompetition) {
           await storage.updatePaymentStatus(payment.id, "succeeded");
         }
 
-        // Update team with payment success and peg assignment
+        // Update team with payment success
+        let teamPegNumber = pegAssignmentMode === "team" ? availablePegs[0] : null;
         const updatedTeam = await storage.updateTeam(teamId, { 
           paymentStatus: "succeeded",
-          pegNumber: availablePeg 
+          pegNumber: teamPegNumber
         });
 
         console.log(`[TEAM BOOKING] Team updated:`, JSON.stringify(updatedTeam));
 
-        // Create participant entries for all team members with the assigned peg
-        const teamMembers = await storage.getTeamMembers(teamId);
-        const acceptedMembers = teamMembers.filter(m => m.status === "accepted");
-        
-        console.log(`[TEAM BOOKING] Found ${acceptedMembers.length} accepted team members to add as participants`);
-        
-        for (const member of acceptedMembers) {
-          // Check if participant already exists to avoid duplicates
+        // Create participant entries for all team members
+        for (let i = 0; i < acceptedMembers.length; i++) {
+          const member = acceptedMembers[i];
           const existingParticipants = await storage.getCompetitionParticipants(competitionId);
           const alreadyExists = existingParticipants.some(p => p.userId === member.userId);
           
           if (!alreadyExists) {
-            // Create participant entry with the team's assigned peg
+            const pegNumber = pegAssignmentMode === "members" ? availablePegs[i] : availablePegs[0];
             await storage.joinCompetition({
               competitionId,
               userId: member.userId,
-              pegNumber: availablePeg
+              pegNumber: pegNumber
             });
-            console.log(`[TEAM BOOKING] Added participant ${member.userId} to peg ${availablePeg}`);
+            console.log(`[TEAM BOOKING] Added participant ${member.userId} to peg ${pegNumber}`);
           }
         }
 
-        // Increment pegsBooked for the competition
+        // Increment pegsBooked based on assignment mode
+        const pegsToIncrement = pegAssignmentMode === "team" ? 1 : acceptedMembers.length;
         await storage.updateCompetition(competitionId, {
-          pegsBooked: competition.pegsBooked + 1
+          pegsBooked: competition.pegsBooked + pegsToIncrement
         });
 
-        console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + 1}`);
+        console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + pegsToIncrement}`);
 
         res.json({ 
           success: true,
-          team: updatedTeam || { ...team, pegNumber: availablePeg, paymentStatus: "succeeded" },
-          pegNumber: availablePeg,
-          message: `Payment confirmed for team successfully. Team assigned to peg ${availablePeg}.` 
+          team: updatedTeam || { ...team, pegNumber: teamPegNumber, paymentStatus: "succeeded" },
+          pegNumbers: availablePegs,
+          assignmentMode: pegAssignmentMode,
+          message: pegAssignmentMode === "team" 
+            ? `Payment confirmed. Team assigned to peg ${availablePegs[0]}.`
+            : `Payment confirmed. Team members assigned to pegs ${availablePegs.join(", ")}.` 
         });
       } else {
         // Verify this is not a team payment (payment.teamId should be null)
@@ -1438,6 +1445,72 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Update password error:", error);
       res.status(500).json({ message: "Error updating password: " + error.message });
+    }
+  });
+
+  app.put("/api/user/username", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = updateUserUsernameSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid username data", errors: result.error.errors });
+      }
+
+      // Check if username is already taken
+      const existingUser = await storage.getUserByUsername(result.data.username);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "Username already taken" });
+      }
+
+      // Update username
+      const updatedUser = await storage.updateUserProfile(userId, { username: result.data.username } as any);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Update username error:", error);
+      res.status(500).json({ message: "Error updating username: " + error.message });
+    }
+  });
+
+  app.put("/api/user/email", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const result = updateUserEmailSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid email data", errors: result.error.errors });
+      }
+
+      // Check if email is already taken
+      const existingUser = await storage.getUserByEmail(result.data.email);
+      if (existingUser && existingUser.id !== userId) {
+        return res.status(409).json({ message: "Email already in use" });
+      }
+
+      // Update email
+      const updatedUser = await storage.updateUserProfile(userId, { email: result.data.email } as any);
+      if (!updatedUser) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const { password, ...userWithoutPassword } = updatedUser;
+      res.json(userWithoutPassword);
+    } catch (error: any) {
+      console.error("Update email error:", error);
+      res.status(500).json({ message: "Error updating email: " + error.message });
     }
   });
 
@@ -2984,18 +3057,33 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.get("/api/competitions/:id/leaderboard", async (req, res) => {
     try {
       const entries = await storage.getLeaderboard(req.params.id);
+      const competition = await storage.getCompetition(req.params.id);
       
-      // Enrich leaderboard with user data
+      // Enrich leaderboard with user/team data based on competition type
       const enrichedEntries = await Promise.all(
         entries.map(async (entry) => {
-          const user = await storage.getUser(entry.userId);
+          let anglerName = "Unknown";
+          let username = "";
+          let club = "";
+          
+          // For team competitions, show team name; for individual, show user name
+          if (competition?.competitionMode === "team" && entry.teamId) {
+            const team = await storage.getTeam(entry.teamId);
+            anglerName = team?.name || "Unknown Team";
+          } else if (entry.userId) {
+            const user = await storage.getUser(entry.userId);
+            anglerName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
+            username = user?.username || "";
+            club = user?.club || "";
+          }
+          
           return {
             position: entry.position,
-            anglerName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
-            username: user?.username || "",
+            anglerName,
+            username,
             pegNumber: entry.pegNumber,
             weight: entry.weight,
-            club: user?.club || "",
+            club,
           };
         })
       );

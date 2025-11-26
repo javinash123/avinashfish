@@ -16,6 +16,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -72,6 +81,7 @@ export default function AdminNews() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
+  const [articleToDelete, setArticleToDelete] = useState<News | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState<"all" | "match-report" | "announcement" | "news" | "general">("all");
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -251,12 +261,8 @@ export default function AdminNews() {
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
-    deleteMutation.mutate(id);
-    toast({
-      title: "Article deleted",
-      description: `${title} has been removed.`,
-    });
+  const handleDelete = (article: News) => {
+    setArticleToDelete(article);
   };
 
   const openEditDialog = (article: News) => {
@@ -454,7 +460,7 @@ export default function AdminNews() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => handleDelete(article.id, article.title)}
+                          onClick={() => handleDelete(article)}
                           data-testid={`button-delete-news-${article.id}`}
                         >
                           <Trash2 className="h-3 w-3" />
@@ -474,6 +480,35 @@ export default function AdminNews() {
           No articles found matching your criteria
         </div>
       )}
+
+      <AlertDialog open={!!articleToDelete} onOpenChange={(open) => !open && setArticleToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Article</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{articleToDelete?.title}"? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (articleToDelete) {
+                  deleteMutation.mutate(articleToDelete.id);
+                  setArticleToDelete(null);
+                  toast({
+                    title: "Article deleted",
+                    description: `${articleToDelete.title} has been removed.`,
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-3xl max-h-[90vh] overflow-y-auto">

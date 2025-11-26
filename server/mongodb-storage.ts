@@ -1329,12 +1329,33 @@ export class MongoDBStorage implements IStorage {
   }
 
   async updateTeam(id: string, updates: UpdateTeam): Promise<Team | undefined> {
-    const result = await this.teams.findOneAndUpdate(
+    console.log(`[MongoDB updateTeam] Updating team ${id} with:`, JSON.stringify(updates));
+    
+    // Use updateOne to get matchedCount confirmation
+    const updateResult = await this.teams.updateOne(
       { id },
-      { $set: updates },
-      { returnDocument: "after" }
+      { $set: updates }
     );
-    return result || undefined;
+    
+    if (updateResult.matchedCount === 0) {
+      console.error(`[MongoDB updateTeam] Failed to find team with id: ${id}`);
+      return undefined;
+    }
+    
+    if (updateResult.modifiedCount === 0) {
+      console.warn(`[MongoDB updateTeam] Team ${id} found but no fields were modified (values may be the same)`);
+    }
+    
+    // Fetch the updated team to return
+    const updatedTeam = await this.teams.findOne({ id });
+    
+    if (!updatedTeam) {
+      console.error(`[MongoDB updateTeam] Team ${id} was updated but could not be retrieved`);
+      return undefined;
+    }
+    
+    console.log(`[MongoDB updateTeam] Successfully updated team:`, JSON.stringify(updatedTeam));
+    return updatedTeam;
   }
 
   async deleteTeam(id: string): Promise<boolean> {

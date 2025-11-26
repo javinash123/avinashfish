@@ -45,11 +45,12 @@ function PaymentForm({
   const elements = useElements();
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
+  const [hasProcessed, setHasProcessed] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements) {
+    if (!stripe || !elements || isProcessing || hasProcessed) {
       return;
     }
 
@@ -65,6 +66,46 @@ function PaymentForm({
       });
 
       if (error) {
+        // Check if this is a "payment already succeeded" error (idempotent case)
+        if (error.code === 'payment_intent_unexpected_state') {
+          console.log('[Booking] Payment intent already succeeded (idempotent), proceeding with booking confirmation');
+          // Get the payment intent ID from error details if available
+          const pi = (error as any).payment_intent;
+          if (pi && pi.id && pi.status === 'succeeded') {
+            // Call backend to confirm payment and join competition atomically
+            const requestBody: any = {
+              paymentIntentId: pi.id,
+              competitionId,
+            };
+            
+            if (teamId) {
+              requestBody.teamId = teamId;
+            }
+            
+            const response = await apiRequest("POST", "/api/confirm-payment-and-join", requestBody);
+
+            if (!response.ok) {
+              const data = await response.json();
+              throw new Error(data.message || "Failed to confirm booking");
+            }
+
+            setHasProcessed(true);
+            toast({
+              title: "Payment Successful",
+              description: teamId ? "Your team peg has been booked!" : "Your peg has been booked!",
+            });
+
+            if (teamId) {
+              await queryClient.invalidateQueries({ 
+                queryKey: [`/api/competitions/${competitionId}/teams`] 
+              });
+            }
+
+            onSuccess();
+            return;
+          }
+        }
+
         toast({
           title: "Payment Failed",
           description: error.message,
@@ -90,6 +131,7 @@ function PaymentForm({
           throw new Error(data.message || "Failed to confirm booking");
         }
 
+        setHasProcessed(true);
         toast({
           title: "Payment Successful",
           description: teamId ? "Your team peg has been booked!" : "Your peg has been booked!",
@@ -145,6 +187,7 @@ export default function Booking() {
   const [clientSecret, setClientSecret] = useState("");
   const [bookingComplete, setBookingComplete] = useState(false);
   const [paymentError, setPaymentError] = useState("");
+  const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
 
   const competitionId = params?.id || "";
 
@@ -167,7 +210,7 @@ export default function Booking() {
 
   // IMPORTANT: Always call useEffect before any conditional returns to avoid "Rendered more hooks" error
   useEffect(() => {
-    if (acceptTerms && !clientSecret && !paymentError && competition) {
+    if (acceptTerms && !clientSecret && !paymentError && !isCreatingPaymentIntent && competition) {
       const entryFee = parseFloat(competition.entryFee);
       
       // For team competitions, verify user has a team
@@ -195,6 +238,7 @@ export default function Booking() {
       // Handle free competitions (no payment required)
       if (entryFee === 0) {
         console.log('[Booking] Free competition detected, joining without payment');
+        setIsCreatingPaymentIntent(true);
         const requestBody: any = {
           paymentIntentId: "free-competition",
           competitionId: competition.id,
@@ -213,10 +257,13 @@ export default function Booking() {
             }
             return res.json();
           })
-          .then(() => {
+          .then((data) => {
+            console.log('[Booking] Free competition booking successful:', data);
             toast({
               title: "Booking Confirmed",
-              description: competition.competitionMode === "team" ? "Your team has been registered!" : "You have been registered!",
+              description: competition.competitionMode === "team" 
+                ? `Your team has been registered${data.pegNumber ? ` to peg ${data.pegNumber}` : ''}!` 
+                : "You have been registered!",
             });
             
             // Invalidate teams cache for admin panel
@@ -236,12 +283,14 @@ export default function Booking() {
               description: error.message || "An unexpected error occurred",
               variant: "destructive",
             });
+            setIsCreatingPaymentIntent(false);
           });
         return;
       }
       
       // Paid competitions: create payment intent
       console.log('[Booking] Creating payment intent for competition:', competition.id);
+      setIsCreatingPaymentIntent(true);
       
       // Prepare payment intent request
       const requestBody: any = {
@@ -280,9 +329,12 @@ export default function Booking() {
             description: errorMessage,
             variant: "destructive",
           });
+        })
+        .finally(() => {
+          setIsCreatingPaymentIntent(false);
         });
     }
-  }, [acceptTerms, clientSecret, paymentError, competition, userTeam, user]);
+  }, [acceptTerms, clientSecret, paymentError, competition]);
 
   if (!competitionId) {
     return (

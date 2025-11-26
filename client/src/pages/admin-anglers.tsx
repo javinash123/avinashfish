@@ -30,6 +30,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Search, MoreVertical, UserCheck, UserX, Mail, Eye, Loader2, Plus, Pencil, Trash2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -286,9 +295,7 @@ export default function AdminAnglers() {
   };
 
   const handleDelete = (angler: Angler) => {
-    if (window.confirm(`Are you sure you want to delete ${angler.firstName} ${angler.lastName}? This will remove all their competition data.`)) {
-      deleteMutation.mutate(angler.id);
-    }
+    setAnglerToDelete(angler);
   };
 
   return (
@@ -463,6 +470,30 @@ export default function AdminAnglers() {
           No anglers found matching your criteria
         </div>
       )}
+
+      <AlertDialog open={!!anglerToDelete} onOpenChange={(open) => !open && setAnglerToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Angler</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete {anglerToDelete?.firstName} {anglerToDelete?.lastName}? This will remove all their competition data and this action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (anglerToDelete) {
+                  deleteMutation.mutate(anglerToDelete.id);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={!!selectedAngler} onOpenChange={(open) => !open && setSelectedAngler(null)}>
         <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">

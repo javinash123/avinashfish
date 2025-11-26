@@ -81,18 +81,26 @@ export function CompetitionCard({
             {pegsAvailable} / {pegsTotal} pegs available
           </span>
         </div>
-        {prizePool && (
+        {prizePool && prizeType !== "other" && (
           <div className="flex items-center gap-2 text-sm font-medium text-chart-3">
             <Coins className="h-4 w-4" />
             <span data-testid="text-prize-pool">
-              {(prizeType === "pool" || !prizeType) ? `${prizePool} Prize Pool` : prizePool}
+              £{prizePool} Prize Pool
+            </span>
+          </div>
+        )}
+        {prizePool && prizeType === "other" && (
+          <div className="flex items-center gap-2 text-sm font-medium text-chart-3">
+            <Coins className="h-4 w-4" />
+            <span data-testid="text-prize-pool">
+              {prizePool}
             </span>
           </div>
         )}
       </CardContent>
 
       <CardFooter className="flex items-center justify-between gap-2 pt-3">
-        <div className="text-lg font-bold" data-testid="text-entry-fee">{entryFee}</div>
+        <div className="text-lg font-bold" data-testid="text-entry-fee">£{entryFee}</div>
         <Link href={`/competition/${id}`} asChild>
           <Button
             variant={status === "live" ? "default" : "secondary"}

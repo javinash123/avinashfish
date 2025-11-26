@@ -15,6 +15,15 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
@@ -35,6 +44,7 @@ export default function AdminGallery() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
+  const [imageToDelete, setImageToDelete] = useState<GalleryImage | null>(null);
   const [categoryFilter, setCategoryFilter] = useState<"all" | "event" | "catch">("all");
   const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [uploadingImage, setUploadingImage] = useState(false);
@@ -269,12 +279,8 @@ export default function AdminGallery() {
     }
   };
 
-  const handleDelete = (id: string, title: string) => {
-    deleteMutation.mutate(id);
-    toast({
-      title: "Image deleted",
-      description: `${title} has been removed from the gallery.`,
-    });
+  const handleDelete = (image: GalleryImage) => {
+    setImageToDelete(image);
   };
 
   const openEditDialog = (image: GalleryImage) => {
@@ -426,7 +432,7 @@ export default function AdminGallery() {
                 <Button
                   variant="outline"
                   size="sm"
-                  onClick={() => handleDelete(image.id, image.title)}
+                  onClick={() => handleDelete(image)}
                   data-testid={`button-delete-image-${image.id}`}
                 >
                   <Trash2 className="h-3 w-3" />
@@ -442,6 +448,35 @@ export default function AdminGallery() {
           No images found in this category
         </div>
       )}
+
+      <AlertDialog open={!!imageToDelete} onOpenChange={(open) => !open && setImageToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Image</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{imageToDelete?.title}" from the gallery? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (imageToDelete) {
+                  deleteMutation.mutate(imageToDelete.id);
+                  setImageToDelete(null);
+                  toast({
+                    title: "Image deleted",
+                    description: `${imageToDelete.title} has been removed from the gallery.`,
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
         <DialogContent className="max-w-2xl">

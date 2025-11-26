@@ -16,6 +16,15 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Table,
   TableBody,
   TableCell,
@@ -51,8 +60,10 @@ export default function AdminCompetitions() {
   const [isAnglersOpen, setIsAnglersOpen] = useState(false);
   const [isPaymentsOpen, setIsPaymentsOpen] = useState(false);
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
+  const [competitionToDelete, setCompetitionToDelete] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [entryToDelete, setEntryToDelete] = useState<{ id: string; weight: string } | null>(null);
   
   // Weigh-in state
   const [weighInEntries, setWeighInEntries] = useState<Record<string, { peg: number; weight: number; angler: string; time: string }[]>>({});
@@ -82,7 +93,7 @@ export default function AdminCompetitions() {
     enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
   });
 
-  // Fetch teams for team competitions
+  // Fetch teams for team competitions (only when "Assign to Team" mode is used)
   const { data: teams = [] } = useQuery<Array<{
     id: string;
     teamName: string;
@@ -96,7 +107,7 @@ export default function AdminCompetitions() {
     }>;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition?.id}/teams`],
-    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && (isPegAssignmentOpen || isWeighInOpen),
+    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "team" && (isPegAssignmentOpen || isWeighInOpen),
   });
 
   // Fetch all users for adding to competition
@@ -117,12 +128,14 @@ export default function AdminCompetitions() {
     ? participants.find(p => p.pegNumber === selectedPegForView)
     : null;
 
-  // Get team from selected peg (for team competitions)
-  const selectedTeam = selectedPegForView && selectedCompetition?.competitionMode === "team"
+  // Get team from selected peg (for team competitions with "Assign to Team" mode)
+  // For "Assign to Members" mode, use participant lookup instead
+  const selectedTeam = selectedPegForView && selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "team"
     ? teams.find(t => t.pegNumber === selectedPegForView)
     : null;
 
-  // Fetch weight entries for selected participant (individual competitions)
+  // Fetch weight entries for selected participant
+  // Used for individual competitions AND team competitions with "Assign to Members" mode
   const { data: participantEntries } = useQuery<{
     entries: Array<{
       id: string;
@@ -132,10 +145,10 @@ export default function AdminCompetitions() {
     totalWeight: string;
   }>({
     queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/participants/${selectedParticipant?.userId}/entries`],
-    enabled: !!selectedCompetition && !!selectedParticipant && selectedCompetition.competitionMode !== "team",
+    enabled: !!selectedCompetition && !!selectedParticipant && (selectedCompetition.competitionMode === "individual" || selectedCompetition.teamPegAssignmentMode === "members"),
   });
 
-  // Fetch weight entries for selected team (team competitions)
+  // Fetch weight entries for selected team (team competitions with "Assign to Team" mode)
   const { data: teamEntries } = useQuery<{
     entries: Array<{
       id: string;
@@ -145,7 +158,7 @@ export default function AdminCompetitions() {
     totalWeight: string;
   }>({
     queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/teams/${selectedTeam?.id}/entries`],
-    enabled: !!selectedCompetition && !!selectedTeam && selectedCompetition.competitionMode === "team",
+    enabled: !!selectedCompetition && !!selectedTeam && selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "team",
   });
 
   // Fetch payments for selected competition
@@ -482,6 +495,7 @@ export default function AdminCompetitions() {
     imageUrl: "",
     competitionMode: "individual",
     maxTeamMembers: "",
+    teamPegAssignmentMode: "team",
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string>("");
@@ -533,6 +547,7 @@ export default function AdminCompetitions() {
       imageUrl: "",
       competitionMode: "individual",
       maxTeamMembers: "",
+      teamPegAssignmentMode: "team",
     });
     setImageFile(null);
     setImagePreview("");
@@ -565,14 +580,18 @@ export default function AdminCompetitions() {
       pegsTotal: parseInt(formData.pegsTotal),
       entryFee: formData.entryFee,
       prizePool: formData.prizePool,
+      prizeType: formData.prizeType,
       description: formData.description,
       competitionMode: formData.competitionMode,
       type: formData.type,
       imageUrl: imageUrl || null,
     };
     
-    if (formData.competitionMode === "team" && formData.maxTeamMembers) {
-      competitionData.maxTeamMembers = parseInt(formData.maxTeamMembers);
+    if (formData.competitionMode === "team") {
+      if (formData.maxTeamMembers) {
+        competitionData.maxTeamMembers = parseInt(formData.maxTeamMembers);
+      }
+      competitionData.teamPegAssignmentMode = formData.teamPegAssignmentMode;
     }
     
     console.log('[COMPETITION DEBUG] Creating competition with data:', competitionData);
@@ -617,6 +636,7 @@ export default function AdminCompetitions() {
         maxTeamMembers: formData.competitionMode === "team" && formData.maxTeamMembers 
           ? parseInt(formData.maxTeamMembers) 
           : null,
+        teamPegAssignmentMode: formData.competitionMode === "team" ? formData.teamPegAssignmentMode : undefined,
         prizeType: formData.prizeType,
         type: formData.type,
         description: formData.description,
@@ -628,8 +648,8 @@ export default function AdminCompetitions() {
     resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    deleteMutation.mutate(id);
+  const handleDelete = (competition: Competition) => {
+    setCompetitionToDelete(competition);
   };
 
   const openEditDialog = (competition: Competition) => {
@@ -650,6 +670,7 @@ export default function AdminCompetitions() {
       imageUrl: competition.imageUrl || "",
       competitionMode: competition.competitionMode || "individual",
       maxTeamMembers: competition.maxTeamMembers?.toString() || "",
+      teamPegAssignmentMode: (competition as any).teamPegAssignmentMode || "team",
     });
     setImagePreview(competition.imageUrl || "");
     setIsEditOpen(true);
@@ -799,8 +820,8 @@ export default function AdminCompetitions() {
     // Convert to total ounces for storage
     const totalOunces = convertToOunces(pounds, ounces);
     
-    // Handle team competitions
-    if (selectedCompetition.competitionMode === "team") {
+    // Handle team competitions with "Assign to Team" mode (shared peg)
+    if (selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "team") {
       // Find team assigned to this peg
       const team = teams.find(t => t.pegNumber === pegNumber);
       
@@ -821,7 +842,8 @@ export default function AdminCompetitions() {
         weight: totalOunces.toString(),
       });
     } else {
-      // Find angler assigned to this peg from participants
+      // For individual competitions OR team competitions with "Assign to Members" mode
+      // Find angler/team member assigned to this peg from participants
       const participant = participants.find(p => p.pegNumber === pegNumber);
       
       if (!participant) {
@@ -834,12 +856,16 @@ export default function AdminCompetitions() {
       }
       
       // Submit to database (weight stored as total ounces in string format)
-      submitWeightMutation.mutate({
+      const submitData: any = {
         competitionId: selectedCompetition.id,
         userId: participant.userId,
         pegNumber: pegNumber,
         weight: totalOunces.toString(),
-      });
+      };
+      
+      // Team ID will be determined by the backend based on the userId if needed
+      
+      submitWeightMutation.mutate(submitData);
     }
   };
 
@@ -1025,7 +1051,7 @@ export default function AdminCompetitions() {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => handleDelete(competition.id)}
+                        onClick={() => handleDelete(competition)}
                         data-testid={`button-delete-${competition.id}`}
                       >
                         <Trash2 className="h-3 w-3" />
@@ -1120,6 +1146,23 @@ export default function AdminCompetitions() {
                 </div>
               )}
             </div>
+            {formData.competitionMode === "team" && (
+              <div className="grid gap-2">
+                <Label htmlFor="teamPegAssignmentMode">Peg Assignment Mode</Label>
+                <Select
+                  value={formData.teamPegAssignmentMode}
+                  onValueChange={(value) => setFormData({ ...formData, teamPegAssignmentMode: value })}
+                >
+                  <SelectTrigger data-testid="select-team-peg-assignment-mode">
+                    <SelectValue placeholder="Select peg assignment mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="team">Assign to Team (1 peg per team)</SelectItem>
+                    <SelectItem value="members">Assign to Members (1 peg per member)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="date">Start Date</Label>
@@ -1340,6 +1383,23 @@ export default function AdminCompetitions() {
                 </div>
               )}
             </div>
+            {formData.competitionMode === "team" && (
+              <div className="grid gap-2">
+                <Label htmlFor="edit-teamPegAssignmentMode">Peg Assignment Mode</Label>
+                <Select
+                  value={formData.teamPegAssignmentMode}
+                  onValueChange={(value) => setFormData({ ...formData, teamPegAssignmentMode: value })}
+                >
+                  <SelectTrigger data-testid="select-edit-team-peg-assignment-mode">
+                    <SelectValue placeholder="Select peg assignment mode" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="team">Assign to Team (1 peg per team)</SelectItem>
+                    <SelectItem value="members">Assign to Members (1 peg per member)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="edit-date">Start Date</Label>
@@ -1485,7 +1545,9 @@ export default function AdminCompetitions() {
             <DialogTitle>Peg Assignment - {selectedCompetition?.name}</DialogTitle>
             <DialogDescription>
               {selectedCompetition?.competitionMode === "team" 
-                ? "Assign teams to pegs for this competition"
+                ? selectedCompetition?.teamPegAssignmentMode === "team"
+                  ? "Assign teams to shared pegs for this competition"
+                  : "Assign individual team members to separate pegs for this competition"
                 : "Assign anglers to pegs for this competition"}
             </DialogDescription>
           </DialogHeader>
@@ -1512,7 +1574,7 @@ export default function AdminCompetitions() {
               </CardContent>
             </Card>
 
-            {selectedCompetition?.competitionMode === "team" && (
+            {selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "team" && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Team Assignments</CardTitle>
@@ -1626,7 +1688,7 @@ export default function AdminCompetitions() {
               </Card>
             )}
 
-            {selectedCompetition?.competitionMode === "individual" && (
+            {(selectedCompetition?.competitionMode === "individual" || (selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "members")) && (
               <Card>
                 <CardHeader>
                   <CardTitle>Current Assignments</CardTitle>
@@ -1637,14 +1699,14 @@ export default function AdminCompetitions() {
                 <CardContent>
                   {participants.filter(p => p.pegNumber > 0).length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p>No anglers assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
+                      <p>{selectedCompetition?.competitionMode === "team" ? "No team members assigned yet. Use Auto-Assign or Random Draw above to get started." : "No anglers assigned yet. Use Auto-Assign or Random Draw above to get started."}</p>
                     </div>
                   ) : (
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Peg</TableHead>
-                          <TableHead>Angler</TableHead>
+                          <TableHead>{selectedCompetition?.competitionMode === "team" ? "Team Member" : "Angler"}</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -1836,7 +1898,7 @@ export default function AdminCompetitions() {
                             .sort((a, b) => (a.pegNumber || 0) - (b.pegNumber || 0))
                             .map((t) => (
                               <option key={t.id} value={t.pegNumber}>
-                                Peg {t.pegNumber} - {t.name}
+                                Peg {t.pegNumber} - {t.teamName}
                               </option>
                             ))
                         ) : (
@@ -1957,11 +2019,7 @@ export default function AdminCompetitions() {
                                       <Button
                                         size="sm"
                                         variant="ghost"
-                                        onClick={() => {
-                                          if (confirm('Are you sure you want to delete this weight entry?')) {
-                                            deleteWeightMutation.mutate(entry.id);
-                                          }
-                                        }}
+                                        onClick={() => setEntryToDelete(entry)}
                                         disabled={deleteWeightMutation.isPending}
                                         data-testid={`button-delete-weight-${entry.id}`}
                                       >
@@ -2229,6 +2287,60 @@ export default function AdminCompetitions() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <AlertDialog open={!!competitionToDelete} onOpenChange={(open) => !open && setCompetitionToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Competition</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete "{competitionToDelete?.name}" competition? This action cannot be undone and will remove all associated data.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (competitionToDelete) {
+                  deleteMutation.mutate(competitionToDelete.id);
+                  setCompetitionToDelete(null);
+                  toast({
+                    title: "Competition deleted",
+                    description: `${competitionToDelete.name} has been deleted.`,
+                  });
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      <AlertDialog open={!!entryToDelete} onOpenChange={(open) => !open && setEntryToDelete(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Weight Entry</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this weight entry ({formatWeight(entryToDelete?.weight || "0")})? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="flex gap-3 justify-end">
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => {
+                if (entryToDelete) {
+                  deleteWeightMutation.mutate(entryToDelete.id);
+                  setEntryToDelete(null);
+                }
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </div>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
