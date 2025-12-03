@@ -24,6 +24,7 @@ import Gallery from "@/pages/gallery";
 import News from "@/pages/news";
 import Sponsors from "@/pages/sponsors";
 import Profile from "@/pages/profile";
+import TeamProfile from "@/pages/team-profile";
 import Booking from "@/pages/booking";
 import AnglerDirectory from "@/pages/angler-directory";
 import PrivacyPolicy from "@/pages/privacy-policy";
@@ -65,6 +66,7 @@ function Router() {
           <Route path="/contact" component={Contact} />
           <Route path="/profile" component={Profile} />
           <Route path="/profile/:username" component={Profile} />
+          <Route path="/team/:teamId" component={TeamProfile} />
           <Route path="/booking/:id" component={Booking} />
           <Route path="/login" component={Login} />
           <Route path="/register" component={Register} />

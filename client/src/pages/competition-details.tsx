@@ -81,6 +81,15 @@ export default function CompetitionDetails() {
 
   const handleBookPeg = () => {
     if (!competition) return;
+    if (!user) {
+      toast({
+        title: "Authentication Required",
+        description: "Please log in to book a peg",
+        variant: "destructive",
+      });
+      window.location.href = "/login";
+      return;
+    }
     
     const entryFee = parseFloat(competition.entryFee);
     
@@ -91,6 +100,14 @@ export default function CompetitionDetails() {
       // Free competition
       if (competition.competitionMode === "team") {
         // For team competitions, use team booking
+        if (!userTeam?.id) {
+          toast({
+            title: "Team Required",
+            description: "You must be part of a team to book this competition",
+            variant: "destructive",
+          });
+          return;
+        }
         freeTeamBookingMutation.mutate();
       } else {
         // For individual competitions, use individual join

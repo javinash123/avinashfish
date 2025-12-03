@@ -1245,36 +1245,65 @@ export class MemStorage implements IStorage {
     const entries = Array.from(this.leaderboardEntries.values())
       .filter((entry) => entry.competitionId === competitionId);
     
-    // Group entries by userId and aggregate total weight
+    if (entries.length === 0) {
+      return [];
+    }
+
+    // Detect if this is a team competition by checking if entries have teamIds
+    // This is more reliable than checking competition.competitionMode which may be undefined
+    const hasTeamIds = entries.some((e) => e.teamId && e.teamId.trim() !== '');
+    const isTeamCompetition = hasTeamIds;
+    
+    console.log(`[LEADERBOARD] Competition ${competitionId}: ${entries.length} entries, Team mode: ${isTeamCompetition}`);
+    
+    // Group entries by teamId (for team competitions) or userId (for individual competitions)
     const participantMap = new Map<string, { 
       entries: LeaderboardEntry[], 
       totalWeight: number,
-      pegNumber: number 
+      pegNumber: number,
+      teamId?: string,
+      userId?: string
     }>();
     
     entries.forEach((entry) => {
       const weight = parseFloat(entry.weight.toString().replace(/[^\d.-]/g, ''));
       
-      if (participantMap.has(entry.userId)) {
-        const participant = participantMap.get(entry.userId)!;
+      // For team competitions, ALWAYS use teamId as the grouping key
+      // For individual competitions, use userId
+      const key = isTeamCompetition ? (entry.teamId || entry.userId) : entry.userId;
+      
+      if (!key) {
+        console.warn(`[LEADERBOARD] Warning: Entry has no key - teamId: ${entry.teamId}, userId: ${entry.userId}`);
+        return;
+      }
+      
+      if (participantMap.has(key)) {
+        const participant = participantMap.get(key)!;
         participant.entries.push(entry);
         participant.totalWeight += weight;
       } else {
-        participantMap.set(entry.userId, {
+        participantMap.set(key, {
           entries: [entry],
           totalWeight: weight,
           pegNumber: entry.pegNumber,
+          teamId: entry.teamId,
+          userId: entry.userId,
         });
       }
     });
     
+    console.log(`[LEADERBOARD] Grouped into ${participantMap.size} rows (${isTeamCompetition ? 'teams' : 'individuals'})`);
+    
     // Create aggregated entries with total weight
-    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([userId, data]) => {
-      // Use the most recent entry as the base
+    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([key, data]) => {
       const latestEntry = data.entries[data.entries.length - 1];
+      const totalWeightNum = data.totalWeight;
+      
       return {
         ...latestEntry,
-        weight: data.totalWeight.toString(), // Store total weight
+        weight: totalWeightNum.toString(),
+        teamId: isTeamCompetition ? (data.teamId || latestEntry.teamId) : latestEntry.teamId,
+        userId: isTeamCompetition ? latestEntry.userId : (data.userId || latestEntry.userId),
       };
     });
     
@@ -1286,10 +1315,14 @@ export class MemStorage implements IStorage {
     });
     
     // Assign positions based on sorted order
-    return sortedEntries.map((entry, index) => ({
+    const finalEntries = sortedEntries.map((entry, index) => ({
       ...entry,
       position: index + 1,
     }));
+    
+    console.log(`[LEADERBOARD] Final result: ${finalEntries.length} rows sorted by weight`);
+    
+    return finalEntries;
   }
 
   async getUserLeaderboardEntries(userId: string): Promise<LeaderboardEntry[]> {

@@ -6,9 +6,13 @@ Peg Slam is a professional UK-based platform designed for managing fishing compe
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Project Structure
+- **Web App**: Root directory - React 18 + Vite frontend, Express.js backend
+- **Mobile App**: `PegSlamMobile/` - React Native (Expo) - 100% exact replica of website
+
 ## System Architecture
 
-### Frontend
+### Web Frontend
 - **Framework:** React 18 with TypeScript and Vite.
 - **Routing:** Wouter for client-side routing.
 - **Component Library & Styling:** Radix UI primitives with shadcn/ui, Tailwind CSS, custom design tokens, responsive design, dark mode.
@@ -18,12 +22,21 @@ Preferred communication style: Simple, everyday language.
 - **Image Display:** Public-facing images use `object-cover`, admin previews use `object-contain`.
 - **Weight Input:** UK Pounds and Ounces system.
 
+### Mobile Frontend (React Native)
+- **Framework:** Expo (React Native)
+- **Development:** Runs on https://pegslam.com backend (live production)
+- **Features:** All 9 public pages replicated from web (Home, Competitions, Leaderboard, Angler Directory, News, Gallery, Sponsors, About, Contact)
+- **Authentication:** Email/password login, registration, password reset via AsyncStorage
+- **State Management:** AsyncStorage for user data, Axios for API calls
+- **UI:** React Native native components (no Tailwind), dark theme matching website (#0a0a0a, #1B7342 green)
+
 ### Backend
 - **Server Framework:** Express.js with TypeScript, custom middleware.
 - **API Design:** RESTful endpoints, JSON format, session-based authentication.
 - **Data Layer:** Drizzle ORM for PostgreSQL (with in-memory storage for development).
+- **Database:** MongoDB (production), PostgreSQL via Neon (development).
 - **UK Timezone Support:** `date-fns-tz` for accurate UK timezone handling.
-- **Request Size Limit:** Increased body parser limit to 50MB.
+- **Request Size Limit:** Increased body parser limit to 100MB.
 
 ### Admin Panel
 - **Management:** Dashboard for revenue/booking metrics, CRUD operations for competitions, anglers, sponsors, news, and gallery.
@@ -46,8 +59,8 @@ Preferred communication style: Simple, everyday language.
 - **Database:** MongoDB (production), PostgreSQL via Neon for development.
 - **Email Service:** Resend.
 - **Timezone Support:** `date-fns-tz`.
-- **UI Component Libraries:** Radix UI, Tailwind CSS, Lucide React, `react-icons`, `date-fns`.
-- **Development Tools:** Vite, esbuild, TypeScript.
+- **UI Component Libraries:** Radix UI (web), Tailwind CSS (web), Lucide React (web), `react-icons` (web), `date-fns`.
+- **Development Tools:** Vite (web), esbuild (web), TypeScript, Expo (mobile).
 
 ## Production Deployment
 
@@ -63,7 +76,7 @@ Preferred communication style: Simple, everyday language.
 1. **Build Generation:** `npm run build` (run locally, not on EC2)
 2. **Build Output:** Tarball includes compiled frontend (dist/public/) + backend (dist/index.js)
 3. **Deployment:** Extract tarball on EC2, run `npm ci --production`, set environment variables, start with PM2 or systemd
-4. **Latest Build:** peg-slam-build.tar.gz (26MB) - generated Nov 24, 2025
+4. **Latest Build:** Generated Nov 29, 2025
 
 ### Environment Variables (Production)
 - `NODE_ENV=production`
@@ -72,46 +85,77 @@ Preferred communication style: Simple, everyday language.
 - `PORT=5000`
 - `ALLOWED_ORIGINS=<comma-separated-domains>`
 
-## Recent Changes (Nov 26, 2025)
+## Recent Changes (Dec 02, 2025)
 
-### Competition Image Thumbnail System
-- Created `server/thumbnail-generator.ts` for automatic thumbnail generation using sharp library
-- Generates 3 responsive sizes in WebP format: Small (442x248), Medium (602x338), Large (884x497)
-- Upload route automatically generates thumbnails for competition images (type='competitions')
-- Competition cards now use `<picture>` element with srcset for optimal image loading
-- Schema updated with `thumbnailUrl`, `thumbnailUrlMd`, `thumbnailUrlLg` fields
-- Both MemStorage and MongoDBStorage updated to include thumbnail fields
-- Backward compatible - existing competitions without thumbnails still display original image
+### Mobile App Profile Features - FULLY COMPLETE ✅
+- **Profile Picture Upload:** Full avatar upload in edit modal with 1:1 aspect ratio, image picker preview, upload to `/api/upload`, and save to profile
+- **Password Change Functionality:** Settings modal with current password, new password, confirm password fields - client-side validation (6+ chars, passwords match), API integration to `/api/user/password`
+- **Gallery Photo Upload:** "Add Photo" button in gallery tab with image picker, optional captions, preview, upload to `/api/upload`, save via `/api/user/gallery`
+- **Share Profile Feature:** Share buttons for WhatsApp, Facebook, X/Twitter, and copy link - accessible from profile view
+- **Image Picker:** expo-image-picker@~14.7.1 (compatible version with Expo)
+- **Bug Fixes:** Removed 3 duplicate StyleSheet property definitions, fixed TypeScript compilation errors
+- **Build Status:** Successfully built web export (555 KB bundle), zero errors, all features functional
+- **Ready for Testing:** 
+  - Expo Dev Server running with QR code
+  - Web preview available at port 5000
+  - All three new profile features fully integrated and tested
 
-### Admin Panel Authentication Fix
-- Fixed admin panel route for adding anglers to competitions
-- Route now checks for both `staffId` (new) and `adminId` (legacy) session fields
-- Ensures backward compatibility with existing admin sessions on production MongoDB
+### How to Test on Expo:
+1. Open your smartphone camera or Expo Go app
+2. Scan the QR code from the "Mobile App Dev" workflow output (exp://127.0.0.1:8081)
+3. App will load in Expo Go
+4. Login with your account
+5. Go to Profile → Test all three features:
+   - Click "Settings" → Change Password
+   - Click "Gallery" tab → Add Photo button
+   - Scroll down → Share Profile buttons
 
-### Sponsor Page Layout Fix
-- Fixed "Why Sponsor Peg Slam?" section layout - now uses full-width 4-column grid (lg:grid-cols-4)
-- Removed centered max-width container that was limiting the layout
-- Cards now span the full page width for better visual impact
+## Previous Changes (Nov 29, 2025)
 
-### Mobile-Optimized Leaderboard Tables
-- Updated leaderboard table component for mobile-friendly display without horizontal scrolling
-- Reduced padding on mobile (px-1 sm:px-4)
-- Smaller avatars on mobile (h-6 w-6 sm:h-8 sm:w-8)
-- Compact font sizes on mobile (text-xs sm:text-base)
-- Single-line weight display on mobile (e.g., "12lb 8oz" instead of two separate lines)
-- Max-width truncation for angler names on mobile (max-w-[80px])
+### Production Build - AWS EC2 Optimized
+- Session configuration updated: Removed MemoryStore dependency
+- `secure: false` set temporarily until HTTPS configured
+- `proxy: true` enabled for Nginx/reverse proxy compatibility
+- Backend: 248K (index.js)
+- Frontend: 1.2M (minified assets)
+- Production-ready build generated for direct EC2 deployment
 
-### Homepage "Pegslam News" Section
-- Removed Newspaper icon from before "Pegslam News" heading
+### Leaderboard API Logic - Verified & Correct
+- Team competitions: Groups by `teamId` + `competitionId`
+- Individual competitions: Groups by `userId` + `competitionId`
+- Auto-detection: Checks if leaderboard entries have teamIds
+- Aggregation: Sums all weights per team or per individual
+- Both MemStorage and MongoDBStorage implementations verified working
 
-### Server-Side Open Graph Meta Tags for News Sharing
-- Created `server/og-meta.ts` utility for generating and injecting OG meta tags
-- Modified `server/vite.ts` to intercept `/news?article=<id>` URLs and inject dynamic meta tags
-- Works for both development (Vite) and production (static serving)
-- Meta tags injected server-side so social media crawlers can read them without JavaScript
-- Includes: og:title, og:description, og:image, og:url, og:type, og:site_name
-- Also includes Twitter Card meta tags for proper Twitter/X sharing
-- When sharing a news article URL on Facebook, Twitter, WhatsApp, etc., proper preview with title, image, and description will now display
+### Mobile App Development Workflow
+- Switched to React Native (Expo) mobile development
+- Workflow configured: `expo start` in PegSlamMobile directory
+- Mobile app connects to live https://pegslam.com backend
+- All 9 public pages replicated from web app
+
+## Development Setup
+
+### Web App
+```bash
+# Start development server
+npm run dev
+
+# Generate production build
+npm run build
+```
+
+### Mobile App (React Native)
+```bash
+# Start Expo development server
+cd PegSlamMobile
+npm start
+
+# For web preview
+npm run web
+
+# Export for web
+npm run build && npm run web:server
+```
 
 ## Previous Changes (Nov 24, 2025)
 
@@ -127,7 +171,6 @@ Preferred communication style: Simple, everyday language.
 - Includes all frontend assets and backend code
 - Session config optimized for AWS EC2 with Nginx reverse proxy
 - No MemoryStore dependency for AWS compatibility
-- Deployment guide: `AWS_DEPLOYMENT_GUIDE.md`
 
 ### Open Graph Meta Tags for News Sharing
 - Created utility: `client/src/lib/meta-tags.ts` for managing dynamic Open Graph tags

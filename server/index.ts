@@ -156,6 +156,10 @@ app.use((req, res, next) => {
   const { initializeStorage } = await import("./storage");
   const storage = await initializeStorage();
   
+  // Run migration to fix legacy profiles with missing fields
+  const { migrateLegacyProfiles } = await import("./migrate-legacy-profiles");
+  await migrateLegacyProfiles(storage);
+  
   // Serve uploaded files statically (must exist on production server)
   // BACKWARDS COMPATIBILITY: Serve from both /assets and /attached-assets
   // Old URLs (/assets/uploads/...) continue working for existing production data

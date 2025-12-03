@@ -27,8 +27,23 @@ declare global {
   }
 }
 
-const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-const stripePromise = stripePublicKey ? loadStripe(stripePublicKey) : null;
+// Lazy load Stripe - keys might be injected later via window.RUNTIME_CONFIG
+let stripePromise: ReturnType<typeof loadStripe> | null = null;
+let stripePromiseLoaded = false;
+
+function getStripePromise() {
+  if (!stripePromiseLoaded) {
+    const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    if (stripePublicKey) {
+      console.log('[Booking] Loading Stripe with public key');
+      stripePromise = loadStripe(stripePublicKey);
+    } else {
+      console.warn('[Booking] Stripe public key not found in RUNTIME_CONFIG or environment');
+    }
+    stripePromiseLoaded = true;
+  }
+  return stripePromise;
+}
 
 function PaymentForm({ 
   competitionId,
@@ -441,8 +456,11 @@ export default function Booking() {
     );
   }
 
-  const showPaymentForm = acceptTerms && clientSecret && stripePromise;
-  const showStripeNotConfigured = acceptTerms && paymentError && !stripePromise;
+  // Ensure stripe is loaded when needed
+  const stripePromiseRef = getStripePromise();
+  
+  const showPaymentForm = acceptTerms && clientSecret && stripePromiseRef;
+  const showStripeNotConfigured = acceptTerms && paymentError && !stripePromiseRef;
 
   return (
     <div className="min-h-screen bg-background">
@@ -532,7 +550,7 @@ export default function Booking() {
                 </CardContent>
               </Card>
 
-              {showPaymentForm && (
+              {showPaymentForm && stripePromiseRef && (
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
@@ -544,7 +562,7 @@ export default function Booking() {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <Elements stripe={stripePromise} options={{ clientSecret }}>
+                    <Elements stripe={stripePromiseRef} options={{ clientSecret }}>
                       <PaymentForm 
                         competitionId={competition.id}
                         teamId={competition.competitionMode === "team" ? userTeam?.id : null}

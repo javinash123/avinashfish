@@ -1,0 +1,82 @@
+Running "expo doctor"
+
+Running 15 checks on your project...
+
+13/15 checks passed. 2 checks failed. Possible issues detected:
+
+Use the --verbose flag to see more details about passed checks.
+ 
+✖ Check that native modules use compatible support package versions for installed Expo SDK
+
+Expected package expo-modules-autolinking@~1.10.0
+
+Found invalid:
+
+  expo-modules-autolinking@3.0.22
+
+  (for more info, run: npm why expo-modules-autolinking)
+
+Advice:
+
+Upgrade dependencies that are using the invalid package versions.
+ 
+✖ Check that packages match versions required by installed Expo SDK
+
+The following packages should be updated for best compatibility with the installed expo version:
+
+  react-native@0.73.0 - expected version: 0.73.6
+
+  react-native-screens@3.27.0 - expected version: ~3.29.0
+
+Your project may not work correctly until you install the correct versions of the packages.
+
+Found outdated dependencies
+
+Advice:
+
+Use 'npx expo install --check' to review and upgrade your dependencies.
+
+To ignore specific packages, add them to "expo.install.exclude" in package.json. Learn more: https://expo.fyi/dependency-validation
+
+2 checks failed, indicating possible issues with the project.
+
+Command "expo doctor" failed.
+fyi/dependency-validation.md at main · expo/fyi
+Little bits of information that you may find useful when interacting with Expo tools and service. Append the markdown filename to https://expo.fyi/ to get a quick link to it. - expo/fyi
+ 
+- Creating native directory (./android)
+
+✔ Created native directory
+
+- Updating package.json
+
+› Using current versions instead of recommended react-native@0.73.6.
+
+- Updating package.json
+
+✔ Updated package.json
+
+- Running prebuild
+
+✖ Prebuild failed
+
+Error: The 'expo-modules-autolinking' package has been found, but it seems to be incompatible with '@expo/prebuild-config'
+
+Error: The 'expo-modules-autolinking' package has been found, but it seems to be incompatible with '@expo/prebuild-config'
+
+    at assertAutolinkingCompatibility (/home/expo/workingdir/build/node_modules/@expo/cli/node_modules/@expo/prebuild-config/build/importExpoModulesAutolinking.js:36:9)
+
+    at importExpoModulesAutolinking (/home/expo/workingdir/build/node_modules/@expo/cli/node_modules/@expo/prebuild-config/build/importExpoModulesAutolinking.js:12:3)
+
+    at getAutolinkedPackagesAsync (/home/expo/workingdir/build/node_modules/@expo/cli/node_modules/@expo/prebuild-config/build/getAutolinkedPackages.js:24:88)
+
+    at Object.getPrebuildConfigAsync (/home/expo/workingdir/build/node_modules/@expo/cli/node_modules/@expo/prebuild-config/build/getPrebuildConfig.js:29:91)
+
+    at configureProjectAsync (/home/expo/workingdir/build/node_modules/@expo/cli/build/src/prebuild/configureProjectAsync.js:44:55)
+
+    at async prebuildAsync (/home/expo/workingdir/build/node_modules/@expo/cli/build/src/prebuild/prebuildAsync.js:117:9)
+
+ 
+Build failed
+
+ 

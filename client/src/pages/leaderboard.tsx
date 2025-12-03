@@ -48,6 +48,8 @@ export default function Leaderboard() {
     pegNumber: number;
     weight: string;
     club: string;
+    isTeam?: boolean;
+    teamId?: string;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition}/leaderboard`],
     enabled: !!selectedCompetition,
@@ -60,6 +62,8 @@ export default function Leaderboard() {
     pegNumber: entry.pegNumber,
     weight: entry.weight,
     club: entry.club,
+    isTeam: entry.isTeam,
+    teamId: entry.teamId,
   }));
 
   const selectedComp = competitions.find(c => c.id === selectedCompetition);

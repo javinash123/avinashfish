@@ -59,6 +59,13 @@ export async function setupVite(app: Express, server: Server, storage?: any) {
         `src="/src/main.tsx?v=${nanoid()}"`,
       );
       
+      // Inject environment variables into window.RUNTIME_CONFIG for client-side access
+      const runtimeConfig = {
+        VITE_STRIPE_PUBLIC_KEY: process.env.VITE_STRIPE_PUBLIC_KEY || '',
+      };
+      const configScript = `<script>window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};</script>`;
+      template = template.replace('</head>', `${configScript}</head>`);
+      
       const urlObj = new URL(url, `http://${req.headers.host}`);
       const articleId = urlObj.searchParams.get('article');
       const basePath = process.env.EXPRESS_BASE_PATH || '';
@@ -115,6 +122,13 @@ export function serveStatic(app: Express, storage?: any) {
     
     try {
       let template = await fs.promises.readFile(indexPath, "utf-8");
+      
+      // Inject environment variables into window.RUNTIME_CONFIG for client-side access
+      const runtimeConfig = {
+        VITE_STRIPE_PUBLIC_KEY: process.env.VITE_STRIPE_PUBLIC_KEY || '',
+      };
+      const configScript = `<script>window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};</script>`;
+      template = template.replace('</head>', `${configScript}</head>`);
       
       const urlObj = new URL(url, `http://${req.headers.host}`);
       const articleId = urlObj.searchParams.get('article');

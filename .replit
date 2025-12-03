@@ -15,8 +15,8 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 33359
-externalPort = 3000
+localPort = 8081
+externalPort = 8081
 
 [env]
 PORT = "5000"
@@ -31,19 +31,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Start application"
+args = "Mobile App Web Preview"
 
 [[workflows.workflow]]
-name = "Start application"
+name = "Mobile App Web Preview"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "npm run dev"
+args = "cd PegSlamMobile && npm run web:server"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_websocket:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "stripe:1.0.0"]

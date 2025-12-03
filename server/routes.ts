@@ -1740,7 +1740,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
 
       const user = await storage.createUser(result.data);
-      const { password, ...userWithoutPassword } = user;
+      
+      // Auto-verify email for admin-created anglers (they don't need email verification)
+      const verifiedUser = await storage.verifyUserEmail(user.id);
+      
+      const { password, ...userWithoutPassword } = verifiedUser || user;
       res.status(201).json(userWithoutPassword);
     } catch (error: any) {
       console.error("Error creating angler:", error);
@@ -2439,7 +2443,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
               id: team.id,
               userId: team.id, // Use team ID as userId for compatibility with admin UI
               pegNumber: team.pegNumber,
-              name: team.name,
+              name: team.name, // Return team name correctly
+              teamName: team.name, // Also include for direct access
               username: captain?.username || "",
               club: captain?.club || "",
               avatar: captain?.avatar || "",
@@ -2485,7 +2490,6 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.post("/api/competitions/:id/join", async (req, res) => {
     try {
       const userId = req.session?.userId;
-      console.log("[DEBUG join] Session:", { userId, adminId: req.session?.adminId, competitionId: req.params.id });
       
       if (!userId) {
         return res.status(401).json({ message: "Not authenticated" });
@@ -2495,7 +2499,6 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       // Check if user is already in the competition
       const isAlreadyIn = await storage.isUserInCompetition(competitionId, userId);
-      console.log("[DEBUG join] Already in competition?", { userId, competitionId, isAlreadyIn });
       if (isAlreadyIn) {
         return res.status(400).json({ message: "Already joined this competition" });
       }
@@ -2532,8 +2535,6 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         userId,
         pegNumber: req.body.pegNumber || undefined,
       });
-      
-      console.log("[DEBUG join] Participant created:", { participantId: participant.id, userId: participant.userId, competitionId: participant.competitionId, pegNumber: participant.pegNumber });
 
       res.json(participant);
     } catch (error: any) {
@@ -2573,8 +2574,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/participants/:id/peg", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
@@ -2583,12 +2584,17 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(400).json({ message: "Invalid peg number" });
       }
 
-      const participant = await storage.updateParticipantPeg(req.params.id, pegNumber);
-      if (!participant) {
-        return res.status(404).json({ message: "Participant not found" });
-      }
+      try {
+        const participant = await storage.updateParticipantPeg(req.params.id, pegNumber);
+        if (!participant) {
+          return res.status(404).json({ message: "Participant not found" });
+        }
 
-      res.json(participant);
+        res.json(participant);
+      } catch (error: any) {
+        // Return validation error with proper status
+        return res.status(409).json({ message: error.message });
+      }
     } catch (error: any) {
       console.error("Error updating participant peg:", error);
       res.status(500).json({ message: "Error updating participant peg: " + error.message });
@@ -2598,15 +2604,12 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.get("/api/competitions/:id/is-joined", async (req, res) => {
     try {
       const userId = req.session?.userId;
-      console.log("[DEBUG is-joined] Session:", { userId, adminId: req.session?.adminId, competitionId: req.params.id });
       
       if (!userId) {
-        console.log("[DEBUG is-joined] No userId in session, returning false");
         return res.json({ isJoined: false });
       }
 
       const isJoined = await storage.isUserInCompetition(req.params.id, userId);
-      console.log("[DEBUG is-joined] Result:", { userId, competitionId: req.params.id, isJoined });
       res.json({ isJoined });
     } catch (error: any) {
       console.error("Error checking if joined:", error);
@@ -2784,16 +2787,32 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     try {
       const teams = await storage.getTeamsByCompetition(req.params.id);
       
-      // Enrich teams with member count
+      // Enrich teams with member count and member details
       const enrichedTeams = await Promise.all(
         teams.map(async (team) => {
           const members = await storage.getTeamMembers(team.id);
           const acceptedMembers = members.filter(m => m.status === "accepted");
           const creator = await storage.getUser(team.createdBy);
+          
+          // Enrich members with user data
+          const enrichedMembers = await Promise.all(
+            acceptedMembers.map(async (member) => {
+              const user = await storage.getUser(member.userId);
+              return {
+                userId: member.userId,
+                name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+                avatar: user?.avatar || null,
+                isPrimary: member.userId === team.createdBy,
+              };
+            })
+          );
+          
           return {
             ...team,
+            teamName: team.name,
             memberCount: acceptedMembers.length,
             creatorName: creator ? `${creator.firstName} ${creator.lastName}` : "Unknown",
+            members: enrichedMembers,
           };
         })
       );
@@ -3057,8 +3076,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin: Update team peg number
   app.put("/api/admin/teams/:id/peg", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
@@ -3067,12 +3086,17 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(400).json({ message: "Invalid peg number" });
       }
 
-      const team = await storage.updateTeamPeg(req.params.id, pegNumber);
-      if (!team) {
-        return res.status(404).json({ message: "Team not found" });
-      }
+      try {
+        const team = await storage.updateTeamPeg(req.params.id, pegNumber);
+        if (!team) {
+          return res.status(404).json({ message: "Team not found" });
+        }
 
-      res.json(team);
+        res.json(team);
+      } catch (error: any) {
+        // Return validation error with proper status
+        return res.status(409).json({ message: error.message });
+      }
     } catch (error: any) {
       console.error("Error updating team peg:", error);
       res.status(500).json({ message: "Error updating team peg: " + error.message });
@@ -3091,11 +3115,15 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           let anglerName = "Unknown";
           let username = "";
           let club = "";
+          let teamId = "";
+          let isTeam = false;
           
           // For team competitions, show team name; for individual, show user name
           if (competition?.competitionMode === "team" && entry.teamId) {
             const team = await storage.getTeam(entry.teamId);
             anglerName = team?.name || "Unknown Team";
+            teamId = entry.teamId;
+            isTeam = true;
           } else if (entry.userId) {
             const user = await storage.getUser(entry.userId);
             anglerName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
@@ -3110,6 +3138,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             pegNumber: entry.pegNumber,
             weight: entry.weight,
             club,
+            teamId,
+            isTeam,
           };
         })
       );
@@ -3121,20 +3151,67 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Get team details with all members
+  app.get("/api/team/:teamId", async (req, res) => {
+    try {
+      const team = await storage.getTeam(req.params.teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const members = await storage.getTeamMembers(req.params.teamId);
+      const enrichedMembers = await Promise.all(
+        members.map(async (member) => {
+          const user = await storage.getUser(member.userId);
+          return {
+            userId: member.userId,
+            name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+            username: user?.username || "",
+            avatar: user?.avatar || null,
+            isCaptain: member.userId === team.createdBy,
+            club: user?.club || "",
+            status: member.status || "accepted",
+          };
+        })
+      );
+
+      res.json({
+        id: team.id,
+        teamName: team.name,
+        createdBy: team.createdBy,
+        createdAt: team.createdAt,
+        pegNumber: team.pegNumber || null,
+        competitionId: team.competitionId,
+        members: enrichedMembers,
+      });
+    } catch (error: any) {
+      console.error("Error fetching team:", error);
+      res.status(500).json({ message: "Error fetching team: " + error.message });
+    }
+  });
+
   // Admin leaderboard management routes
   app.post("/api/admin/leaderboard", async (req, res) => {
     try {
+      console.log("[BACKEND WEIGHT] POST /api/admin/leaderboard called");
+      console.log("[BACKEND WEIGHT] Request body:", req.body);
+      console.log("[BACKEND WEIGHT] Session adminId:", req.session?.adminId);
+      
       const adminId = req.session?.adminId;
       if (!adminId) {
+        console.log("[BACKEND WEIGHT] NOT AUTHENTICATED - no adminId in session");
         return res.status(401).json({ message: "Not authenticated" });
       }
 
       const result = insertLeaderboardEntrySchema.safeParse(req.body);
       if (!result.success) {
+        console.log("[BACKEND WEIGHT] VALIDATION ERROR:", result.error.errors);
         return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
       }
 
+      console.log("[BACKEND WEIGHT] Creating leaderboard entry with:", result.data);
       const entry = await storage.createLeaderboardEntry(result.data);
+      console.log("[BACKEND WEIGHT] Entry created successfully:", entry);
       res.json(entry);
     } catch (error: any) {
       console.error("Error creating leaderboard entry:", error);
@@ -3144,8 +3221,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/leaderboard/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 
@@ -3168,8 +3245,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/leaderboard/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
-      if (!adminId) {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
 

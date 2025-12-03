@@ -9,9 +9,18 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy } from "lucide-react";
+import { Trophy, Users } from "lucide-react";
 import { Link } from "wouter";
 import { formatWeight, convertFromOunces, parseWeight } from "@shared/weight-utils";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { useState } from "react";
+import { useQuery } from "@tanstack/react-query";
+import { Button } from "@/components/ui/button";
 
 interface LeaderboardEntry {
   position: number;
@@ -21,6 +30,24 @@ interface LeaderboardEntry {
   pegNumber: number;
   weight: string;
   club?: string;
+  teamId?: string;
+  isTeam?: boolean;
+}
+
+interface TeamMember {
+  userId: string;
+  name: string;
+  username: string;
+  avatar: string;
+  isCaptain: boolean;
+  club: string;
+  status: string;
+}
+
+interface TeamDetailsType {
+  id: string;
+  teamName: string;
+  members: TeamMember[];
 }
 
 interface LeaderboardTableProps {
@@ -29,6 +56,12 @@ interface LeaderboardTableProps {
 }
 
 export function LeaderboardTable({ entries, isLive = false }: LeaderboardTableProps) {
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  
+  const { data: teamDetails } = useQuery<TeamDetailsType>({
+    queryKey: [`/api/team/${selectedTeamId}`],
+    enabled: !!selectedTeamId,
+  });
   const getMedalColor = (position: number) => {
     if (position === 1) return "text-chart-3";
     if (position === 2) return "text-muted-foreground";
@@ -71,8 +104,9 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
   };
 
   return (
-    <Card>
-      <Table>
+    <>
+      <Card>
+        <Table>
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 sm:w-16 px-1 sm:px-4">Pos</TableHead>
@@ -101,14 +135,26 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                     <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
                       <AvatarImage src={entry.anglerAvatar} className="object-cover" />
                       <AvatarFallback className="text-xs sm:text-sm">
-                        {entry.anglerName
-                          .split(" ")
+                        {entry.anglerName.split(" ")
                           .map((n) => n[0])
                           .join("")}
                       </AvatarFallback>
                     </Avatar>
                     <div className="min-w-0 flex-1">
-                      {entry.username ? (
+                      {entry.isTeam ? (
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setSelectedTeamId(entry.teamId || null)}
+                          className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none h-auto p-0"
+                          data-testid={`button-team-${entry.position}`}
+                        >
+                          <div className="flex items-center gap-1">
+                            {entry.anglerName}
+                            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                          </div>
+                        </Button>
+                      ) : entry.username ? (
                         <Link href={`/profile/${entry.username}`}>
                           <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
@@ -153,7 +199,41 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
           <div className="h-2 w-2 rounded-full bg-chart-4 animate-pulse" />
           Live updates enabled
         </div>
-      )}
-    </Card>
+        )}
+      </Card>
+
+      <Dialog open={!!selectedTeamId} onOpenChange={(open) => !open && setSelectedTeamId(null)}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Team Members - {teamDetails?.teamName}</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-3">
+            {teamDetails?.members.map((member) => (
+              <div key={member.userId} className="flex items-start gap-3 p-3 border rounded-md hover-elevate">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={member.avatar} className="object-cover" />
+                  <AvatarFallback>
+                    {member.name
+                      .split(" ")
+                      .map((n) => n[0])
+                      .join("")}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex-1 min-w-0">
+                  <Link href={`/profile/${member.username}`}>
+                    <div className="font-medium hover:text-primary transition-colors cursor-pointer">
+                      {member.name}
+                      {member.isCaptain && <Badge className="ml-2 text-xs">Captain</Badge>}
+                    </div>
+                  </Link>
+                  <p className="text-xs text-muted-foreground">@{member.username}</p>
+                  {member.club && <p className="text-xs text-muted-foreground">{member.club}</p>}
+                </div>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 }
