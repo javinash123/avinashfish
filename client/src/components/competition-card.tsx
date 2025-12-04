@@ -127,7 +127,6 @@ export function CompetitionCard({
         <Link href={`/competition/${id}`} asChild>
           <Button
             variant={status === "live" ? "default" : "secondary"}
-            disabled={pegsAvailable === 0 && status !== "completed"}
             data-testid="button-view-details"
           >
             {status === "completed" ? "View Results" : pegsAvailable === 0 ? "Sold Out" : "View Details"}

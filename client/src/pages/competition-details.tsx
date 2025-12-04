@@ -571,25 +571,42 @@ export default function CompetitionDetails() {
                             </p>
                           </div>
                           {userTeam.isCaptain ? (
-                            <Button 
-                              className="w-full" 
-                              size="lg" 
-                              onClick={handleBookPeg}
-                              disabled={competition.pegsBooked >= competition.pegsTotal || userTeam.paymentStatus === "succeeded"}
-                              data-testid="button-book-team-peg"
-                            >
-                              {userTeam.paymentStatus === "succeeded" ? (
-                                <>
-                                  <Check className="mr-2 h-5 w-5" />
-                                  Peg Booked
-                                </>
-                              ) : (
-                                <>
-                                  <Coins className="mr-2 h-5 w-5" />
-                                  Book Team Peg
-                                </>
-                              )}
-                            </Button>
+                            userTeam.paymentStatus === "succeeded" ? (
+                              <Button 
+                                className="w-full" 
+                                size="lg" 
+                                disabled
+                                data-testid="button-book-team-peg"
+                              >
+                                <Check className="mr-2 h-5 w-5" />
+                                Peg Booked
+                              </Button>
+                            ) : competition.pegsBooked >= competition.pegsTotal ? (
+                              <div className="space-y-3">
+                                <Button 
+                                  className="w-full" 
+                                  size="lg" 
+                                  variant="secondary"
+                                  disabled
+                                  data-testid="button-sold-out"
+                                >
+                                  Sold Out
+                                </Button>
+                                <p className="text-sm text-muted-foreground text-center">
+                                  All pegs have been booked for this competition.
+                                </p>
+                              </div>
+                            ) : (
+                              <Button 
+                                className="w-full" 
+                                size="lg" 
+                                onClick={handleBookPeg}
+                                data-testid="button-book-team-peg"
+                              >
+                                <Coins className="mr-2 h-5 w-5" />
+                                Book Team Peg
+                              </Button>
+                            )
                           ) : (
                             <div className="text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-md">
                               Only the team captain can book a peg for the team.
@@ -626,12 +643,27 @@ export default function CompetitionDetails() {
                             "Leave Competition"
                           )}
                         </Button>
+                      ) : competition.pegsBooked >= competition.pegsTotal ? (
+                        <div className="space-y-3">
+                          <Button 
+                            className="w-full" 
+                            size="lg" 
+                            variant="secondary"
+                            disabled
+                            data-testid="button-sold-out"
+                          >
+                            Sold Out
+                          </Button>
+                          <p className="text-sm text-muted-foreground text-center">
+                            All pegs have been booked for this competition.
+                          </p>
+                        </div>
                       ) : (
                         <Button 
                           className="w-full" 
                           size="lg" 
                           onClick={handleBookPeg}
-                          disabled={joinMutation.isPending || competition.pegsBooked >= competition.pegsTotal}
+                          disabled={joinMutation.isPending}
                           data-testid="button-book-peg"
                         >
                           {joinMutation.isPending ? (

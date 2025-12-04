@@ -15,8 +15,8 @@ localPort = 5000
 externalPort = 80
 
 [[ports]]
-localPort = 8081
-externalPort = 8081
+localPort = 33719
+externalPort = 3000
 
 [env]
 PORT = "5000"
@@ -31,15 +31,15 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Mobile App Web Preview"
+args = "Start application"
 
 [[workflows.workflow]]
-name = "Mobile App Web Preview"
+name = "Start application"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && npm run web:server"
+args = "npm run dev"
 waitForPort = 5000
 
 [workflows.workflow.metadata]

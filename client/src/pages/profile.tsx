@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   User as UserIcon, Trophy, Calendar, MapPin, Fish, TrendingUp, 
-  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera, Share2
+  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera, Share2, Play
 } from "lucide-react";
 import { SiFacebook, SiX, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
@@ -29,6 +29,22 @@ import type { User, Competition, CompetitionParticipant, UserGalleryPhoto } from
 import { EditProfileDialog } from "@/components/edit-profile-dialog";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
+
+function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
 
 export default function Profile() {
   const [, params] = useRoute("/profile/:username");
@@ -666,6 +682,54 @@ export default function Profile() {
             </CardContent>
           </Card>
         </div>
+
+        {displayUser.youtubeVideoUrl && extractYouTubeVideoId(displayUser.youtubeVideoUrl) && (
+          <Card className="mb-8" data-testid="card-youtube-video">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <SiYoutube className="h-5 w-5 text-red-600" />
+                <CardTitle>Featured Video</CardTitle>
+              </div>
+              <CardDescription>
+                {isOwnProfile ? "Your featured YouTube video" : `${displayUser.firstName}'s featured video`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${extractYouTubeVideoId(displayUser.youtubeVideoUrl)}`}
+                  title="YouTube video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  data-testid="iframe-youtube"
+                />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(displayUser.youtubeVideoUrl!, '_blank')}
+                  data-testid="button-watch-youtube"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Watch on YouTube
+                </Button>
+                {isOwnProfile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditProfileOpen(true)}
+                    data-testid="button-change-video"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Change Video
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="gallery" className="space-y-4">
           <TabsList data-testid="tabs-profile">

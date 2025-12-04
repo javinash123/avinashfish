@@ -26,6 +26,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || "");
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || "");
   const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || "");
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || "");
   const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || "");
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || "");
   const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || "");
@@ -39,6 +40,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       favouriteMethod?: string;
       favouriteSpecies?: string;
       youtubeUrl?: string;
+      youtubeVideoUrl?: string;
       facebookUrl?: string;
       twitterUrl?: string;
       instagramUrl?: string;
@@ -109,6 +111,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
         favouriteMethod,
         favouriteSpecies,
         youtubeUrl,
+        youtubeVideoUrl,
         facebookUrl,
         twitterUrl,
         instagramUrl,
@@ -213,14 +216,25 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
             <p className="text-sm text-muted-foreground">Add your social media profiles (optional)</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="youtubeUrl">YouTube URL</Label>
+            <Label htmlFor="youtubeUrl">YouTube Channel URL</Label>
             <Input
               id="youtubeUrl"
-              placeholder="https://youtube.com/@username"
+              placeholder="https://youtube.com/@yourchannel"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               data-testid="input-youtube"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="youtubeVideoUrl">Featured YouTube Video</Label>
+            <Input
+              id="youtubeVideoUrl"
+              placeholder="https://youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID"
+              value={youtubeVideoUrl}
+              onChange={(e) => setYoutubeVideoUrl(e.target.value)}
+              data-testid="input-youtube-video"
+            />
+            <p className="text-xs text-muted-foreground">Paste a YouTube video link to showcase on your profile</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="facebookUrl">Facebook URL</Label>
