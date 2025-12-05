@@ -98,7 +98,7 @@ export default function AdminCompetitions() {
   const { data: teams = [] } = useQuery<Array<{
     id: string;
     teamName: string;
-    pegNumber: number;
+    pegNumber: number | null;
     memberCount: number;
     members: Array<{
       userId: string;
@@ -1677,15 +1677,15 @@ export default function AdminCompetitions() {
             {selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "team" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Team Assignments</CardTitle>
+                  <CardTitle>Team Peg Assignments</CardTitle>
                   <CardDescription>
-                    {teams.filter(t => t.pegNumber > 0).length} / {teams.length} teams assigned
+                    {teams.filter(t => t.pegNumber && t.pegNumber > 0).length} / {teams.length} teams assigned
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {teams.filter(t => t.pegNumber > 0).length === 0 ? (
+                  {teams.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p>No teams assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
+                      <p>No teams registered for this competition yet.</p>
                     </div>
                   ) : (
                     <Table>
@@ -1699,8 +1699,13 @@ export default function AdminCompetitions() {
                       </TableHeader>
                       <TableBody>
                         {teams
-                          .filter(t => t.pegNumber > 0)
-                          .sort((a, b) => a.pegNumber - b.pegNumber)
+                          .sort((a, b) => {
+                            // Sort: assigned pegs first (by number), then unassigned
+                            if (a.pegNumber && b.pegNumber) return a.pegNumber - b.pegNumber;
+                            if (a.pegNumber) return -1;
+                            if (b.pegNumber) return 1;
+                            return 0;
+                          })
                           .map((team) => (
                             <TableRow key={team.id}>
                             <TableCell>
@@ -1774,7 +1779,7 @@ export default function AdminCompetitions() {
                                 </div>
                               ) : (
                                 <Badge variant="outline" className="font-mono">
-                                  {team.pegNumber}
+                                  {team.pegNumber ? team.pegNumber : "Not assigned"}
                                 </Badge>
                               )}
                             </TableCell>
@@ -1791,7 +1796,7 @@ export default function AdminCompetitions() {
                                   variant="ghost"
                                   onClick={() => {
                                     setEditingPegTeamId(team.id);
-                                    setEditPegNumber(team.pegNumber.toString());
+                                    setEditPegNumber(team.pegNumber ? team.pegNumber.toString() : "");
                                   }}
                                   data-testid={`button-edit-team-peg-${team.id}`}
                                 >

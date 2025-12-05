@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SponsorLogoSlider } from "@/components/sponsor-logo-slider";
 import Home from "@/pages/home";
 import Competitions from "@/pages/competitions";
 import Leaderboard from "@/pages/leaderboard";
@@ -81,6 +82,7 @@ function Router() {
           <Route component={NotFound} />
         </Switch>
       </div>
+      {!isAdminRoute && !isAuthRoute && <SponsorLogoSlider />}
       {!isAdminRoute && !isAuthRoute && <Footer />}
     </div>
   );

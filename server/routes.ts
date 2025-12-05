@@ -2286,6 +2286,148 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // YouTube Video routes (public access for display)
+  app.get("/api/youtube-videos", async (req, res) => {
+    try {
+      const videos = await storage.getActiveYoutubeVideos();
+      res.json(videos);
+    } catch (error: any) {
+      console.error("Error fetching YouTube videos:", error);
+      res.status(500).json({ message: "Error fetching YouTube videos: " + error.message });
+    }
+  });
+
+  // Admin YouTube Video management routes
+  app.get("/api/admin/youtube-videos", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const videos = await storage.getAllYoutubeVideos();
+      res.json(videos);
+    } catch (error: any) {
+      console.error("Error fetching YouTube videos:", error);
+      res.status(500).json({ message: "Error fetching YouTube videos: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/youtube-videos", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { title, videoId, description, displayOrder, active } = req.body;
+      
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ message: "Title is required and must be a non-empty string" });
+      }
+      
+      if (!videoId || typeof videoId !== 'string' || videoId.trim().length === 0) {
+        return res.status(400).json({ message: "Video ID is required and must be a non-empty string" });
+      }
+      
+      if (displayOrder !== undefined && (typeof displayOrder !== 'number' || displayOrder < 0)) {
+        return res.status(400).json({ message: "Display order must be a non-negative number" });
+      }
+      
+      if (active !== undefined && typeof active !== 'boolean') {
+        return res.status(400).json({ message: "Active must be a boolean" });
+      }
+
+      const video = await storage.createYoutubeVideo({
+        title: title.trim(),
+        videoId: videoId.trim(),
+        description: description?.trim() || null,
+        displayOrder: displayOrder ?? 0,
+        active: active !== false,
+      });
+
+      res.status(201).json(video);
+    } catch (error: any) {
+      console.error("Error creating YouTube video:", error);
+      res.status(500).json({ message: "Error creating YouTube video: " + error.message });
+    }
+  });
+
+  app.put("/api/admin/youtube-videos/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { title, videoId, description, displayOrder, active } = req.body;
+      
+      const updates: any = {};
+      
+      if (title !== undefined) {
+        if (typeof title !== 'string' || title.trim().length === 0) {
+          return res.status(400).json({ message: "Title must be a non-empty string" });
+        }
+        updates.title = title.trim();
+      }
+      
+      if (videoId !== undefined) {
+        if (typeof videoId !== 'string' || videoId.trim().length === 0) {
+          return res.status(400).json({ message: "Video ID must be a non-empty string" });
+        }
+        updates.videoId = videoId.trim();
+      }
+      
+      if (description !== undefined) {
+        updates.description = description?.trim() || null;
+      }
+      
+      if (displayOrder !== undefined) {
+        if (typeof displayOrder !== 'number' || displayOrder < 0) {
+          return res.status(400).json({ message: "Display order must be a non-negative number" });
+        }
+        updates.displayOrder = displayOrder;
+      }
+      
+      if (active !== undefined) {
+        if (typeof active !== 'boolean') {
+          return res.status(400).json({ message: "Active must be a boolean" });
+        }
+        updates.active = active;
+      }
+      
+      const video = await storage.updateYoutubeVideo(req.params.id, updates);
+      
+      if (!video) {
+        return res.status(404).json({ message: "YouTube video not found" });
+      }
+
+      res.json(video);
+    } catch (error: any) {
+      console.error("Error updating YouTube video:", error);
+      res.status(500).json({ message: "Error updating YouTube video: " + error.message });
+    }
+  });
+
+  app.delete("/api/admin/youtube-videos/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const success = await storage.deleteYoutubeVideo(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "YouTube video not found" });
+      }
+
+      res.json({ message: "YouTube video deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting YouTube video:", error);
+      res.status(500).json({ message: "Error deleting YouTube video: " + error.message });
+    }
+  });
+
   // Competition routes (public access for display)
   app.get("/api/competitions", async (req, res) => {
     try {
@@ -3103,6 +3245,258 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Admin: Get teams for a competition
+  app.get("/api/admin/competitions/:id/teams", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const teams = await storage.getTeamsByCompetition(req.params.id);
+      
+      const enrichedTeams = await Promise.all(
+        teams.map(async (team) => {
+          const members = await storage.getTeamMembers(team.id);
+          const acceptedMembers = members.filter(m => m.status === "accepted");
+          
+          const enrichedMembers = await Promise.all(
+            acceptedMembers.map(async (member) => {
+              const user = await storage.getUser(member.userId);
+              return {
+                id: member.id,
+                userId: member.userId,
+                name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+                username: user?.username || "",
+                avatar: user?.avatar || null,
+                club: user?.club || "",
+                role: member.role,
+                status: member.status,
+                isCaptain: member.userId === team.createdBy,
+              };
+            })
+          );
+          
+          return {
+            id: team.id,
+            name: team.name,
+            competitionId: team.competitionId,
+            inviteCode: team.inviteCode,
+            createdBy: team.createdBy,
+            paymentStatus: team.paymentStatus,
+            pegNumber: team.pegNumber,
+            createdAt: team.createdAt,
+            memberCount: acceptedMembers.length,
+            members: enrichedMembers,
+          };
+        })
+      );
+      
+      res.json(enrichedTeams);
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ message: "Error fetching teams: " + error.message });
+    }
+  });
+
+  // Admin: Create a team for a competition
+  app.post("/api/admin/teams", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { competitionId, name, captainUserId } = req.body;
+      
+      if (!competitionId || !name) {
+        return res.status(400).json({ message: "Competition ID and team name are required" });
+      }
+
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      if (competition.competitionMode !== "team") {
+        return res.status(400).json({ message: "This competition is not a team competition" });
+      }
+
+      const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      const team = await storage.createTeam({
+        competitionId,
+        name,
+        inviteCode,
+        createdBy: captainUserId || staffId,
+        paymentStatus: "pending",
+        pegNumber: null,
+      });
+
+      if (captainUserId) {
+        await storage.addTeamMember({
+          teamId: team.id,
+          userId: captainUserId,
+          role: "captain",
+          status: "accepted",
+        });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error creating team:", error);
+      res.status(500).json({ message: "Error creating team: " + error.message });
+    }
+  });
+
+  // Admin: Update team details
+  app.put("/api/admin/teams/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { name, paymentStatus } = req.body;
+      
+      const team = await storage.updateTeam(req.params.id, { name, paymentStatus });
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Error updating team: " + error.message });
+    }
+  });
+
+  // Admin: Delete a team
+  app.delete("/api/admin/teams/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const members = await storage.getTeamMembers(req.params.id);
+      for (const member of members) {
+        await storage.removeTeamMember(member.id);
+      }
+
+      const success = await storage.deleteTeam(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json({ message: "Team deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting team:", error);
+      res.status(500).json({ message: "Error deleting team: " + error.message });
+    }
+  });
+
+  // Admin: Add an angler to a team
+  app.post("/api/admin/teams/:id/members", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { userId, role = "member" } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const team = await storage.getTeam(req.params.id);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const competition = await storage.getCompetition(team.competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const isInTeam = await storage.isUserInTeam(team.id, userId);
+      if (isInTeam) {
+        return res.status(400).json({ message: "User is already a member of this team" });
+      }
+
+      const allTeams = await storage.getTeamsByCompetition(team.competitionId);
+      for (const t of allTeams) {
+        const isInOtherTeam = await storage.isUserInTeam(t.id, userId);
+        if (isInOtherTeam) {
+          return res.status(400).json({ message: "User is already in another team for this competition" });
+        }
+      }
+
+      const currentMembers = await storage.getTeamMembers(team.id);
+      const acceptedMembers = currentMembers.filter(m => m.status === "accepted");
+      if (competition.maxTeamMembers && acceptedMembers.length >= competition.maxTeamMembers) {
+        return res.status(400).json({ message: `Team is full (max ${competition.maxTeamMembers} members)` });
+      }
+
+      const member = await storage.addTeamMember({
+        teamId: team.id,
+        userId,
+        role,
+        status: "accepted",
+      });
+
+      const enrichedMember = {
+        id: member.id,
+        userId: member.userId,
+        name: `${user.firstName} ${user.lastName}`,
+        username: user.username,
+        avatar: user.avatar,
+        club: user.club,
+        role: member.role,
+        status: member.status,
+        isCaptain: member.userId === team.createdBy,
+      };
+
+      res.json(enrichedMember);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      res.status(500).json({ message: "Error adding team member: " + error.message });
+    }
+  });
+
+  // Admin: Remove an angler from a team
+  app.delete("/api/admin/teams/:teamId/members/:memberId", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { teamId, memberId } = req.params;
+      
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const success = await storage.removeTeamMember(memberId);
+      if (!success) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      res.json({ message: "Member removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ message: "Error removing team member: " + error.message });
+    }
+  });
+
   // Leaderboard routes
   app.get("/api/competitions/:id/leaderboard", async (req, res) => {
     try {
@@ -3111,7 +3505,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       
       // Enrich leaderboard with user/team data based on competition type
       const enrichedEntries = await Promise.all(
-        entries.map(async (entry) => {
+        entries.map(async (entry: any) => {
           let anglerName = "Unknown";
           let username = "";
           let club = "";
@@ -3140,6 +3534,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             club,
             teamId,
             isTeam,
+            fishCount: entry.fishCount || 1,
           };
         })
       );

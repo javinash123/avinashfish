@@ -32,6 +32,7 @@ interface LeaderboardEntry {
   club?: string;
   teamId?: string;
   isTeam?: boolean;
+  fishCount?: number;
 }
 
 interface TeamMember {
@@ -112,6 +113,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
             <TableHead className="w-10 sm:w-16 px-1 sm:px-4">Pos</TableHead>
             <TableHead className="px-1 sm:px-4">Angler</TableHead>
             <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Peg</TableHead>
+            <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Fish</TableHead>
             <TableHead className="text-right w-16 sm:w-24 px-1 sm:px-4">Weight</TableHead>
           </TableRow>
         </TableHeader>
@@ -175,6 +177,11 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                   <Badge variant="outline" className="font-mono text-[10px] sm:text-sm px-1.5 sm:px-2" data-testid={`badge-peg-${entry.position}`}>
                     {entry.pegNumber}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-center py-2 px-1 sm:px-4">
+                  <span className="font-mono font-medium text-[10px] sm:text-sm" data-testid={`text-fish-${entry.position}`}>
+                    {entry.fishCount || 1}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right py-2 px-1 sm:px-4">
                   <div className="hidden sm:flex flex-col items-end" data-testid={`text-weight-${entry.position}`}>

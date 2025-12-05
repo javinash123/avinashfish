@@ -1,13 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play, Pause, Volume2, Radio } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import type { Competition, News, GalleryImage } from "@shared/schema";
+import type { Competition, News, GalleryImage, YoutubeVideo } from "@shared/schema";
 import { format } from "date-fns";
 import {
   Select,
@@ -33,6 +33,32 @@ export default function Home() {
   const { data: featuredGallery = [] } = useQuery<GalleryImage[]>({
     queryKey: ["/api/gallery/featured"],
   });
+
+  const { data: youtubeVideos = [] } = useQuery<YoutubeVideo[]>({
+    queryKey: ["/api/youtube-videos"],
+  });
+
+  // Audio player state
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioError, setAudioError] = useState(false);
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+          setAudioError(false);
+        }).catch(() => {
+          setAudioError(true);
+          setIsPlaying(false);
+        });
+      }
+    }
+  };
 
   // State for randomly selected featured news by category
   const [randomFeaturedNews, setRandomFeaturedNews] = useState<News[]>([]);
@@ -333,6 +359,126 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      <audio
+        ref={audioRef}
+        src="https://data.webstreamer.co.uk:8030/radio.mp3"
+        preload="none"
+        onError={() => setAudioError(true)}
+        onEnded={() => setIsPlaying(false)}
+      />
+
+      <section className="py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+        <div className="container mx-auto px-4 lg:px-8">
+          <Card className="overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ${isPlaying ? 'animate-pulse' : ''}`}>
+                      <Radio className="h-6 w-6 text-primary" />
+                    </div>
+                    {isPlaying && (
+                      <div className="absolute -top-1 -right-1">
+                        <span className="flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-chart-4" />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Peg Slam Radio</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isPlaying ? "Now Playing - Live Stream" : "Tap to listen to our live stream"}
+                    </p>
+                    {audioError && (
+                      <p className="text-xs text-destructive mt-1">Unable to connect to stream</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="lg"
+                    variant={isPlaying ? "secondary" : "default"}
+                    onClick={toggleAudio}
+                    className="min-w-[140px]"
+                    data-testid="button-audio-toggle"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="h-5 w-5 mr-2" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-5 w-5 mr-2" />
+                        Listen Live
+                      </>
+                    )}
+                  </Button>
+                  {isPlaying && <Volume2 className="h-5 w-5 text-muted-foreground animate-pulse" />}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
+      {youtubeVideos.length > 0 && (
+        <section className="py-16">
+          <div className="container mx-auto px-4 lg:px-8">
+            <div className="flex items-center justify-between mb-8">
+              <div className="flex items-center gap-2">
+                <Youtube className="h-6 w-6 text-red-600" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Latest Videos</h2>
+              </div>
+            </div>
+            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+              {youtubeVideos.slice(0, 6).map((video) => (
+                <Card key={video.id} className="overflow-hidden hover-elevate active-elevate-2" data-testid={`card-youtube-${video.id}`}>
+                  <a
+                    href={`https://www.youtube.com/watch?v=${video.videoId}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="block"
+                    data-testid={`link-youtube-${video.id}`}
+                  >
+                    <div className="relative aspect-video bg-muted">
+                      <img
+                        src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
+                        alt={video.title}
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="bg-red-600 rounded-full p-4 shadow-lg transition-transform hover:scale-110">
+                          <Play className="h-6 w-6 text-white fill-white" />
+                        </div>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
+                        <Badge variant="secondary" className="bg-black/50 text-white">
+                          <Youtube className="h-3 w-3 mr-1" />
+                          YouTube
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <h3 className="font-semibold line-clamp-2" data-testid={`text-youtube-title-${video.id}`}>
+                        {video.title}
+                      </h3>
+                      {video.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
+                          {video.description}
+                        </p>
+                      )}
+                    </CardContent>
+                  </a>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {featuredGallery.length > 0 && (
         <section className="py-16 bg-muted/30">

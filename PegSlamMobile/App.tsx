@@ -14,6 +14,9 @@ import {
   Dimensions,
   Animated,
   Image,
+  Linking,
+  Clipboard,
+  Platform,
 } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
@@ -21,7 +24,9 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 
 const API_URL = 'https://pegslam.com';
+const STRIPE_PUBLISHABLE_KEY = 'pk_live_51OkNT9CWRF6gYXTMFu18Bqv7h8lPJPHW8n4bQN5m1E8lDnOBm1y4l2QGmvKfB4Yp9WvFmPCnEJ5vP5X4SYnCjE9e00ZVF4zZqS';
 const { width } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
 const apiClient = axios.create({
   baseURL: API_URL,
@@ -32,6 +37,22 @@ const apiClient = axios.create({
 const stripHtml = (html: string) => {
   if (!html) return '';
   return html.replace(/<[^>]*>/g, '').trim();
+};
+
+// Sponsor tier display helper
+const getTierInfo = (tier: string) => {
+  switch (tier?.toLowerCase()) {
+    case 'platinum':
+      return { label: 'Platinum', color: '#7B8894' };
+    case 'gold':
+      return { label: 'Gold', color: '#D4AF37' };
+    case 'silver':
+      return { label: 'Silver', color: '#C0C0C0' };
+    case 'bronze':
+      return { label: 'Bronze', color: '#CD7F32' };
+    default:
+      return { label: tier || 'Partner', color: '#1B7342' };
+  }
 };
 
 // Menu Items matching website navigation
@@ -676,8 +697,8 @@ function HeroCarousel() {
 }
 
 // Leaderboard Page Component
-function LeaderboardPage({ competitions }: any) {
-  const [selectedCompId, setSelectedCompId] = useState(competitions[0]?.id || '');
+function LeaderboardPage({ competitions, onTeamClick }: any) {
+  const [selectedCompId, setSelectedCompId] = useState(competitions?.[0]?.id || '');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderLoading, setLeaderLoading] = useState(false);
 
@@ -687,7 +708,15 @@ function LeaderboardPage({ competitions }: any) {
     }
   }, [selectedCompId]);
 
+  // Update selected competition when competitions list changes
+  useEffect(() => {
+    if (competitions?.length > 0 && !selectedCompId) {
+      setSelectedCompId(competitions[0].id);
+    }
+  }, [competitions]);
+
   const fetchLeaderboard = async (compId: string) => {
+    if (!compId) return;
     setLeaderLoading(true);
     try {
       const response = await apiClient.get(`/api/competitions/${compId}/leaderboard`);
@@ -699,6 +728,18 @@ function LeaderboardPage({ competitions }: any) {
       setLeaderLoading(false);
     }
   };
+
+  // Show message if no competitions available
+  if (!competitions || competitions.length === 0) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Leaderboard</Text>
+        <View style={styles.placeholderCard}>
+          <Text style={styles.placeholderText}>No competitions available</Text>
+        </View>
+      </View>
+    );
+  }
 
   return (
     <View style={styles.section}>
@@ -738,16 +779,30 @@ function LeaderboardPage({ competitions }: any) {
             <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Pos</Text>
             <Text style={[styles.leaderboardCell, styles.leaderboardHeader, styles.leaderboardCellWide]}>Angler</Text>
             <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Peg</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Fish</Text>
             <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Weight</Text>
           </View>
           {/* Table Rows */}
           {leaderboardData.slice(0, 20).map((entry: any, idx: number) => (
             <View key={idx} style={styles.leaderboardRow}>
               <Text style={styles.leaderboardCell}>{entry.position || idx + 1}</Text>
-              <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
-                {entry.anglerName || entry.username || 'Unknown'}
-              </Text>
+              {entry.isTeam ? (
+                <TouchableOpacity 
+                  style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
+                  onPress={() => onTeamClick && onTeamClick(entry.teamId)}
+                >
+                  <Text style={styles.teamNameText} numberOfLines={1}>
+                    {entry.anglerName || entry.teamName || 'Team'}
+                  </Text>
+                  <Text style={styles.teamIcon}> [Team]</Text>
+                </TouchableOpacity>
+              ) : (
+                <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
+                  {entry.anglerName || entry.username || 'Unknown'}
+                </Text>
+              )}
               <Text style={styles.leaderboardCell}>{entry.pegNumber}</Text>
+              <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
               <Text style={styles.leaderboardCell}>{entry.weight || '0lb'}</Text>
             </View>
           ))}
@@ -762,7 +817,7 @@ function LeaderboardPage({ competitions }: any) {
 }
 
 // Competition Details Page
-function CompetitionDetailsPage({ competition, onClose }: any) {
+function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLogin }: any) {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('details');
@@ -770,6 +825,21 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
   const [joiningLeaving, setJoiningLeaving] = useState(false);
+  const [userTeam, setUserTeam] = useState<any>(null);
+  const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+  const [showCreateTeamModal, setShowCreateTeamModal] = useState(false);
+  const [showJoinTeamModal, setShowJoinTeamModal] = useState(false);
+  const [showManageTeamModal, setShowManageTeamModal] = useState(false);
+  const [teamName, setTeamName] = useState('');
+  const [inviteCode, setInviteCode] = useState('');
+  const [creatingTeam, setCreatingTeam] = useState(false);
+  const [joiningTeam, setJoiningTeam] = useState(false);
+  const [copiedInvite, setCopiedInvite] = useState(false);
+
+  const isTeamCompetition = competition.competitionMode === 'team';
+  const entryFee = parseFloat(competition.entryFee) || 0;
+  const isPaidCompetition = entryFee > 0;
 
   const getImageUrl = () => {
     const url = competition.imageUrl;
@@ -786,12 +856,52 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
   };
 
   useEffect(() => {
+    checkIsJoined();
+    if (isTeamCompetition && user) {
+      fetchUserTeam();
+      fetchAllTeams();
+    }
+  }, [user, competition.id]);
+
+  useEffect(() => {
     if (activeTab === 'leaderboard') {
       fetchLeaderboard();
     } else if (activeTab === 'participants') {
       fetchParticipants();
+    } else if (activeTab === 'teams' && isTeamCompetition) {
+      fetchAllTeams();
     }
   }, [activeTab]);
+
+  const checkIsJoined = async () => {
+    if (!user) return;
+    try {
+      const response = await apiClient.get(`/api/competitions/${competition.id}/is-joined`);
+      setIsJoined(response.data?.isJoined || false);
+    } catch (error) {
+      console.error('Error checking join status:', error);
+    }
+  };
+
+  const fetchUserTeam = async () => {
+    if (!user) return;
+    try {
+      const response = await apiClient.get(`/api/competitions/${competition.id}/my-team`);
+      setUserTeam(response.data || null);
+    } catch (error) {
+      console.error('Error fetching user team:', error);
+      setUserTeam(null);
+    }
+  };
+
+  const fetchAllTeams = async () => {
+    try {
+      const response = await apiClient.get(`/api/competitions/${competition.id}/teams`);
+      setAllTeams(response.data || []);
+    } catch (error) {
+      console.error('Error fetching teams:', error);
+    }
+  };
 
   const fetchLeaderboard = async () => {
     setLoadingLeaderboard(true);
@@ -823,33 +933,157 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
   const status = getCompetitionStatus();
   const pegsRemaining = competition.pegsTotal - competition.pegsBooked;
 
-  const handleJoinCompetition = async () => {
+  const handleBookPeg = async () => {
+    if (!user) {
+      Alert.alert('Login Required', 'Please log in to book a peg', [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Login', onPress: () => onLogin && onLogin() }
+      ]);
+      return;
+    }
+
+    if (pegsRemaining <= 0) {
+      Alert.alert('Sold Out', 'This competition is fully booked');
+      return;
+    }
+
+    if (isTeamCompetition) {
+      if (!userTeam) {
+        Alert.alert('Team Required', 'You must be part of a team to book this competition. Please create or join a team first.');
+        return;
+      }
+      
+      if (isPaidCompetition && userTeam.createdBy !== user.id) {
+        Alert.alert('Permission Denied', 'Only the team captain can make the booking and payment for the team.');
+        return;
+      }
+
+      if (userTeam.paymentStatus === 'succeeded') {
+        Alert.alert('Already Booked', 'Your team is already registered for this competition.');
+        return;
+      }
+    }
+
+    if (isPaidCompetition) {
+      setShowBookingModal(true);
+    } else {
+      handleFreeJoin();
+    }
+  };
+
+  const handleFreeJoin = async () => {
     setJoiningLeaving(true);
     try {
-      const response = await apiClient.post(`/api/competitions/${competition.id}/join`, {});
-      if (response.data.success) {
-        setIsJoined(true);
+      if (isTeamCompetition && userTeam) {
+        const response = await apiClient.post('/api/confirm-payment-and-join', {
+          paymentIntentId: 'free-competition',
+          competitionId: competition.id,
+          teamId: userTeam.id,
+        });
+        Alert.alert('Success', 'Your team has been registered for the competition!');
+        fetchUserTeam();
+      } else {
+        await apiClient.post(`/api/competitions/${competition.id}/join`, {});
         Alert.alert('Success', 'You have joined the competition!');
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to join competition');
+      setIsJoined(true);
+      checkIsJoined();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to join competition');
     } finally {
       setJoiningLeaving(false);
     }
   };
 
   const handleLeaveCompetition = async () => {
-    setJoiningLeaving(true);
-    try {
-      const response = await apiClient.delete(`/api/competitions/${competition.id}/leave`);
-      if (response.data.success) {
-        setIsJoined(false);
-        Alert.alert('Success', 'You have left the competition');
+    Alert.alert('Leave Competition', 'Are you sure you want to leave this competition?', [
+      { text: 'Cancel', style: 'cancel' },
+      { 
+        text: 'Leave', 
+        style: 'destructive',
+        onPress: async () => {
+          setJoiningLeaving(true);
+          try {
+            await apiClient.delete(`/api/competitions/${competition.id}/leave`);
+            setIsJoined(false);
+            Alert.alert('Success', 'You have left the competition');
+          } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to leave competition');
+          } finally {
+            setJoiningLeaving(false);
+          }
+        }
       }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to leave competition');
+    ]);
+  };
+
+  const handleCreateTeam = async () => {
+    if (!teamName.trim()) {
+      Alert.alert('Error', 'Please enter a team name');
+      return;
+    }
+    setCreatingTeam(true);
+    try {
+      const response = await apiClient.post(`/api/competitions/${competition.id}/teams`, { name: teamName.trim() });
+      setUserTeam(response.data);
+      setTeamName('');
+      setShowCreateTeamModal(false);
+      Alert.alert('Success', `Team "${response.data.name}" created! Share your invite code with team members.`);
+      fetchAllTeams();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to create team');
     } finally {
-      setJoiningLeaving(false);
+      setCreatingTeam(false);
+    }
+  };
+
+  const handleJoinTeam = async () => {
+    if (!inviteCode.trim()) {
+      Alert.alert('Error', 'Please enter an invite code');
+      return;
+    }
+    setJoiningTeam(true);
+    try {
+      const response = await apiClient.post('/api/teams/join', { inviteCode: inviteCode.trim() });
+      setUserTeam(response.data);
+      setInviteCode('');
+      setShowJoinTeamModal(false);
+      Alert.alert('Success', `You have joined the team!`);
+      fetchAllTeams();
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to join team');
+    } finally {
+      setJoiningTeam(false);
+    }
+  };
+
+  const handleLeaveTeam = async () => {
+    if (!userTeam) return;
+    Alert.alert('Leave Team', 'Are you sure you want to leave this team?', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Leave',
+        style: 'destructive',
+        onPress: async () => {
+          try {
+            await apiClient.delete(`/api/teams/${userTeam.id}/leave`);
+            setUserTeam(null);
+            Alert.alert('Success', 'You have left the team');
+            fetchAllTeams();
+          } catch (error: any) {
+            Alert.alert('Error', error.response?.data?.message || 'Failed to leave team');
+          }
+        }
+      }
+    ]);
+  };
+
+  const copyInviteCode = () => {
+    if (userTeam?.inviteCode) {
+      Clipboard.setString(userTeam.inviteCode);
+      setCopiedInvite(true);
+      setTimeout(() => setCopiedInvite(false), 2000);
+      Alert.alert('Copied!', 'Invite code copied to clipboard');
     }
   };
 
@@ -859,14 +1093,23 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
     
     try {
       if (platform === 'whatsapp') {
-        const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' ' + compUrl)}`;
-        Alert.alert('Share', 'Open WhatsApp and share this link');
+        Linking.openURL(`https://wa.me/?text=${encodeURIComponent(text + ' ' + compUrl)}`);
       } else if (platform === 'copy') {
-        Alert.alert('Success', 'Competition link: ' + compUrl);
+        Clipboard.setString(compUrl);
+        Alert.alert('Copied!', 'Competition link copied to clipboard');
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to share competition');
     }
+  };
+
+  const getBookButtonText = () => {
+    if (joiningLeaving) return 'Processing...';
+    if (isJoined) return 'Leave Competition';
+    if (pegsRemaining <= 0) return 'Fully Booked';
+    if (isTeamCompetition && userTeam?.paymentStatus === 'succeeded') return 'Team Registered';
+    if (isPaidCompetition) return `Book Peg - £${entryFee}`;
+    return 'Join Competition';
   };
 
   return (
@@ -955,24 +1198,80 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
           <Text style={styles.pegsRemainingText}>{pegsRemaining} pegs remaining</Text>
         </View>
 
+        {/* Team Management Section (for team competitions) */}
+        {isTeamCompetition && user && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsSectionTitle}>Team Management</Text>
+            {userTeam ? (
+              <View>
+                <View style={styles.teamInfoCard}>
+                  <Text style={styles.teamInfoName}>{userTeam.name}</Text>
+                  <Text style={styles.teamInfoRole}>
+                    {userTeam.createdBy === user.id ? 'Captain' : 'Member'}
+                  </Text>
+                  {userTeam.paymentStatus === 'succeeded' && (
+                    <View style={styles.teamPaidBadge}>
+                      <Text style={styles.teamPaidBadgeText}>Registered</Text>
+                    </View>
+                  )}
+                </View>
+                
+                {userTeam.createdBy === user.id && (
+                  <View style={styles.inviteCodeSection}>
+                    <Text style={styles.inviteCodeLabel}>Invite Code:</Text>
+                    <TouchableOpacity style={styles.inviteCodeBox} onPress={copyInviteCode}>
+                      <Text style={styles.inviteCodeText}>{userTeam.inviteCode}</Text>
+                      <Text style={styles.copyText}>{copiedInvite ? 'Copied!' : 'Tap to copy'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                )}
+                
+                {userTeam.paymentStatus !== 'succeeded' && (
+                  <TouchableOpacity 
+                    style={[styles.teamActionButton, { backgroundColor: '#dc3545' }]}
+                    onPress={handleLeaveTeam}
+                  >
+                    <Text style={styles.teamActionButtonText}>Leave Team</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
+            ) : (
+              <View style={{ flexDirection: 'row', gap: 12 }}>
+                <TouchableOpacity 
+                  style={[styles.teamActionButton, { flex: 1 }]}
+                  onPress={() => setShowCreateTeamModal(true)}
+                >
+                  <Text style={styles.teamActionButtonText}>Create Team</Text>
+                </TouchableOpacity>
+                <TouchableOpacity 
+                  style={[styles.teamActionButton, { flex: 1, backgroundColor: '#555' }]}
+                  onPress={() => setShowJoinTeamModal(true)}
+                >
+                  <Text style={styles.teamActionButtonText}>Join Team</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+        )}
+
         {/* Action Buttons */}
         {status !== 'completed' && (
           <View>
-            {isJoined ? (
+            {isJoined || (isTeamCompetition && userTeam?.paymentStatus === 'succeeded') ? (
               <TouchableOpacity 
-                style={[styles.bookButton, { backgroundColor: '#888' }]}
-                onPress={handleLeaveCompetition}
-                disabled={joiningLeaving}
+                style={[styles.bookButton, { backgroundColor: isJoined ? '#888' : '#1B7342' }]}
+                onPress={isJoined ? handleLeaveCompetition : undefined}
+                disabled={joiningLeaving || (isTeamCompetition && userTeam?.paymentStatus === 'succeeded')}
               >
-                <Text style={styles.bookButtonText}>{joiningLeaving ? 'Leaving...' : 'Leave Competition'}</Text>
+                <Text style={styles.bookButtonText}>{getBookButtonText()}</Text>
               </TouchableOpacity>
             ) : (
               <TouchableOpacity 
                 style={[styles.bookButton, { backgroundColor: '#1B7342', opacity: pegsRemaining > 0 ? 1 : 0.5 }]}
-                onPress={handleJoinCompetition}
+                onPress={handleBookPeg}
                 disabled={joiningLeaving || pegsRemaining <= 0}
               >
-                <Text style={styles.bookButtonText}>{joiningLeaving ? 'Joining...' : pegsRemaining > 0 ? 'Join Competition' : 'Fully Booked'}</Text>
+                <Text style={styles.bookButtonText}>{getBookButtonText()}</Text>
               </TouchableOpacity>
             )}
 
@@ -1092,15 +1391,29 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Pos</Text>
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader, styles.leaderboardCellWide]}>Angler</Text>
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Peg</Text>
+                  <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Fish</Text>
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Weight</Text>
                 </View>
                 {leaderboard.slice(0, 25).map((entry: any, idx: number) => (
                   <View key={idx} style={styles.leaderboardRow}>
                     <Text style={styles.leaderboardCell}>{entry.position || idx + 1}</Text>
-                    <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
-                      {entry.anglerName || entry.name || 'Unknown'}
-                    </Text>
+                    {entry.isTeam ? (
+                      <TouchableOpacity 
+                        style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
+                        onPress={() => onTeamClick && onTeamClick(entry.teamId)}
+                      >
+                        <Text style={styles.teamNameText} numberOfLines={1}>
+                          {entry.anglerName || entry.teamName || 'Team'}
+                        </Text>
+                        <Text style={styles.teamIcon}> [Team]</Text>
+                      </TouchableOpacity>
+                    ) : (
+                      <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
+                        {entry.anglerName || entry.name || 'Unknown'}
+                      </Text>
+                    )}
                     <Text style={styles.leaderboardCell}>{entry.pegNumber || '-'}</Text>
+                    <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
                     <Text style={styles.leaderboardCell}>{entry.weight || '0lb'}</Text>
                   </View>
                 ))}
@@ -1115,7 +1428,235 @@ function CompetitionDetailsPage({ competition, onClose }: any) {
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Create Team Modal */}
+      <Modal visible={showCreateTeamModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.teamModalContainer}>
+            <View style={styles.editModalHeader}>
+              <TouchableOpacity onPress={() => setShowCreateTeamModal(false)}>
+                <Text style={styles.editModalClose}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.editModalTitle}>Create Team</Text>
+              <TouchableOpacity onPress={handleCreateTeam} disabled={creatingTeam}>
+                <Text style={[styles.editModalSave, creatingTeam && { opacity: 0.5 }]}>
+                  {creatingTeam ? 'Creating...' : 'Create'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 16 }}>
+              <Text style={styles.modalLabel}>Team Name</Text>
+              <TextInput
+                style={styles.editInput}
+                placeholder="Enter team name"
+                placeholderTextColor="#666"
+                value={teamName}
+                onChangeText={setTeamName}
+              />
+              <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
+                You will be the team captain. Share the invite code with your teammates after creation.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Join Team Modal */}
+      <Modal visible={showJoinTeamModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.teamModalContainer}>
+            <View style={styles.editModalHeader}>
+              <TouchableOpacity onPress={() => setShowJoinTeamModal(false)}>
+                <Text style={styles.editModalClose}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.editModalTitle}>Join Team</Text>
+              <TouchableOpacity onPress={handleJoinTeam} disabled={joiningTeam}>
+                <Text style={[styles.editModalSave, joiningTeam && { opacity: 0.5 }]}>
+                  {joiningTeam ? 'Joining...' : 'Join'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 16 }}>
+              <Text style={styles.modalLabel}>Invite Code</Text>
+              <TextInput
+                style={styles.editInput}
+                placeholder="Enter invite code from team captain"
+                placeholderTextColor="#666"
+                value={inviteCode}
+                onChangeText={setInviteCode}
+                autoCapitalize="characters"
+              />
+              <Text style={{ color: '#999', fontSize: 12, marginTop: 8 }}>
+                Ask your team captain for the invite code to join their team.
+              </Text>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Booking/Payment Modal */}
+      <Modal visible={showBookingModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.bookingModalContainer}>
+            <View style={styles.editModalHeader}>
+              <TouchableOpacity onPress={() => setShowBookingModal(false)}>
+                <Text style={styles.editModalClose}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.editModalTitle}>Book Peg</Text>
+              <View style={{ width: 60 }} />
+            </View>
+            <BookingPaymentForm
+              competition={competition}
+              userTeam={userTeam}
+              user={user}
+              onSuccess={() => {
+                setShowBookingModal(false);
+                setIsJoined(true);
+                checkIsJoined();
+                fetchUserTeam();
+                Alert.alert('Success', isTeamCompetition ? 'Your team peg has been booked!' : 'Your peg has been booked!');
+              }}
+              onCancel={() => setShowBookingModal(false)}
+            />
+          </View>
+        </View>
+      </Modal>
     </View>
+  );
+}
+
+// Booking Payment Form Component
+function BookingPaymentForm({ competition, userTeam, user, onSuccess, onCancel }: any) {
+  const [acceptTerms, setAcceptTerms] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState('');
+
+  const entryFee = parseFloat(competition.entryFee) || 0;
+  const isTeamCompetition = competition.competitionMode === 'team';
+  const isFreeCompetition = entryFee === 0;
+
+  const handleFreeBooking = async () => {
+    setIsProcessing(true);
+    try {
+      const confirmBody: any = {
+        paymentIntentId: 'free-competition',
+        competitionId: competition.id,
+      };
+      if (isTeamCompetition && userTeam) {
+        confirmBody.teamId = userTeam.id;
+      }
+
+      await apiClient.post('/api/confirm-payment-and-join', confirmBody);
+      onSuccess();
+    } catch (error: any) {
+      setPaymentError(error.response?.data?.message || 'Failed to book competition');
+    } finally {
+      setIsProcessing(false);
+    }
+  };
+
+  const handlePaidBooking = async () => {
+    const competitionUrl = `${API_URL}/competitions/${competition.id}`;
+    
+    Alert.alert(
+      'Complete Payment on Website',
+      `To complete your booking for ${competition.name}, please visit pegslam.com and log in with your account.\n\nEntry Fee: £${entryFee.toFixed(2)}`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Open Website', 
+          onPress: () => {
+            if (isWeb) {
+              window.open(competitionUrl, '_blank');
+            } else {
+              Linking.openURL(competitionUrl);
+            }
+            onCancel();
+          }
+        }
+      ]
+    );
+  };
+
+  const handleBooking = () => {
+    if (isFreeCompetition) {
+      handleFreeBooking();
+    } else {
+      handlePaidBooking();
+    }
+  };
+
+  return (
+    <ScrollView style={{ flex: 1 }} contentContainerStyle={{ padding: 16 }}>
+      <View style={styles.bookingSummary}>
+        <Text style={styles.bookingSummaryTitle}>Booking Summary</Text>
+        <View style={styles.bookingSummaryRow}>
+          <Text style={styles.bookingSummaryLabel}>Competition</Text>
+          <Text style={styles.bookingSummaryValue}>{competition.name}</Text>
+        </View>
+        <View style={styles.bookingSummaryRow}>
+          <Text style={styles.bookingSummaryLabel}>Date</Text>
+          <Text style={styles.bookingSummaryValue}>{competition.date}</Text>
+        </View>
+        <View style={styles.bookingSummaryRow}>
+          <Text style={styles.bookingSummaryLabel}>Venue</Text>
+          <Text style={styles.bookingSummaryValue}>{competition.venue}</Text>
+        </View>
+        {isTeamCompetition && userTeam && (
+          <View style={styles.bookingSummaryRow}>
+            <Text style={styles.bookingSummaryLabel}>Team</Text>
+            <Text style={styles.bookingSummaryValue}>{userTeam.name}</Text>
+          </View>
+        )}
+        <View style={[styles.bookingSummaryRow, { borderTopWidth: 1, borderTopColor: '#333', marginTop: 8, paddingTop: 8 }]}>
+          <Text style={[styles.bookingSummaryLabel, { fontWeight: 'bold', fontSize: 16 }]}>Total</Text>
+          <Text style={[styles.bookingSummaryValue, { fontWeight: 'bold', fontSize: 18, color: '#1B7342' }]}>
+            {isFreeCompetition ? 'FREE' : `£${entryFee.toFixed(2)}`}
+          </Text>
+        </View>
+      </View>
+
+      {paymentError ? (
+        <View style={styles.paymentErrorBox}>
+          <Text style={styles.paymentErrorText}>{paymentError}</Text>
+          <TouchableOpacity style={styles.retryButton} onPress={() => { setPaymentError(''); setAcceptTerms(false); }}>
+            <Text style={styles.retryButtonText}>Try Again</Text>
+          </TouchableOpacity>
+        </View>
+      ) : (
+        <>
+          <TouchableOpacity 
+            style={styles.termsCheckbox}
+            onPress={() => setAcceptTerms(!acceptTerms)}
+          >
+            <View style={[styles.checkbox, acceptTerms && styles.checkboxChecked]}>
+              {acceptTerms && <Text style={styles.checkmark}>✓</Text>}
+            </View>
+            <Text style={styles.termsText}>
+              I agree to the terms and conditions and understand that this booking is non-refundable.
+            </Text>
+          </TouchableOpacity>
+
+          {acceptTerms && (
+            <TouchableOpacity
+              style={[styles.payButton, isProcessing && styles.payButtonDisabled]}
+              onPress={handleBooking}
+              disabled={isProcessing}
+            >
+              <Text style={styles.payButtonText}>
+                {isProcessing ? 'Processing...' : isFreeCompetition ? 'Complete Booking' : 'Continue to Payment'}
+              </Text>
+            </TouchableOpacity>
+          )}
+        </>
+      )}
+
+      <View style={styles.securityBadge}>
+        <Text style={styles.securityBadgeText}>
+          {isFreeCompetition ? 'Free registration' : 'Secure payment via website'}
+        </Text>
+      </View>
+    </ScrollView>
   );
 }
 
@@ -2179,14 +2720,62 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || '');
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || '');
   const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || '');
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || '');
   const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || '');
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || '');
   const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || '');
+  const [tiktokUrl, setTiktokUrl] = useState(user.tiktokUrl || '');
+  const [avatarUri, setAvatarUri] = useState<string | null>(null);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  const pickAvatar = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setAvatarUri(result.assets[0].uri);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+    }
+  };
+
+  const uploadAvatar = async (): Promise<string | null> => {
+    if (!avatarUri) return user.avatar || null;
+    
+    try {
+      setUploadingAvatar(true);
+      const formData = new FormData();
+      formData.append('image', {
+        uri: avatarUri,
+        type: 'image/jpeg',
+        name: 'avatar.jpg',
+      } as any);
+      formData.append('type', 'avatar');
+      
+      const response = await apiClient.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data.url;
+    } catch (error) {
+      console.error('Avatar upload error:', error);
+      Alert.alert('Error', 'Failed to upload profile picture');
+      return user.avatar || null;
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const handleSave = async () => {
     setLoading(true);
     try {
+      const newAvatarUrl = await uploadAvatar();
+      
       await apiClient.patch('/api/user/profile', {
         firstName,
         lastName,
@@ -2196,9 +2785,12 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
         favouriteMethod,
         favouriteSpecies,
         youtubeUrl,
+        youtubeVideoUrl,
         facebookUrl,
         twitterUrl,
         instagramUrl,
+        tiktokUrl,
+        avatar: newAvatarUrl,
       });
       Alert.alert('Success', 'Profile updated successfully!');
       onSave({
@@ -2211,9 +2803,12 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
         favouriteMethod,
         favouriteSpecies,
         youtubeUrl,
+        youtubeVideoUrl,
         facebookUrl,
         twitterUrl,
         instagramUrl,
+        tiktokUrl,
+        avatar: newAvatarUrl,
       });
       onClose();
     } catch (error: any) {
@@ -2240,6 +2835,30 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
           </View>
 
           <ScrollView style={styles.editModalContent} showsVerticalScrollIndicator={false}>
+            {/* Avatar Upload Section */}
+            <View style={styles.editSection}>
+              <Text style={styles.editSectionTitle}>Profile Picture</Text>
+              <View style={{ alignItems: 'center', marginBottom: 16 }}>
+                <TouchableOpacity onPress={pickAvatar} style={{ alignItems: 'center' }}>
+                  {avatarUri ? (
+                    <Image source={{ uri: avatarUri }} style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 8 }} />
+                  ) : user.avatar ? (
+                    <Image source={{ uri: user.avatar }} style={{ width: 100, height: 100, borderRadius: 50, marginBottom: 8 }} />
+                  ) : (
+                    <View style={{ width: 100, height: 100, borderRadius: 50, backgroundColor: '#1B7342', justifyContent: 'center', alignItems: 'center', marginBottom: 8 }}>
+                      <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>
+                        {user.firstName?.[0] || 'U'}{user.lastName?.[0] || 'S'}
+                      </Text>
+                    </View>
+                  )}
+                  <Text style={{ color: '#1B7342', fontSize: 14 }}>Tap to change photo</Text>
+                </TouchableOpacity>
+                {uploadingAvatar && (
+                  <ActivityIndicator size="small" color="#1B7342" style={{ marginTop: 8 }} />
+                )}
+              </View>
+            </View>
+
             <View style={styles.editSection}>
               <Text style={styles.editSectionTitle}>Basic Information</Text>
               <TextInput
@@ -2341,6 +2960,26 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
                   onChangeText={setInstagramUrl}
                 />
               </View>
+              <View style={styles.socialInputGroup}>
+                <Text style={styles.socialLabel}>TikTok</Text>
+                <TextInput
+                  style={styles.editInput}
+                  placeholder="TikTok URL"
+                  placeholderTextColor="#666"
+                  value={tiktokUrl}
+                  onChangeText={setTiktokUrl}
+                />
+              </View>
+              <View style={styles.socialInputGroup}>
+                <Text style={styles.socialLabel}>YouTube Video</Text>
+                <TextInput
+                  style={styles.editInput}
+                  placeholder="Featured YouTube Video URL"
+                  placeholderTextColor="#666"
+                  value={youtubeVideoUrl}
+                  onChangeText={setYoutubeVideoUrl}
+                />
+              </View>
             </View>
 
             <View style={{ height: 30 }} />
@@ -2364,12 +3003,68 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const [activeTab, setActiveTab] = useState('history');
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showGalleryUploadModal, setShowGalleryUploadModal] = useState(false);
+  const [galleryPhotoUri, setGalleryPhotoUri] = useState<string | null>(null);
+  const [galleryCaption, setGalleryCaption] = useState('');
+  const [galleryUploading, setGalleryUploading] = useState(false);
 
   useEffect(() => {
     fetchStats();
     fetchGallery();
     fetchParticipations();
   }, [user.username]);
+
+  const pickGalleryPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+      if (!result.canceled && result.assets[0]) {
+        setGalleryPhotoUri(result.assets[0].uri);
+        setShowGalleryUploadModal(true);
+      }
+    } catch (error) {
+      console.error('Image picker error:', error);
+    }
+  };
+
+  const uploadGalleryPhoto = async () => {
+    if (!galleryPhotoUri) return;
+    
+    try {
+      setGalleryUploading(true);
+      const formData = new FormData();
+      formData.append('image', {
+        uri: galleryPhotoUri,
+        type: 'image/jpeg',
+        name: 'gallery.jpg',
+      } as any);
+      formData.append('type', 'gallery');
+      
+      const uploadResponse = await apiClient.post('/api/upload', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      
+      await apiClient.post('/api/user/gallery', {
+        url: uploadResponse.data.url,
+        caption: galleryCaption,
+      });
+      
+      Alert.alert('Success', 'Photo added to gallery!');
+      setShowGalleryUploadModal(false);
+      setGalleryPhotoUri(null);
+      setGalleryCaption('');
+      fetchGallery();
+    } catch (error) {
+      console.error('Gallery upload error:', error);
+      Alert.alert('Error', 'Failed to upload photo');
+    } finally {
+      setGalleryUploading(false);
+    }
+  };
 
   const fetchStats = async () => {
     try {
@@ -2427,13 +3122,13 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
     if (user.location) completed++;
     if (user.favouriteMethod) completed++;
     if (user.favouriteSpecies) completed++;
-    if (user.youtubeUrl || user.facebookUrl || user.twitterUrl || user.instagramUrl) completed += 2;
+    if (user.youtubeUrl || user.facebookUrl || user.twitterUrl || user.instagramUrl || user.tiktokUrl) completed += 2;
     if (user.avatar) completed++;
     return Math.round((completed / total) * 100);
   };
 
   const profileCompletion = calculateProfileCompletion();
-  const hasSocialLinks = user.youtubeUrl || user.facebookUrl || user.twitterUrl || user.instagramUrl;
+  const hasSocialLinks = user.youtubeUrl || user.facebookUrl || user.twitterUrl || user.instagramUrl || user.tiktokUrl;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2578,6 +3273,11 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                   <Text style={styles.socialLinkText}>Instagram</Text>
                 </TouchableOpacity>
               )}
+              {user.tiktokUrl && (
+                <TouchableOpacity>
+                  <Text style={styles.socialLinkText}>TikTok</Text>
+                </TouchableOpacity>
+              )}
             </View>
           </View>
         )}
@@ -2602,6 +3302,12 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               onPress={() => setActiveTab('gallery')}
             >
               <Text style={[styles.tabButtonText, activeTab === 'gallery' && styles.tabButtonTextActive]}>Gallery</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tabButton, activeTab === 'settings' && styles.tabButtonActive]}
+              onPress={() => setActiveTab('settings')}
+            >
+              <Text style={[styles.tabButtonText, activeTab === 'settings' && styles.tabButtonTextActive]}>Settings</Text>
             </TouchableOpacity>
           </View>
 
@@ -2652,7 +3358,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
           {activeTab === 'gallery' && (
             <View>
               <Text style={styles.tabTitle}>My Gallery</Text>
-              <TouchableOpacity style={styles.galleryUploadButton}>
+              <TouchableOpacity style={styles.galleryUploadButton} onPress={pickGalleryPhoto}>
                 <Text style={styles.galleryUploadButtonText}>Add Photo to Gallery</Text>
               </TouchableOpacity>
               {galleryLoading ? (
@@ -2664,7 +3370,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                   {gallery.map((photo: any) => (
                     <View key={photo.id} style={styles.galleryPhoto}>
                       <Image
-                        source={{ uri: photo.url }}
+                        source={{ uri: photo.url?.startsWith('http') ? photo.url : `${API_URL}${photo.url}` }}
                         style={styles.galleryPhotoImage}
                         resizeMode="cover"
                       />
@@ -2707,6 +3413,49 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
         visible={showPasswordModal}
         onClose={() => setShowPasswordModal(false)}
       />
+
+      {/* Gallery Upload Modal */}
+      <Modal visible={showGalleryUploadModal} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.galleryUploadModalContainer}>
+            <View style={styles.editModalHeader}>
+              <TouchableOpacity onPress={() => {
+                setShowGalleryUploadModal(false);
+                setGalleryPhotoUri(null);
+                setGalleryCaption('');
+              }}>
+                <Text style={styles.editModalClose}>Cancel</Text>
+              </TouchableOpacity>
+              <Text style={styles.editModalTitle}>Add Photo</Text>
+              <TouchableOpacity onPress={uploadGalleryPhoto} disabled={galleryUploading}>
+                <Text style={[styles.editModalSave, galleryUploading && { opacity: 0.5 }]}>
+                  {galleryUploading ? 'Uploading...' : 'Upload'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+            <View style={{ padding: 16 }}>
+              {galleryPhotoUri && (
+                <Image 
+                  source={{ uri: galleryPhotoUri }} 
+                  style={{ width: '100%', height: 200, borderRadius: 8, marginBottom: 16 }} 
+                  resizeMode="cover"
+                />
+              )}
+              <TextInput
+                style={styles.editInput}
+                placeholder="Add a caption (optional)"
+                placeholderTextColor="#666"
+                value={galleryCaption}
+                onChangeText={setGalleryCaption}
+                multiline
+              />
+              {galleryUploading && (
+                <ActivityIndicator size="large" color="#1B7342" style={{ marginTop: 16 }} />
+              )}
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -2734,6 +3483,10 @@ export default function App() {
   const [sortBy, setSortBy] = useState('name-asc');
   const [page, setPage] = useState(1);
   const [galleryFilter, setGalleryFilter] = useState('all');
+  const [selectedSponsor, setSelectedSponsor] = useState<any>(null);
+  const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [teamDetails, setTeamDetails] = useState<any>(null);
+  const [teamLoading, setTeamLoading] = useState(false);
 
   useEffect(() => {
     checkUser();
@@ -2783,6 +3536,28 @@ export default function App() {
       setDataLoading(false);
     }
   };
+
+  const fetchTeamDetails = async (teamId: string) => {
+    try {
+      setTeamLoading(true);
+      const response = await apiClient.get(`/api/team/${teamId}`);
+      setTeamDetails(response.data);
+    } catch (error) {
+      console.error('Error fetching team details:', error);
+      setTeamDetails(null);
+    } finally {
+      setTeamLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (selectedTeamId) {
+      fetchTeamDetails(selectedTeamId);
+    } else {
+      setTeamDetails(null);
+      setTeamLoading(false);
+    }
+  }, [selectedTeamId]);
 
   const handleAnglerSearch = (value: string) => {
     setSearch(value);
@@ -2894,7 +3669,10 @@ export default function App() {
       {selectedCompetition && (
         <CompetitionDetailsPage 
           competition={selectedCompetition} 
-          onClose={() => setSelectedCompetition(null)} 
+          onClose={() => setSelectedCompetition(null)}
+          onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
+          user={currentUser}
+          onLogin={() => setShowLoginModal(true)}
         />
       )}
 
@@ -2943,7 +3721,7 @@ export default function App() {
               )}
             </View>
 
-            <LeaderboardPage competitions={competitions} />
+            <LeaderboardPage competitions={competitions} onTeamClick={(teamId: string) => setSelectedTeamId(teamId)} />
 
             {gallery.length > 0 && (
               <View style={styles.section}>
@@ -3014,7 +3792,7 @@ export default function App() {
 
         {/* LEADERBOARD PAGE */}
         {currentPage === 'leaderboard' && (
-          <LeaderboardPage competitions={competitions} />
+          <LeaderboardPage competitions={competitions} onTeamClick={(teamId: string) => setSelectedTeamId(teamId)} />
         )}
 
         {/* ANGLER DIRECTORY PAGE */}
@@ -3125,10 +3903,19 @@ export default function App() {
                         <Text style={styles.sponsorTierTitle}>{tierGroup.title}</Text>
                       </View>
                       {tierSponsors.map((sponsor: any) => (
-                        <View key={sponsor.id} style={styles.sponsorListItem}>
+                        <TouchableOpacity 
+                          key={sponsor.id} 
+                          style={styles.sponsorListItem}
+                          onPress={() => {
+                            const logoUrl = sponsor.logo && !sponsor.logo.startsWith('http') 
+                              ? `${API_URL}${sponsor.logo}` 
+                              : sponsor.logo;
+                            setSelectedSponsor({ ...sponsor, logo: logoUrl });
+                          }}
+                        >
                           <View style={styles.sponsorLogoContainer}>
                             {sponsor.logo ? (
-                              <Image source={{ uri: sponsor.logo }} style={styles.sponsorLogo} resizeMode="contain" />
+                              <Image source={{ uri: sponsor.logo.startsWith('http') ? sponsor.logo : `${API_URL}${sponsor.logo}` }} style={styles.sponsorLogo} resizeMode="contain" />
                             ) : (
                               <Text style={styles.sponsorLogoPlaceholder}>{sponsor.name[0]}</Text>
                             )}
@@ -3137,7 +3924,8 @@ export default function App() {
                             <Text style={styles.sponsorItemName}>{sponsor.name}</Text>
                             <Text style={styles.sponsorItemDesc} numberOfLines={2}>{sponsor.shortDescription || sponsor.description}</Text>
                           </View>
-                        </View>
+                          <Text style={styles.sponsorTapHint}>Tap for details</Text>
+                        </TouchableOpacity>
                       ))}
                     </View>
                   );
@@ -3263,6 +4051,153 @@ export default function App() {
           setShowLoginModal(false);
         }}
       />
+
+      {/* Team Member Modal */}
+      <Modal visible={!!selectedTeamId} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.teamModalContainer}>
+            <View style={styles.teamModalHeader}>
+              <Text style={styles.teamModalTitle}>
+                Team Members{teamDetails ? ` - ${teamDetails.teamName}` : ''}
+              </Text>
+              <TouchableOpacity onPress={() => setSelectedTeamId(null)}>
+                <Text style={styles.teamModalClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            {teamLoading ? (
+              <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 40 }} />
+            ) : teamDetails && teamDetails.members ? (
+              <ScrollView style={styles.teamModalContent}>
+                {teamDetails.members.map((member: any) => (
+                  <View key={member.userId} style={styles.teamMemberRow}>
+                    <View style={styles.teamMemberAvatar}>
+                      {member.avatar ? (
+                        <Image source={{ uri: member.avatar }} style={styles.teamMemberAvatarImage} />
+                      ) : (
+                        <Text style={styles.teamMemberAvatarText}>
+                          {member.name?.split(' ').map((n: string) => n[0]).join('') || 'U'}
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.teamMemberInfo}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                        <Text style={styles.teamMemberName}>{member.name}</Text>
+                        {member.isCaptain && (
+                          <View style={styles.captainBadge}>
+                            <Text style={styles.captainBadgeText}>Captain</Text>
+                          </View>
+                        )}
+                      </View>
+                      <Text style={styles.teamMemberUsername}>@{member.username}</Text>
+                      {member.club && <Text style={styles.teamMemberClub}>{member.club}</Text>}
+                    </View>
+                  </View>
+                ))}
+              </ScrollView>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No team members found</Text>
+              </View>
+            )}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Sponsor Details Modal */}
+      <Modal visible={!!selectedSponsor} animationType="slide" transparent>
+        <View style={styles.modalOverlay}>
+          <View style={styles.sponsorModalContainer}>
+            <View style={styles.sponsorModalHeader}>
+              <TouchableOpacity onPress={() => setSelectedSponsor(null)}>
+                <Text style={styles.sponsorModalClose}>Close</Text>
+              </TouchableOpacity>
+            </View>
+            {selectedSponsor && (
+              <ScrollView style={styles.sponsorModalContent}>
+                <View style={styles.sponsorModalLogoContainer}>
+                  {selectedSponsor.logo ? (
+                    <Image source={{ uri: selectedSponsor.logo }} style={styles.sponsorModalLogo} resizeMode="contain" />
+                  ) : (
+                    <View style={styles.sponsorModalLogoPlaceholder}>
+                      <Text style={styles.sponsorModalLogoText}>{selectedSponsor.name[0]}</Text>
+                    </View>
+                  )}
+                </View>
+                <Text style={styles.sponsorModalName}>{selectedSponsor.name}</Text>
+                <View style={[styles.sponsorTierBadge, { backgroundColor: getTierInfo(selectedSponsor.tier).color }]}>
+                  <Text style={styles.sponsorTierBadgeText}>{getTierInfo(selectedSponsor.tier).label}</Text>
+                </View>
+                <Text style={styles.sponsorModalDescription}>
+                  {selectedSponsor.description || selectedSponsor.shortDescription || 'No description available.'}
+                </Text>
+                {selectedSponsor.website && (
+                  <TouchableOpacity
+                    style={styles.sponsorWebsiteButton}
+                    onPress={() => {
+                      if ((window as any).cordova) {
+                        (window as any).cordova.InAppBrowser.open(selectedSponsor.website, '_blank');
+                      } else {
+                        window.open(selectedSponsor.website, '_blank');
+                      }
+                    }}
+                  >
+                    <Text style={styles.sponsorWebsiteButtonText}>Visit Website</Text>
+                  </TouchableOpacity>
+                )}
+                {selectedSponsor.social && (typeof selectedSponsor.social === 'object') && (
+                  <View style={styles.sponsorSocialRow}>
+                    {selectedSponsor.social.facebook && typeof selectedSponsor.social.facebook === 'string' && selectedSponsor.social.facebook.startsWith('http') && (
+                      <TouchableOpacity
+                        style={styles.sponsorSocialButton}
+                        onPress={() => {
+                          const url = selectedSponsor.social.facebook;
+                          if ((window as any).cordova) {
+                            (window as any).cordova.InAppBrowser.open(url, '_blank');
+                          } else {
+                            window.open(url, '_blank');
+                          }
+                        }}
+                      >
+                        <Text style={styles.sponsorSocialButtonText}>Facebook</Text>
+                      </TouchableOpacity>
+                    )}
+                    {selectedSponsor.social.twitter && typeof selectedSponsor.social.twitter === 'string' && selectedSponsor.social.twitter.startsWith('http') && (
+                      <TouchableOpacity
+                        style={styles.sponsorSocialButton}
+                        onPress={() => {
+                          const url = selectedSponsor.social.twitter;
+                          if ((window as any).cordova) {
+                            (window as any).cordova.InAppBrowser.open(url, '_blank');
+                          } else {
+                            window.open(url, '_blank');
+                          }
+                        }}
+                      >
+                        <Text style={styles.sponsorSocialButtonText}>X / Twitter</Text>
+                      </TouchableOpacity>
+                    )}
+                    {selectedSponsor.social.instagram && typeof selectedSponsor.social.instagram === 'string' && selectedSponsor.social.instagram.startsWith('http') && (
+                      <TouchableOpacity
+                        style={styles.sponsorSocialButton}
+                        onPress={() => {
+                          const url = selectedSponsor.social.instagram;
+                          if ((window as any).cordova) {
+                            (window as any).cordova.InAppBrowser.open(url, '_blank');
+                          } else {
+                            window.open(url, '_blank');
+                          }
+                        }}
+                      >
+                        <Text style={styles.sponsorSocialButtonText}>Instagram</Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                )}
+              </ScrollView>
+            )}
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -3806,6 +4741,214 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: 'bold',
     fontSize: 16,
+  },
+  teamInfoCard: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  teamInfoName: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 4,
+  },
+  teamInfoRole: {
+    color: '#1B7342',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  teamPaidBadge: {
+    backgroundColor: '#1B7342',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 4,
+    alignSelf: 'flex-start',
+    marginTop: 8,
+  },
+  teamPaidBadgeText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  inviteCodeSection: {
+    marginTop: 12,
+  },
+  inviteCodeLabel: {
+    color: '#999',
+    fontSize: 12,
+    marginBottom: 4,
+  },
+  inviteCodeBox: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#1B7342',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  inviteCodeText: {
+    color: '#1B7342',
+    fontSize: 18,
+    fontWeight: 'bold',
+    letterSpacing: 2,
+  },
+  copyText: {
+    color: '#666',
+    fontSize: 12,
+  },
+  teamActionButton: {
+    backgroundColor: '#1B7342',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  teamActionButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  teamModalContainer: {
+    backgroundColor: '#0a0a0a',
+    marginTop: 200,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    maxHeight: 300,
+  },
+  bookingModalContainer: {
+    flex: 1,
+    backgroundColor: '#0a0a0a',
+    marginTop: 60,
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
+  },
+  modalLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  bookingSummary: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 20,
+  },
+  bookingSummaryTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 12,
+  },
+  bookingSummaryRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    paddingVertical: 8,
+  },
+  bookingSummaryLabel: {
+    color: '#999',
+    fontSize: 14,
+  },
+  bookingSummaryValue: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    flex: 1,
+    textAlign: 'right',
+  },
+  termsCheckbox: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 20,
+  },
+  checkbox: {
+    width: 24,
+    height: 24,
+    borderRadius: 4,
+    borderWidth: 2,
+    borderColor: '#1B7342',
+    marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#1B7342',
+  },
+  checkmark: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  termsText: {
+    color: '#999',
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
+  },
+  cardInputLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+    marginBottom: 8,
+  },
+  cardField: {
+    width: '100%',
+    height: 50,
+    marginBottom: 20,
+  },
+  payButton: {
+    backgroundColor: '#1B7342',
+    paddingVertical: 16,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  payButtonDisabled: {
+    opacity: 0.5,
+  },
+  payButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 16,
+  },
+  paymentErrorBox: {
+    backgroundColor: '#2a1a1a',
+    borderRadius: 8,
+    padding: 16,
+    marginBottom: 20,
+    borderWidth: 1,
+    borderColor: '#dc3545',
+  },
+  paymentErrorText: {
+    color: '#dc3545',
+    fontSize: 14,
+    marginBottom: 12,
+  },
+  retryButton: {
+    backgroundColor: '#dc3545',
+    paddingVertical: 10,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  securityBadge: {
+    alignItems: 'center',
+    marginTop: 20,
+    paddingVertical: 12,
+  },
+  securityBadgeText: {
+    color: '#666',
+    fontSize: 12,
   },
   galleryItem: {
     marginRight: 12,
@@ -4798,6 +5941,13 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 16,
     borderTopRightRadius: 16,
   },
+  galleryUploadModalContainer: {
+    backgroundColor: '#0a0a0a',
+    marginTop: 200,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    maxHeight: 400,
+  },
   editModalHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -5018,6 +6168,226 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
+  // Team Display Styles (Leaderboard)
+  teamInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flex: 1,
+  },
+  teamIconSmall: {
+    marginRight: 6,
+  },
+  teamIconText: {
+    fontSize: 14,
+  },
+  teamNameTouchable: {
+    borderBottomWidth: 1,
+    borderBottomColor: '#1B7342',
+  },
+  teamNameLink: {
+    color: '#1B7342',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  teamNameText: {
+    color: '#1B7342',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  teamIcon: {
+    color: '#999',
+    fontSize: 10,
+    marginLeft: 4,
+  },
+  // Team Modal Styles
+  teamModalContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '70%',
+    overflow: 'hidden',
+  },
+  teamModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  teamModalTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#fff',
+    flex: 1,
+  },
+  teamModalClose: {
+    color: '#1B7342',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  teamModalContent: {
+    padding: 16,
+  },
+  teamMemberRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  teamMemberAvatar: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: '#1B7342',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 12,
+    overflow: 'hidden',
+  },
+  teamMemberAvatarImage: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+  },
+  teamMemberAvatarText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  teamMemberInfo: {
+    flex: 1,
+  },
+  teamMemberName: {
+    color: '#fff',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  teamMemberUsername: {
+    color: '#999',
+    fontSize: 13,
+    marginTop: 2,
+  },
+  teamMemberClub: {
+    color: '#888',
+    fontSize: 12,
+    marginTop: 2,
+  },
+  captainBadge: {
+    backgroundColor: '#1B7342',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
+    marginLeft: 8,
+  },
+  captainBadgeText: {
+    color: '#000',
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  // Sponsor Modal Styles
+  sponsorModalContainer: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 12,
+    width: '90%',
+    maxWidth: 400,
+    maxHeight: '80%',
+    overflow: 'hidden',
+  },
+  sponsorModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    padding: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  sponsorModalClose: {
+    color: '#1B7342',
+    fontWeight: '600',
+    fontSize: 16,
+  },
+  sponsorModalContent: {
+    padding: 16,
+  },
+  sponsorModalLogoContainer: {
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sponsorModalLogo: {
+    width: 120,
+    height: 80,
+  },
+  sponsorModalLogoPlaceholder: {
+    width: 120,
+    height: 80,
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderRadius: 8,
+  },
+  sponsorModalLogoText: {
+    fontSize: 32,
+    fontWeight: 'bold',
+    color: '#1B7342',
+  },
+  sponsorModalName: {
+    fontSize: 22,
+    fontWeight: 'bold',
+    color: '#fff',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  sponsorTierBadge: {
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 16,
+    marginBottom: 16,
+  },
+  sponsorTierBadgeText: {
+    color: '#fff',
+    fontWeight: 'bold',
+    fontSize: 12,
+    textTransform: 'uppercase',
+  },
+  sponsorModalDescription: {
+    color: '#ccc',
+    fontSize: 14,
+    lineHeight: 22,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  sponsorWebsiteButton: {
+    backgroundColor: '#1B7342',
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sponsorWebsiteButtonText: {
+    color: '#000',
+    fontWeight: 'bold',
+    fontSize: 14,
+  },
+  sponsorSocialRow: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  sponsorSocialButton: {
+    backgroundColor: '#2a2a2a',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+  },
+  sponsorSocialButtonText: {
+    color: '#1B7342',
+    fontWeight: '600',
+    fontSize: 13,
+  },
 });
 
-// Styles for new sections

@@ -27,6 +27,7 @@ import {
   UserCircle,
   LogOut,
   Images,
+  Youtube,
 } from "lucide-react";
 import {
   Sidebar,
@@ -46,15 +47,17 @@ import AdminSponsors from "./admin-sponsors";
 import AdminSettings from "./admin-settings";
 import AdminNews from "./admin-news";
 import AdminGallery from "./admin-gallery";
+import AdminYoutubeVideos from "./admin-youtube-videos";
 import AdminProfile from "./admin-profile";
 import AdminSlider from "./admin-slider";
 import AdminStaff from "./admin-staff";
+import AdminTeams from "./admin-teams";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck, UsersRound } from "lucide-react";
 
-type AdminSection = "dashboard" | "competitions" | "anglers" | "sponsors" | "news" | "gallery" | "settings" | "profile" | "slider" | "staff";
+type AdminSection = "dashboard" | "competitions" | "teams" | "anglers" | "sponsors" | "news" | "gallery" | "youtube-videos" | "settings" | "profile" | "slider" | "staff";
 
 interface AdminUser {
   id: string;
@@ -138,10 +141,12 @@ export default function AdminDashboard() {
   const menuItems = [
     { id: "dashboard" as const, title: "Dashboard", icon: BarChart3 },
     { id: "competitions" as const, title: "Competitions", icon: Trophy },
+    { id: "teams" as const, title: "Teams", icon: UsersRound },
     { id: "anglers" as const, title: "Anglers", icon: Users },
     { id: "sponsors" as const, title: "Sponsors", icon: Coins },
     { id: "news" as const, title: "News", icon: Newspaper },
     { id: "gallery" as const, title: "Gallery", icon: ImageIcon },
+    { id: "youtube-videos" as const, title: "YouTube Videos", icon: Youtube },
     { id: "slider" as const, title: "Slider & Logo", icon: Images },
     // Show staff management only to admins
     ...(admin?.role === "admin" ? [{ id: "staff" as const, title: "Staff", icon: ShieldCheck }] : []),
@@ -187,6 +192,8 @@ export default function AdminDashboard() {
     switch (activeSection) {
       case "competitions":
         return <AdminCompetitions />;
+      case "teams":
+        return <AdminTeams />;
       case "anglers":
         return <AdminAnglers />;
       case "sponsors":
@@ -195,6 +202,8 @@ export default function AdminDashboard() {
         return <AdminNews />;
       case "gallery":
         return <AdminGallery />;
+      case "youtube-videos":
+        return <AdminYoutubeVideos />;
       case "slider":
         return <AdminSlider />;
       case "staff":

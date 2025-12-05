@@ -1,4 +1,4 @@
-import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Payment, type InsertPayment } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type Admin, type InsertAdmin, type UpdateAdmin, type Staff, type InsertStaff, type UpdateStaff, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type YoutubeVideo, type InsertYoutubeVideo, type UpdateYoutubeVideo, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 
 // modify the interface with any CRUD methods
@@ -81,6 +81,14 @@ export interface IStorage {
   updateGalleryImage(id: string, updates: UpdateGalleryImage): Promise<GalleryImage | undefined>;
   deleteGalleryImage(id: string): Promise<boolean>;
   
+  // YouTube Video methods
+  getAllYoutubeVideos(): Promise<YoutubeVideo[]>;
+  getActiveYoutubeVideos(): Promise<YoutubeVideo[]>;
+  getYoutubeVideo(id: string): Promise<YoutubeVideo | undefined>;
+  createYoutubeVideo(video: InsertYoutubeVideo): Promise<YoutubeVideo>;
+  updateYoutubeVideo(id: string, updates: UpdateYoutubeVideo): Promise<YoutubeVideo | undefined>;
+  deleteYoutubeVideo(id: string): Promise<boolean>;
+  
   // Competition methods
   getAllCompetitions(): Promise<Competition[]>;
   getCompetition(id: string): Promise<Competition | undefined>;
@@ -144,6 +152,7 @@ export class MemStorage implements IStorage {
   private sponsors: Map<string, Sponsor>;
   private news: Map<string, News>;
   private galleryImages: Map<string, GalleryImage>;
+  private youtubeVideos: Map<string, YoutubeVideo>;
   private competitions: Map<string, Competition>;
   private competitionParticipants: Map<string, CompetitionParticipant>;
   private teams: Map<string, Team>;
@@ -160,6 +169,7 @@ export class MemStorage implements IStorage {
     this.sponsors = new Map();
     this.news = new Map();
     this.galleryImages = new Map();
+    this.youtubeVideos = new Map();
     this.competitions = new Map();
     this.competitionParticipants = new Map();
     this.teams = new Map();
@@ -1022,6 +1032,47 @@ export class MemStorage implements IStorage {
     return this.galleryImages.delete(id);
   }
 
+  async getAllYoutubeVideos(): Promise<YoutubeVideo[]> {
+    return Array.from(this.youtubeVideos.values()).sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getActiveYoutubeVideos(): Promise<YoutubeVideo[]> {
+    return Array.from(this.youtubeVideos.values())
+      .filter(v => v.active)
+      .sort((a, b) => a.displayOrder - b.displayOrder);
+  }
+
+  async getYoutubeVideo(id: string): Promise<YoutubeVideo | undefined> {
+    return this.youtubeVideos.get(id);
+  }
+
+  async createYoutubeVideo(insertVideo: InsertYoutubeVideo): Promise<YoutubeVideo> {
+    const id = randomUUID();
+    const video: YoutubeVideo = {
+      ...insertVideo,
+      id,
+      description: insertVideo.description || null,
+      displayOrder: insertVideo.displayOrder ?? 0,
+      active: insertVideo.active ?? true,
+      createdAt: new Date(),
+    };
+    this.youtubeVideos.set(id, video);
+    return video;
+  }
+
+  async updateYoutubeVideo(id: string, updates: UpdateYoutubeVideo): Promise<YoutubeVideo | undefined> {
+    const video = this.youtubeVideos.get(id);
+    if (!video) return undefined;
+
+    const updatedVideo = { ...video, ...updates };
+    this.youtubeVideos.set(id, updatedVideo);
+    return updatedVideo;
+  }
+
+  async deleteYoutubeVideo(id: string): Promise<boolean> {
+    return this.youtubeVideos.delete(id);
+  }
+
   async getAllCompetitions(): Promise<Competition[]> {
     return Array.from(this.competitions.values()).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
@@ -1300,16 +1351,18 @@ export class MemStorage implements IStorage {
     
     console.log(`[LEADERBOARD] Grouped into ${participantMap.size} rows (${isTeamCompetition ? 'teams' : 'individuals'})`);
     
-    // Create aggregated entries with total weight
-    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([key, data]) => {
+    // Create aggregated entries with total weight and fish count
+    const aggregatedEntries = Array.from(participantMap.entries()).map(([key, data]) => {
       const latestEntry = data.entries[data.entries.length - 1];
       const totalWeightNum = data.totalWeight;
+      const fishCount = data.entries.length;
       
       return {
         ...latestEntry,
         weight: totalWeightNum.toString(),
         teamId: isTeamCompetition ? (data.teamId || latestEntry.teamId) : latestEntry.teamId,
         userId: isTeamCompetition ? latestEntry.userId : (data.userId || latestEntry.userId),
+        fishCount,
       };
     });
     

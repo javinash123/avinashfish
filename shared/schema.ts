@@ -301,6 +301,30 @@ export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;
 export type UpdateGalleryImage = z.infer<typeof updateGalleryImageSchema>;
 export type GalleryImage = typeof galleryImages.$inferSelect;
 
+export const youtubeVideos = pgTable("youtube_videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  videoId: text("video_id").notNull(),
+  description: text("description"),
+  displayOrder: integer("display_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertYoutubeVideoSchema = createInsertSchema(youtubeVideos).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateYoutubeVideoSchema = createInsertSchema(youtubeVideos).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>;
+export type UpdateYoutubeVideo = z.infer<typeof updateYoutubeVideoSchema>;
+export type YoutubeVideo = typeof youtubeVideos.$inferSelect;
+
 export const competitions = pgTable("competitions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   name: text("name").notNull(),

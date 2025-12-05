@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type YoutubeVideo, type InsertYoutubeVideo, type UpdateYoutubeVideo, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -13,6 +13,7 @@ export class MongoDBStorage implements IStorage {
   private sponsors!: Collection<Sponsor>;
   private news!: Collection<News>;
   private galleryImages!: Collection<GalleryImage>;
+  private youtubeVideos!: Collection<YoutubeVideo>;
   private competitions!: Collection<Competition>;
   private competitionParticipants!: Collection<CompetitionParticipant>;
   private teams!: Collection<Team>;
@@ -38,6 +39,7 @@ export class MongoDBStorage implements IStorage {
       this.sponsors = this.db.collection<Sponsor>("sponsors");
       this.news = this.db.collection<News>("news");
       this.galleryImages = this.db.collection<GalleryImage>("gallery_images");
+      this.youtubeVideos = this.db.collection<YoutubeVideo>("youtube_videos");
       this.competitions = this.db.collection<Competition>("competitions");
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
       this.teams = this.db.collection<Team>("teams");
@@ -941,6 +943,48 @@ export class MongoDBStorage implements IStorage {
     return result.deletedCount === 1;
   }
 
+  // YouTube Video methods
+  async getAllYoutubeVideos(): Promise<YoutubeVideo[]> {
+    return await this.youtubeVideos.find({}).sort({ displayOrder: 1 }).toArray();
+  }
+
+  async getActiveYoutubeVideos(): Promise<YoutubeVideo[]> {
+    return await this.youtubeVideos.find({ active: true }).sort({ displayOrder: 1 }).toArray();
+  }
+
+  async getYoutubeVideo(id: string): Promise<YoutubeVideo | undefined> {
+    const video = await this.youtubeVideos.findOne({ id });
+    return video || undefined;
+  }
+
+  async createYoutubeVideo(insertVideo: InsertYoutubeVideo): Promise<YoutubeVideo> {
+    const id = randomUUID();
+    const newVideo: YoutubeVideo = {
+      ...insertVideo,
+      id,
+      description: insertVideo.description || null,
+      displayOrder: insertVideo.displayOrder ?? 0,
+      active: insertVideo.active ?? true,
+      createdAt: new Date(),
+    };
+    await this.youtubeVideos.insertOne(newVideo);
+    return newVideo;
+  }
+
+  async updateYoutubeVideo(id: string, updates: UpdateYoutubeVideo): Promise<YoutubeVideo | undefined> {
+    const result = await this.youtubeVideos.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async deleteYoutubeVideo(id: string): Promise<boolean> {
+    const result = await this.youtubeVideos.deleteOne({ id });
+    return result.deletedCount === 1;
+  }
+
   // Competition methods
   async getAllCompetitions(): Promise<Competition[]> {
     return await this.competitions.find({}).sort({ date: 1 }).toArray();
@@ -1250,16 +1294,18 @@ export class MongoDBStorage implements IStorage {
     
     console.log(`[LEADERBOARD-MONGO] Grouped into ${participantMap.size} rows (${isTeamCompetition ? 'teams' : 'individuals'})`);
     
-    // Create aggregated entries with total weight
-    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([key, data]) => {
+    // Create aggregated entries with total weight and fish count
+    const aggregatedEntries = Array.from(participantMap.entries()).map(([key, data]) => {
       const latestEntry = data.entries[data.entries.length - 1];
       const totalWeightNum = data.totalWeight;
+      const fishCount = data.entries.length;
       
       return {
         ...latestEntry,
         weight: totalWeightNum.toString(),
         teamId: isTeamCompetition ? (data.teamId || latestEntry.teamId) : latestEntry.teamId,
         userId: isTeamCompetition ? latestEntry.userId : (data.userId || latestEntry.userId),
+        fishCount,
       };
     });
     
