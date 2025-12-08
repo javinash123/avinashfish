@@ -1,7 +1,7 @@
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Fish, Menu, User, LogOut } from "lucide-react";
-import { useState, useEffect } from "react";
+import { Fish, Menu, User, LogOut, Radio, Play, Pause } from "lucide-react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery } from "@tanstack/react-query";
 import type { SiteSettings } from "@shared/schema";
 import {
@@ -30,6 +30,25 @@ export function Header() {
   const { data: siteSettings } = useQuery<SiteSettings>({
     queryKey: ["/api/site-settings"],
   });
+
+  // Audio player state for mobile radio button
+  const audioRef = useRef<HTMLAudioElement>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+
+  const toggleAudio = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+        setIsPlaying(false);
+      } else {
+        audioRef.current.play().then(() => {
+          setIsPlaying(true);
+        }).catch(() => {
+          setIsPlaying(false);
+        });
+      }
+    }
+  };
 
   const navItems = [
     { href: "/", label: "Home" },
@@ -87,6 +106,31 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-2">
+            {/* Mobile Radio Button - Only visible on mobile */}
+            <Button
+              variant={isPlaying ? "default" : "outline"}
+              size="sm"
+              onClick={toggleAudio}
+              className="md:hidden relative gap-1.5"
+              data-testid="button-mobile-radio"
+              aria-label={isPlaying ? "Stop radio" : "Play radio"}
+            >
+              <Radio className="h-4 w-4" />
+              <span className="text-xs font-medium">{isPlaying ? "Stop" : "Radio"}</span>
+              {isPlaying && (
+                <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-chart-4" />
+                </span>
+              )}
+            </Button>
+            <audio
+              ref={audioRef}
+              src="https://data.webstreamer.co.uk:8030/radio.mp3"
+              preload="none"
+              onEnded={() => setIsPlaying(false)}
+            />
+
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>

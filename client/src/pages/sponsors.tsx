@@ -59,7 +59,7 @@ export default function Sponsors() {
               Our Sponsors & Partners
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl">
-              We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+              We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function Sponsors() {
               Our Sponsors & Partners
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl">
-              We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+              We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function Sponsors() {
             Our Sponsors & Partners
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl">
-            We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+            We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
           </p>
         </div>
       </div>

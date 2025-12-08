@@ -50,6 +50,7 @@ export default function Leaderboard() {
     club: string;
     isTeam?: boolean;
     teamId?: string;
+    fishCount?: number;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition}/leaderboard`],
     enabled: !!selectedCompetition,
@@ -64,6 +65,7 @@ export default function Leaderboard() {
     club: entry.club,
     isTeam: entry.isTeam,
     teamId: entry.teamId,
+    fishCount: entry.fishCount,
   }));
 
   const selectedComp = competitions.find(c => c.id === selectedCompetition);

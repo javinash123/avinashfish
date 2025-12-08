@@ -54,7 +54,7 @@ export function SponsorLogoSlider() {
               Our Sponsors & Partners
             </h2>
             <p className="text-muted-foreground">
-              Proudly supported by these amazing organizations
+              Proudly supported by these amazing organisations
             </p>
           </div>
           

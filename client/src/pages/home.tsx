@@ -196,6 +196,64 @@ export default function Home() {
         </div>
       </section>
 
+      {/* Radio Section - Desktop/Big Screen */}
+      <section className="hidden md:block py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+        <div className="container mx-auto px-4 lg:px-8">
+          <Card className="overflow-hidden">
+            <CardContent className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-4">
+                  <div className="relative">
+                    <div className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ${isPlaying ? 'animate-pulse' : ''}`}>
+                      <Radio className="h-6 w-6 text-primary" />
+                    </div>
+                    {isPlaying && (
+                      <div className="absolute -top-1 -right-1">
+                        <span className="flex h-3 w-3">
+                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
+                          <span className="relative inline-flex rounded-full h-3 w-3 bg-chart-4" />
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                  <div>
+                    <h3 className="font-semibold text-lg">Peg Slam Radio</h3>
+                    <p className="text-sm text-muted-foreground">
+                      {isPlaying ? "Now Playing - Live Stream" : "Tap to listen to our live stream"}
+                    </p>
+                    {audioError && (
+                      <p className="text-xs text-destructive mt-1">Unable to connect to stream</p>
+                    )}
+                  </div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    size="lg"
+                    variant={isPlaying ? "secondary" : "default"}
+                    onClick={toggleAudio}
+                    className="min-w-[140px]"
+                    data-testid="button-audio-toggle-desktop"
+                  >
+                    {isPlaying ? (
+                      <>
+                        <Pause className="h-5 w-5 mr-2" />
+                        Stop
+                      </>
+                    ) : (
+                      <>
+                        <Play className="h-5 w-5 mr-2" />
+                        Listen Live
+                      </>
+                    )}
+                  </Button>
+                  {isPlaying && <Volume2 className="h-5 w-5 text-muted-foreground animate-pulse" />}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      </section>
+
       {featuredNews.length > 0 && (
         <section className="py-16">
           <div className="container mx-auto px-4 lg:px-8">
@@ -368,7 +426,8 @@ export default function Home() {
         onEnded={() => setIsPlaying(false)}
       />
 
-      <section className="py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+      {/* Radio Section - Mobile Only (appears in different position than desktop) */}
+      <section className="md:hidden py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
         <div className="container mx-auto px-4 lg:px-8">
           <Card className="overflow-hidden">
             <CardContent className="p-4 sm:p-6">
@@ -403,7 +462,7 @@ export default function Home() {
                     variant={isPlaying ? "secondary" : "default"}
                     onClick={toggleAudio}
                     className="min-w-[140px]"
-                    data-testid="button-audio-toggle"
+                    data-testid="button-audio-toggle-mobile"
                   >
                     {isPlaying ? (
                       <>
@@ -429,10 +488,7 @@ export default function Home() {
         <section className="py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <Youtube className="h-6 w-6 text-red-600" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Latest Videos</h2>
-              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold">Latest Videos</h2>
             </div>
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {youtubeVideos.slice(0, 6).map((video) => (
@@ -484,10 +540,7 @@ export default function Home() {
         <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-2">
-                <ImageIcon className="h-6 w-6 text-primary" />
-                <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
-              </div>
+              <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
               <Link href="/gallery">
                 <Button variant="outline" data-testid="button-view-all-gallery">
                   View All
