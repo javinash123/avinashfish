@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2 } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -519,6 +519,26 @@ export default function AdminCompetitions() {
       toast({
         title: "Error",
         description: "Failed to remove participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const regenerateThumbnailsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/regenerate-thumbnails");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      toast({
+        title: "Thumbnails Regenerated",
+        description: `Processed ${data.processed} competitions: ${data.success} succeeded, ${data.skipped} skipped, ${data.errors} errors`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to regenerate thumbnails",
         variant: "destructive",
       });
     },
@@ -1003,10 +1023,25 @@ export default function AdminCompetitions() {
             Create and manage fishing competitions
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Competition
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            variant="outline" 
+            onClick={() => regenerateThumbnailsMutation.mutate()}
+            disabled={regenerateThumbnailsMutation.isPending}
+            data-testid="button-regenerate-thumbnails"
+          >
+            {regenerateThumbnailsMutation.isPending ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            {regenerateThumbnailsMutation.isPending ? "Regenerating..." : "Fix Images"}
+          </Button>
+          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
+            <Plus className="h-4 w-4 mr-2" />
+            Create Competition
+          </Button>
+        </div>
       </div>
 
       <div className="flex gap-2">

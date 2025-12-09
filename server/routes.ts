@@ -4,6 +4,7 @@ import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
 import { generateCompetitionThumbnails } from "./thumbnail-generator";
+import { regenerateAllThumbnails, regenerateSingleThumbnail } from "./thumbnail-regenerator";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
@@ -875,6 +876,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Delete staff error:", error);
       res.status(500).json({ message: "Error deleting staff: " + error.message });
+    }
+  });
+
+  // Thumbnail regeneration endpoints
+  app.post("/api/admin/regenerate-thumbnails", requireStaffAuth, async (req, res) => {
+    try {
+      console.log("Starting thumbnail regeneration for all competitions...");
+      const result = await regenerateAllThumbnails(storage);
+      console.log(`Thumbnail regeneration complete: ${result.success} success, ${result.skipped} skipped, ${result.errors} errors`);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Thumbnail regeneration error:", error);
+      res.status(500).json({ message: "Error regenerating thumbnails: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/regenerate-thumbnail/:id", requireStaffAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`Regenerating thumbnail for competition ${id}...`);
+      const result = await regenerateSingleThumbnail(storage, id);
+      console.log(`Thumbnail regeneration for ${id}: ${result.status}`);
+      
+      if (result.status === 'error') {
+        if (result.message === 'Competition not found') {
+          return res.status(404).json(result);
+        }
+        return res.status(500).json(result);
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Single thumbnail regeneration error:", error);
+      res.status(500).json({ message: "Error regenerating thumbnail: " + error.message });
     }
   });
 

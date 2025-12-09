@@ -1,33 +1,26 @@
-# Persisted Information - December 09, 2025
+# Context Persistence - December 09, 2025
 
-## ALL TASKS COMPLETED
+## Completed Task: Competition Image Thumbnail Regeneration
 
-User requested 3 changes (AWS EC2/MongoDB compatible):
+### Summary
+Successfully implemented a thumbnail regeneration system to fix existing competition images that don't have properly sized thumbnails.
 
-### Task 1: Remove Peg Slam Radio section - COMPLETED & REVIEWED
+### All Tasks Completed:
+1. Created `server/thumbnail-regenerator.ts` - Utility that scans all competitions, finds ones with imageUrl but missing thumbnails, generates 3 sizes (16:9 aspect ratio) using Sharp
+2. Added API endpoints in `server/routes.ts`:
+   - `POST /api/admin/regenerate-thumbnails` - Regenerates all thumbnails
+   - `POST /api/admin/regenerate-thumbnail/:id` - Regenerates single thumbnail (with proper 404/500 status codes)
+3. Added "Fix Images" button in `client/src/pages/admin-competitions.tsx` with proper apiRequest usage
+4. All architect-identified issues have been fixed
 
-### Task 2: Admin Slider - Move slider above logo + add order numbering - COMPLETED & REVIEWED
-- Swapped Logo Card and Slider Card order in admin-slider.tsx (Slider now first)
-- Added order number input field with GripVertical icon for each slider image
-- Sorted sliderImages by order when displaying
-- Architect approved
+### Fixes Applied After Architect Review:
+- Fixed `regenerate-thumbnail/:id` endpoint to return proper HTTP status codes (404/500) instead of always 200
+- Fixed `regenerateThumbnailsMutation` to correctly use apiRequest (which returns parsed JSON, not a Response object)
 
-### Task 3: Add mobile/DOB to angler profile - COMPLETED & REVIEWED
-- Updated edit-profile-dialog.tsx with mobileNumber and dateOfBirth fields
-- Updated profile.tsx to display mobile/DOB (own profile only for privacy)
-- Architect approved
+### Application Status
+- App is running on port 5000
+- All tasks completed and reviewed by architect
+- Ready for user to test the "Fix Images" button in admin competitions panel
 
-### Task 4: Test and verify - IN PROGRESS
-- Workflow is running
-- Need to restart workflow and verify everything works
-
-## Next Steps
-1. Restart the workflow to ensure all changes are applied
-2. Verify the application runs without errors
-3. Mark task 4 as completed
-4. Return to user with summary of completed work
-
-## Files Modified
-- `client/src/pages/admin-slider.tsx`
-- `client/src/components/edit-profile-dialog.tsx`
-- `client/src/pages/profile.tsx`
+### User Notification
+The user should be informed that the "Fix Images" button is now available in the admin competitions panel to regenerate thumbnails for all existing competition images.
