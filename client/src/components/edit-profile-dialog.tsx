@@ -25,6 +25,8 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
   const [location, setLocation] = useState(user.location || "");
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || "");
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || "");
+  const [mobileNumber, setMobileNumber] = useState(user.mobileNumber || "");
+  const [dateOfBirth, setDateOfBirth] = useState(user.dateOfBirth || "");
   const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || "");
   const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || "");
   const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || "");
@@ -39,6 +41,8 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       location?: string;
       favouriteMethod?: string;
       favouriteSpecies?: string;
+      mobileNumber?: string;
+      dateOfBirth?: string;
       youtubeUrl?: string;
       youtubeVideoUrl?: string;
       facebookUrl?: string;
@@ -110,6 +114,8 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
         location,
         favouriteMethod,
         favouriteSpecies,
+        mobileNumber,
+        dateOfBirth,
         youtubeUrl,
         youtubeVideoUrl,
         facebookUrl,
@@ -209,6 +215,27 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
               value={favouriteSpecies}
               onChange={(e) => setFavouriteSpecies(e.target.value)}
               data-testid="input-species"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="mobileNumber">Mobile Number</Label>
+            <Input
+              id="mobileNumber"
+              type="tel"
+              placeholder="e.g., 07123456789"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              data-testid="input-mobile"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Input
+              id="dateOfBirth"
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              data-testid="input-dob"
             />
           </div>
           <div className="space-y-2">

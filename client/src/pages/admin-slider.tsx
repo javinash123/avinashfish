@@ -7,7 +7,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { useToast } from "@/hooks/use-toast";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import type { SliderImage, SiteSettings } from "@shared/schema";
-import { Trash2, Upload } from "lucide-react";
+import { Trash2, Upload, GripVertical } from "lucide-react";
+import { Input as OrderInput } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
 import {
   AlertDialog,
@@ -107,6 +108,28 @@ export default function AdminSlider() {
     },
     onError: (error) => {
       const errorMessage = error instanceof Error ? error.message : "Failed to update slider image";
+      toast({
+        title: "Error",
+        description: errorMessage,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateOrderMutation = useMutation({
+    mutationFn: async (params: { id: string; order: number }) => {
+      return await apiRequest("PUT", `/api/admin/slider-images/${params.id}`, { order: params.order });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/slider-images"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/slider-images"] });
+      toast({
+        title: "Success",
+        description: "Slider order updated",
+      });
+    },
+    onError: (error) => {
+      const errorMessage = error instanceof Error ? error.message : "Failed to update order";
       toast({
         title: "Error",
         description: errorMessage,
@@ -219,6 +242,100 @@ export default function AdminSlider() {
 
       <Card>
         <CardHeader>
+          <CardTitle>Hero Slider Images</CardTitle>
+          <CardDescription>
+            Upload and manage images for the homepage hero slider
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="slider-file">Upload New Slider Image</Label>
+            <div className="flex gap-2">
+              <Input
+                id="slider-file"
+                type="file"
+                accept="image/*"
+                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
+                ref={sliderFileInputRef}
+                data-testid="input-new-slider-image"
+              />
+              <Button
+                onClick={handleAddSliderImage}
+                disabled={uploadingSlider || !selectedFile}
+                data-testid="button-add-slider-image"
+              >
+                <Upload className="h-4 w-4 mr-2" />
+                {uploadingSlider ? "Uploading..." : "Add Image"}
+              </Button>
+            </div>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-sm font-medium">Current Slider Images</h3>
+            {sliderImages.length === 0 ? (
+              <p className="text-sm text-muted-foreground">No slider images yet</p>
+            ) : (
+              <div className="space-y-2">
+                {[...sliderImages].sort((a, b) => a.order - b.order).map((image) => (
+                  <Card key={image.id} className="overflow-hidden" data-testid={`card-slider-${image.id}`}>
+                    <div className="flex items-center gap-4 p-4">
+                      <div className="flex items-center gap-2">
+                        <GripVertical className="h-4 w-4 text-muted-foreground" />
+                        <Input
+                          type="number"
+                          value={image.order}
+                          onChange={(e) => {
+                            const newOrder = parseInt(e.target.value);
+                            if (!isNaN(newOrder) && newOrder >= 0) {
+                              updateOrderMutation.mutate({ id: image.id, order: newOrder });
+                            }
+                          }}
+                          className="w-16 text-center"
+                          min={0}
+                          data-testid={`input-order-${image.id}`}
+                        />
+                      </div>
+                      <img
+                        src={image.imageUrl}
+                        alt="Slider"
+                        className="h-20 w-32 object-cover rounded"
+                        data-testid={`img-slider-${image.id}`}
+                      />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm truncate">{image.imageUrl}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-2">
+                          <Switch
+                            checked={image.isActive}
+                            onCheckedChange={(checked) =>
+                              toggleImageMutation.mutate({ id: image.id, isActive: checked })
+                            }
+                            data-testid={`switch-active-${image.id}`}
+                          />
+                          <span className="text-sm">{image.isActive ? "Active" : "Inactive"}</span>
+                        </div>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => setImageToDelete(image)}
+                          disabled={deleteImageMutation.isPending}
+                          data-testid={`button-delete-${image.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    </div>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </div>
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
           <CardTitle>Site Logo</CardTitle>
           <CardDescription>
             Upload the logo displayed in the header
@@ -257,84 +374,6 @@ export default function AdminSlider() {
               />
             </div>
           )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Hero Slider Images</CardTitle>
-          <CardDescription>
-            Upload and manage images for the homepage hero slider
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="space-y-2">
-            <Label htmlFor="slider-file">Upload New Slider Image</Label>
-            <div className="flex gap-2">
-              <Input
-                id="slider-file"
-                type="file"
-                accept="image/*"
-                onChange={(e) => setSelectedFile(e.target.files?.[0] || null)}
-                ref={sliderFileInputRef}
-                data-testid="input-new-slider-image"
-              />
-              <Button
-                onClick={handleAddSliderImage}
-                disabled={uploadingSlider || !selectedFile}
-                data-testid="button-add-slider-image"
-              >
-                <Upload className="h-4 w-4 mr-2" />
-                {uploadingSlider ? "Uploading..." : "Add Image"}
-              </Button>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <h3 className="text-sm font-medium">Current Slider Images</h3>
-            {sliderImages.length === 0 ? (
-              <p className="text-sm text-muted-foreground">No slider images yet</p>
-            ) : (
-              <div className="space-y-2">
-                {sliderImages.map((image) => (
-                  <Card key={image.id} className="overflow-hidden" data-testid={`card-slider-${image.id}`}>
-                    <div className="flex items-center gap-4 p-4">
-                      <img
-                        src={image.imageUrl}
-                        alt="Slider"
-                        className="h-20 w-32 object-cover rounded"
-                        data-testid={`img-slider-${image.id}`}
-                      />
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm truncate">{image.imageUrl}</p>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <div className="flex items-center gap-2">
-                          <Switch
-                            checked={image.isActive}
-                            onCheckedChange={(checked) =>
-                              toggleImageMutation.mutate({ id: image.id, isActive: checked })
-                            }
-                            data-testid={`switch-active-${image.id}`}
-                          />
-                          <span className="text-sm">{image.isActive ? "Active" : "Inactive"}</span>
-                        </div>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => setImageToDelete(image)}
-                          disabled={deleteImageMutation.isPending}
-                          data-testid={`button-delete-${image.id}`}
-                        >
-                          <Trash2 className="h-4 w-4 text-destructive" />
-                        </Button>
-                      </div>
-                    </div>
-                  </Card>
-                ))}
-              </div>
-            )}
-          </div>
         </CardContent>
       </Card>
 

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play, Pause, Volume2, Radio } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition, News, GalleryImage, YoutubeVideo } from "@shared/schema";
@@ -37,28 +37,6 @@ export default function Home() {
   const { data: youtubeVideos = [] } = useQuery<YoutubeVideo[]>({
     queryKey: ["/api/youtube-videos"],
   });
-
-  // Audio player state
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [audioError, setAudioError] = useState(false);
-
-  const toggleAudio = () => {
-    if (audioRef.current) {
-      if (isPlaying) {
-        audioRef.current.pause();
-        setIsPlaying(false);
-      } else {
-        audioRef.current.play().then(() => {
-          setIsPlaying(true);
-          setAudioError(false);
-        }).catch(() => {
-          setAudioError(true);
-          setIsPlaying(false);
-        });
-      }
-    }
-  };
 
   // State for randomly selected featured news by category
   const [randomFeaturedNews, setRandomFeaturedNews] = useState<News[]>([]);
@@ -193,64 +171,6 @@ export default function Home() {
               </Button>
             </Link>
           </div>
-        </div>
-      </section>
-
-      {/* Radio Section - Desktop/Big Screen */}
-      <section className="hidden md:block py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
-        <div className="container mx-auto px-4 lg:px-8">
-          <Card className="overflow-hidden">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ${isPlaying ? 'animate-pulse' : ''}`}>
-                      <Radio className="h-6 w-6 text-primary" />
-                    </div>
-                    {isPlaying && (
-                      <div className="absolute -top-1 -right-1">
-                        <span className="flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-chart-4" />
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Peg Slam Radio</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {isPlaying ? "Now Playing - Live Stream" : "Tap to listen to our live stream"}
-                    </p>
-                    {audioError && (
-                      <p className="text-xs text-destructive mt-1">Unable to connect to stream</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="lg"
-                    variant={isPlaying ? "secondary" : "default"}
-                    onClick={toggleAudio}
-                    className="min-w-[140px]"
-                    data-testid="button-audio-toggle-desktop"
-                  >
-                    {isPlaying ? (
-                      <>
-                        <Pause className="h-5 w-5 mr-2" />
-                        Stop
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-5 w-5 mr-2" />
-                        Listen Live
-                      </>
-                    )}
-                  </Button>
-                  {isPlaying && <Volume2 className="h-5 w-5 text-muted-foreground animate-pulse" />}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
 
@@ -415,72 +335,6 @@ export default function Home() {
               </div>
             </Card>
           )}
-        </div>
-      </section>
-
-      <audio
-        ref={audioRef}
-        src="https://data.webstreamer.co.uk/listen/pegslam/radio.mp3"
-        preload="none"
-        onError={() => setAudioError(true)}
-        onEnded={() => setIsPlaying(false)}
-      />
-
-      {/* Radio Section - Mobile Only (appears in different position than desktop) */}
-      <section className="md:hidden py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
-        <div className="container mx-auto px-4 lg:px-8">
-          <Card className="overflow-hidden">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <div className="relative">
-                    <div className={`w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center ${isPlaying ? 'animate-pulse' : ''}`}>
-                      <Radio className="h-6 w-6 text-primary" />
-                    </div>
-                    {isPlaying && (
-                      <div className="absolute -top-1 -right-1">
-                        <span className="flex h-3 w-3">
-                          <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
-                          <span className="relative inline-flex rounded-full h-3 w-3 bg-chart-4" />
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">Peg Slam Radio</h3>
-                    <p className="text-sm text-muted-foreground">
-                      {isPlaying ? "Now Playing - Live Stream" : "Tap to listen to our live stream"}
-                    </p>
-                    {audioError && (
-                      <p className="text-xs text-destructive mt-1">Unable to connect to stream</p>
-                    )}
-                  </div>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Button
-                    size="lg"
-                    variant={isPlaying ? "secondary" : "default"}
-                    onClick={toggleAudio}
-                    className="min-w-[140px]"
-                    data-testid="button-audio-toggle-mobile"
-                  >
-                    {isPlaying ? (
-                      <>
-                        <Pause className="h-5 w-5 mr-2" />
-                        Stop
-                      </>
-                    ) : (
-                      <>
-                        <Play className="h-5 w-5 mr-2" />
-                        Listen Live
-                      </>
-                    )}
-                  </Button>
-                  {isPlaying && <Volume2 className="h-5 w-5 text-muted-foreground animate-pulse" />}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
         </div>
       </section>
 

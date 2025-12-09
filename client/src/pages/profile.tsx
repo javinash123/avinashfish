@@ -499,6 +499,24 @@ export default function Profile() {
                       </div>
                     </div>
                   )}
+                  {isOwnProfile && displayUser.mobileNumber && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Mobile Number</p>
+                        <span data-testid="text-mobile">{displayUser.mobileNumber}</span>
+                      </div>
+                    </div>
+                  )}
+                  {isOwnProfile && displayUser.dateOfBirth && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Date of Birth</p>
+                        <span data-testid="text-dob">{new Date(displayUser.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
