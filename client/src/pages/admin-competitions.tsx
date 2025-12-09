@@ -43,7 +43,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -1099,64 +1107,65 @@ export default function AdminCompetitions() {
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {getCompetitionStatus(competition) === "upcoming" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openPegAssignment(competition)}
-                          data-testid={`button-assign-pegs-${competition.id}`}
-                        >
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Pegs
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" data-testid={`button-actions-${competition.id}`}>
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                      )}
-                      {getCompetitionStatus(competition) === "live" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openWeighIn(competition)}
-                          data-testid={`button-weigh-in-${competition.id}`}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {getCompetitionStatus(competition) === "upcoming" && (
+                          <DropdownMenuItem 
+                            onClick={() => openPegAssignment(competition)}
+                            data-testid={`action-assign-pegs-${competition.id}`}
+                          >
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Assign Pegs
+                          </DropdownMenuItem>
+                        )}
+                        {getCompetitionStatus(competition) === "live" && (
+                          <DropdownMenuItem 
+                            onClick={() => openWeighIn(competition)}
+                            data-testid={`action-weigh-in-${competition.id}`}
+                          >
+                            <Trophy className="h-4 w-4 mr-2" />
+                            Weigh-in
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => openAnglersDialog(competition)}
+                          data-testid={`action-anglers-${competition.id}`}
                         >
-                          <Trophy className="h-3 w-3 mr-1" />
-                          Weigh-in
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAnglersDialog(competition)}
-                        data-testid={`button-anglers-${competition.id}`}
-                      >
-                        <Users className="h-3 w-3 mr-1" />
-                        Anglers
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openPaymentsDialog(competition)}
-                        data-testid={`button-payments-${competition.id}`}
-                      >
-                        <CreditCard className="h-3 w-3 mr-1" />
-                        Payments
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(competition)}
-                        data-testid={`button-edit-${competition.id}`}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(competition)}
-                        data-testid={`button-delete-${competition.id}`}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                          <Users className="h-4 w-4 mr-2" />
+                          Anglers
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => openPaymentsDialog(competition)}
+                          data-testid={`action-payments-${competition.id}`}
+                        >
+                          <CreditCard className="h-4 w-4 mr-2" />
+                          Payments
+                        </DropdownMenuItem>
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem 
+                          onClick={() => openEditDialog(competition)}
+                          data-testid={`action-edit-${competition.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Edit
+                        </DropdownMenuItem>
+                        <DropdownMenuItem 
+                          onClick={() => handleDelete(competition)}
+                          data-testid={`action-delete-${competition.id}`}
+                          className="text-destructive"
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Delete
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
                 ))

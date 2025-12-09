@@ -54,7 +54,7 @@ export function Header() {
     { href: "/", label: "Home" },
     { href: "/about", label: "About" },
     { href: "/competitions", label: "Competitions" },
-    { href: "/leaderboard", label: "Leaderboard" },
+    { href: "/leaderboard", label: "Leaderboards" },
     { href: "/angler-directory", label: "Anglers" },
     { href: "/gallery", label: "Gallery" },
     { href: "/news", label: "News" },
@@ -106,17 +106,17 @@ export function Header() {
           </nav>
 
           <div className="flex items-center gap-2">
-            {/* Mobile Radio Button - Only visible on mobile */}
+            {/* Desktop Radio Button - Only visible on desktop, before login */}
             <Button
               variant={isPlaying ? "default" : "outline"}
               size="sm"
               onClick={toggleAudio}
-              className="md:hidden relative gap-1.5"
-              data-testid="button-mobile-radio"
-              aria-label={isPlaying ? "Stop radio" : "Play radio"}
+              className="hidden md:flex relative gap-1.5"
+              data-testid="button-radio"
+              aria-label={isPlaying ? "Stop radio" : "Play PegSlam Radio"}
             >
               <Radio className="h-4 w-4" />
-              <span className="text-xs font-medium">{isPlaying ? "Stop" : "Radio"}</span>
+              <span className="text-xs font-medium">{isPlaying ? "Stop" : "PegSlam Radio"}</span>
               {isPlaying && (
                 <span className="absolute -top-1 -right-1 flex h-2.5 w-2.5">
                   <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-chart-4 opacity-75" />
@@ -126,7 +126,7 @@ export function Header() {
             </Button>
             <audio
               ref={audioRef}
-              src="https://data.webstreamer.co.uk:8030/radio.mp3"
+              src="https://data.webstreamer.co.uk/listen/pegslam/radio.mp3"
               preload="none"
               onEnded={() => setIsPlaying(false)}
             />

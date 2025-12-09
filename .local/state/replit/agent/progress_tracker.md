@@ -1,9 +1,42 @@
-# Import Progress Tracker - LATEST SESSION (December 05, 2025)
+# Import Progress Tracker - LATEST SESSION (December 08, 2025)
 
 [x] 1. Install the required packages
 [x] 2. Restart the workflow to see if the project is working
 [x] 3. Verify the project is working using the screenshot tool
 [x] 4. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
+
+### ✅ DECEMBER 08, 2025 - RE-VERIFICATION COMPLETE
+
+All dependencies have been successfully installed and verified. The "Start application" workflow is running flawlessly on port 5000 with webview output. Frontend is displaying perfectly with all features operational:
+- Hero section: "UK's Premier Fishing Competitions"
+- Navigation menu: All 9 sections visible (Home, About, Competitions, Leaderboard, Anglers, Gallery, News, Sponsors, Contact)
+- Call-to-action buttons: "Book a Peg" and "View Leaderboards"
+- Peg Slam Radio: "Listen Live" button visible
+- In-memory storage: Active with 5 legacy user profiles migrated
+- Backend APIs: Responding properly
+- Frontend: Vite connected and rendering correctly
+
+---
+
+## December 08, 2025 - User Requested Changes
+
+[x] **Admin Competition Table Actions** - Consolidated action buttons into dropdown menu (three dots)
+    - Replaced 6 individual buttons with DropdownMenu component
+    - Options: Assign Pegs, Weigh-in, Anglers, Payments, Edit, Delete
+    - Matches the same pattern used in admin-anglers.tsx
+    - Eliminates horizontal scrollbar issue
+
+[x] **Radio Stream URL Updated**
+    - Changed from: `https://data.webstreamer.co.uk:8030/radio.mp3`
+    - Changed to: `https://data.webstreamer.co.uk/listen/pegslam/radio.mp3`
+    - Updated in both `client/src/components/header.tsx` and `client/src/pages/home.tsx`
+
+### Files Modified:
+- `client/src/pages/admin-competitions.tsx` - Action buttons now in dropdown menu
+- `client/src/components/header.tsx` - Updated radio stream URL
+- `client/src/pages/home.tsx` - Updated radio stream URL
+
+🎉 **CHANGES COMPLETE - READY FOR AWS EC2 DEPLOYMENT** 🎉
 
 ---
 

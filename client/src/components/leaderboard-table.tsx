@@ -59,6 +59,38 @@ interface LeaderboardTableProps {
 export function LeaderboardTable({ entries, isLive = false }: LeaderboardTableProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   
+  // Get all unique team IDs from entries
+  const teamIds = [...new Set(entries
+    .filter(e => e.isTeam && e.teamId)
+    .map(e => e.teamId as string))];
+  
+  // Fetch all team details for displaying member avatars
+  const { data: allTeamsData } = useQuery<TeamDetailsType[]>({
+    queryKey: ['/api/teams/details', teamIds.join(',')],
+    queryFn: async () => {
+      if (teamIds.length === 0) return [];
+      const results = await Promise.all(
+        teamIds.map(async (teamId) => {
+          try {
+            const response = await fetch(`/api/team/${teamId}`);
+            if (response.ok) return response.json();
+            return null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: teamIds.length > 0,
+  });
+  
+  // Create a map of teamId to team details for quick lookup
+  const teamDetailsMap = new Map<string, TeamDetailsType>();
+  allTeamsData?.forEach(team => {
+    if (team) teamDetailsMap.set(team.id, team);
+  });
+  
   const { data: teamDetails } = useQuery<TeamDetailsType>({
     queryKey: [`/api/team/${selectedTeamId}`],
     enabled: !!selectedTeamId,
@@ -134,14 +166,41 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                 </TableCell>
                 <TableCell className="py-2 px-1 sm:px-4">
                   <div className="flex items-center gap-1.5 sm:gap-3">
-                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
-                      <AvatarImage src={entry.anglerAvatar} className="object-cover" />
-                      <AvatarFallback className="text-xs sm:text-sm">
-                        {entry.anglerName.split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
+                    {entry.isTeam && entry.teamId ? (
+                      // For team entries, show stacked team member avatars
+                      <div className="flex -space-x-2 shrink-0">
+                        {(() => {
+                          const team = teamDetailsMap.get(entry.teamId);
+                          if (team && team.members) {
+                            return team.members.slice(0, 4).map((member, idx) => (
+                              <Avatar key={member.userId} className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-background" style={{ zIndex: 4 - idx }}>
+                                <AvatarImage src={member.avatar} className="object-cover" />
+                                <AvatarFallback className="text-[10px] sm:text-xs">
+                                  {member.name.split(" ").map((n) => n[0]).join("")}
+                                </AvatarFallback>
+                              </Avatar>
+                            ));
+                          }
+                          // Fallback if team data not loaded yet
+                          return (
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                              <AvatarFallback className="text-[10px] sm:text-xs">
+                                <Users className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
+                        <AvatarImage src={entry.anglerAvatar} className="object-cover" />
+                        <AvatarFallback className="text-xs sm:text-sm">
+                          {entry.anglerName.split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="min-w-0 flex-1">
                       {entry.isTeam ? (
                         <Button

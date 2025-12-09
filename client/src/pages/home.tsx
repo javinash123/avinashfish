@@ -197,7 +197,7 @@ export default function Home() {
       </section>
 
       {/* Radio Section - Desktop/Big Screen */}
-      <section className="hidden md:block py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+      <section className="hidden md:block py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
         <div className="container mx-auto px-4 lg:px-8">
           <Card className="overflow-hidden">
             <CardContent className="p-4 sm:p-6">
@@ -255,7 +255,7 @@ export default function Home() {
       </section>
 
       {featuredNews.length > 0 && (
-        <section className="py-16">
+        <section className="py-12">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold">Pegslam News</h2>
@@ -349,7 +349,7 @@ export default function Home() {
         </section>
       )}
 
-      <section className="py-16 container mx-auto px-4 lg:px-8">
+      <section className="py-12 container mx-auto px-4 lg:px-8">
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
           <div>
             <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
@@ -371,7 +371,7 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-16 bg-muted/30">
+      <section className="py-12 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
@@ -420,14 +420,14 @@ export default function Home() {
 
       <audio
         ref={audioRef}
-        src="https://data.webstreamer.co.uk:8030/radio.mp3"
+        src="https://data.webstreamer.co.uk/listen/pegslam/radio.mp3"
         preload="none"
         onError={() => setAudioError(true)}
         onEnded={() => setIsPlaying(false)}
       />
 
       {/* Radio Section - Mobile Only (appears in different position than desktop) */}
-      <section className="md:hidden py-8 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
+      <section className="md:hidden py-12 bg-gradient-to-r from-primary/10 via-primary/5 to-primary/10">
         <div className="container mx-auto px-4 lg:px-8">
           <Card className="overflow-hidden">
             <CardContent className="p-4 sm:p-6">
@@ -485,7 +485,7 @@ export default function Home() {
       </section>
 
       {youtubeVideos.length > 0 && (
-        <section className="py-16">
+        <section className="py-12">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold">Latest Videos</h2>
@@ -537,7 +537,7 @@ export default function Home() {
       )}
 
       {featuredGallery.length > 0 && (
-        <section className="py-16 bg-muted/30">
+        <section className="py-12 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
