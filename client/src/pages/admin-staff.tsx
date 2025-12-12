@@ -263,9 +263,11 @@ export default function AdminStaff() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Admin</strong> - Full access to all features including staff management.
+          <strong>Admin</strong> - Full access to all features including staff management and payments.
           <br />
-          <strong>Manager</strong> - Access to competitions, anglers, content, but cannot manage staff.
+          <strong>Manager</strong> - Access to competitions, anglers, content, but cannot manage staff or view payments.
+          <br />
+          <strong>Marshal</strong> - View-only access to competitions (cannot add, edit, delete, or view payments).
         </AlertDescription>
       </Alert>
 
@@ -296,6 +298,7 @@ export default function AdminStaff() {
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="marshal">Marshal</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -457,6 +460,7 @@ export default function AdminStaff() {
                       <SelectContent>
                         <SelectItem value="admin">Admin - Full access</SelectItem>
                         <SelectItem value="manager">Manager - Limited access</SelectItem>
+                        <SelectItem value="marshal">Marshal - View competitions only</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -542,6 +546,7 @@ export default function AdminStaff() {
                       <SelectContent>
                         <SelectItem value="admin">Admin - Full access</SelectItem>
                         <SelectItem value="manager">Manager - Limited access</SelectItem>
+                        <SelectItem value="marshal">Marshal - View competitions only</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

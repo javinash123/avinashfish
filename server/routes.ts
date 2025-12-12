@@ -2554,7 +2554,24 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const success = await storage.deleteCompetition(req.params.id);
+      const competitionId = req.params.id;
+
+      // Check if any anglers or teams are assigned to this competition
+      const participants = await storage.getCompetitionParticipants(competitionId);
+      if (participants.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this competition. ${participants.length} angler(s) are currently assigned. Please remove all anglers first.` 
+        });
+      }
+
+      const teams = await storage.getTeamsByCompetition(competitionId);
+      if (teams.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this competition. ${teams.length} team(s) are currently assigned. Please remove all teams first.` 
+        });
+      }
+
+      const success = await storage.deleteCompetition(competitionId);
       if (!success) {
         return res.status(404).json({ message: "Competition not found" });
       }

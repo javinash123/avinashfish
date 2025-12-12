@@ -1,94 +1,47 @@
-# Import Progress Tracker - LATEST SESSION (December 09, 2025)
+# Import Progress Tracker - LATEST SESSION (December 12, 2025)
 
 [x] 1. Install the required packages
 [x] 2. Restart the workflow to see if the project is working
 [x] 3. Verify the project is working using the screenshot tool
 [x] 4. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
 
-### December 09, 2025 - Import Re-verification Complete
+### December 12, 2025 - User Requested Changes (Staff Roles & Competition Deletion)
 
-**Issue Found:** The workflow was not configured with webview output type.
+[x] **Marshal Role Restrictions**
+    - Marshal role already defined in `shared/schema.ts`
+    - admin-dashboard.tsx restricts Marshal to only see Competitions menu
+    - admin-competitions.tsx: `canModify = admin?.role === "admin" || admin?.role === "manager"` excludes Marshal from add/edit/delete
+    - `canViewPayments = admin?.role === "admin"` hides all payment info from Marshal and Manager
 
-**Fix Applied:** Configured workflow with `output_type: webview` and `wait_for_port: 5000`.
+[x] **Manager Payment Restrictions**
+    - admin-competitions.tsx: `canViewPayments = admin?.role === "admin"` hides payment column and dialog
+    - admin-dashboard.tsx: Revenue stat wrapped in `{admin?.role === "admin" && ...}` so only admin sees it
 
-**Status:** Application is now running successfully on port 5000 with all features operational:
-- Hero section: "UK's Premier Fishing Competitions" displaying correctly
-- Navigation menu: All sections visible (Home, About, Competitions, Leaderboards, Anglers, Gallery, News, Sponsors, Contact)
-- Peg Slam Radio: "Listen Live" button visible and functional
-- Call-to-action buttons: "Book a Peg" and "View Leaderboards" working
-- Backend APIs: Responding properly
-- Frontend: Vite connected and rendering correctly
+[x] **Competition Deletion Protection**
+    - Added server-side check in `DELETE /api/admin/competitions/:id` route
+    - Checks for assigned participants before deletion: returns 400 error with count
+    - Checks for assigned teams before deletion: returns 400 error with count
+    - Competition can only be deleted if both participants and teams arrays are empty
 
----
-
-## December 08, 2025 - User Requested Changes
-
-[x] **Admin Competition Table Actions** - Consolidated action buttons into dropdown menu (three dots)
-    - Replaced 6 individual buttons with DropdownMenu component
-    - Options: Assign Pegs, Weigh-in, Anglers, Payments, Edit, Delete
-    - Matches the same pattern used in admin-anglers.tsx
-    - Eliminates horizontal scrollbar issue
-
-[x] **Radio Stream URL Updated**
-    - Changed from: `https://data.webstreamer.co.uk:8030/radio.mp3`
-    - Changed to: `https://data.webstreamer.co.uk/listen/pegslam/radio.mp3`
-    - Updated in both `client/src/components/header.tsx` and `client/src/pages/home.tsx`
+[x] **Social Media Section Moved in Profile**
+    - Moved social media buttons (YouTube, Facebook, Twitter/X, Instagram, TikTok)
+    - New location: directly under username, above bio
+    - Removed old location (was below "Member since" section)
+    - Clean inline display with gap-2 spacing
 
 ### Files Modified:
-- `client/src/pages/admin-competitions.tsx` - Action buttons now in dropdown menu
-- `client/src/components/header.tsx` - Updated radio stream URL
-- `client/src/pages/home.tsx` - Updated radio stream URL
+- `server/routes.ts` - Added participant/team checks before competition deletion (lines 2562-2575)
+- `client/src/pages/profile.tsx` - Moved social media section to near username (lines 466-521)
 
 ---
 
-## December 05, 2025 - UI Fixes and Production Build
+### December 12, 2025 - Import Re-verification
 
-[x] Fixed admin panel add/edit popup scrolling - Added `max-h-[85vh] overflow-y-auto` to DialogContent
-[x] Removed icon before "Latest Videos" section heading on homepage
-[x] Removed icon before "Featured Gallery" section heading on homepage
-[x] Added mobile-only radio button in header between logo and hamburger menu (md:hidden)
-[x] Production build generated successfully - dist folder ready for AWS EC2 deployment
+**Issue Found:** The workflow was failing because `tsx` was not found in PATH.
 
-### Files Modified:
-- `client/src/components/ui/dialog.tsx` - Fixed scrolling for all dialogs
-- `client/src/pages/home.tsx` - Removed Youtube and ImageIcon from section headings
-- `client/src/components/header.tsx` - Added mobile radio player button
+**Fix Applied:** Installed `tsx` package using packager tool, then reconfigured workflow with `output_type: webview` and `wait_for_port: 5000`.
 
-### Production Build Output:
-- `dist/index.js` (264KB) - Backend server bundle
-- `dist/public/index.html` - Main HTML file
-- `dist/public/assets/index-DOq8-i1S.js` (1.15MB) - Frontend JavaScript
-- `dist/public/assets/index-j7KY0puV.css` (130KB) - Styles
-
----
-
-## December 04, 2025 - Sponsor Logo Slider Feature
-
-[x] Created new `SponsorLogoSlider` component at `client/src/components/sponsor-logo-slider.tsx`
-[x] Updated `client/src/App.tsx` to display sponsor slider above footer on all public pages
-[x] Slider fetches sponsors from `/api/sponsors` endpoint (works with MongoDB in production)
-[x] Slider only appears when sponsors exist in database
-[x] Logos display with grayscale effect, color on hover
-[x] Compatible with AWS EC2 + MongoDB deployment
-
-### Fixes Applied (User Feedback):
-[x] **Fixed logo duplication** - Removed 3x duplication, now shows each sponsor only once
-[x] **Professional heading** - Updated to "Our Sponsors & Partners" with subtitle matching site style
-[x] **Popup on click** - Changed from external link to Dialog popup showing sponsor details
-[x] Removed unused sliding animation CSS
-
-### Features:
-- Clean centered layout with flex-wrap (no infinite scroll)
-- Responsive design (smaller logos on mobile)
-- Grayscale effect with full color on hover
-- Professional section heading with subtitle
-- Click any logo to see popup with:
-  - Sponsor logo and name
-  - Tier badge (Platinum/Gold/Silver/Partner)
-  - Full description
-  - Visit Website button (if URL exists)
-  - Social media icons (if configured)
-- Positioned above footer on all public pages (not admin/auth routes)
+**Status:** Application is now running successfully on port 5000.
 
 ---
 
@@ -98,6 +51,7 @@ The fishing competition management application has been successfully imported an
 - Team competition support
 - Individual competitions
 - Admin panel (peg allocation, weigh-in management)
+- Role-based access control (Admin, Manager, Marshal)
 - User profiles and leaderboards
 - Payment processing with Stripe
 - News articles and gallery

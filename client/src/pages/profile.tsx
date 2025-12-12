@@ -441,7 +441,7 @@ export default function Profile() {
               </div>
 
               <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
                   <div>
                     <h1 className="text-3xl font-bold mb-1" data-testid="text-profile-name">
                       {displayUser.firstName} {displayUser.lastName}
@@ -459,6 +459,63 @@ export default function Profile() {
                     </Button>
                   )}
                 </div>
+
+                {(displayUser.youtubeUrl || displayUser.facebookUrl || displayUser.twitterUrl || displayUser.instagramUrl || displayUser.tiktokUrl) && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex gap-2">
+                      {displayUser.youtubeUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.youtubeUrl && window.open(displayUser.youtubeUrl, '_blank')}
+                          data-testid="button-youtube"
+                        >
+                          <SiYoutube className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.facebookUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.facebookUrl && window.open(displayUser.facebookUrl, '_blank')}
+                          data-testid="button-facebook"
+                        >
+                          <SiFacebook className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.twitterUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.twitterUrl && window.open(displayUser.twitterUrl, '_blank')}
+                          data-testid="button-twitter"
+                        >
+                          <SiX className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.instagramUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
+                          data-testid="button-instagram"
+                        >
+                          <SiInstagram className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.tiktokUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.tiktokUrl && window.open(displayUser.tiktokUrl, '_blank')}
+                          data-testid="button-tiktok"
+                        >
+                          <SiTiktok className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {displayUser.bio && <p className="text-muted-foreground mb-4">{displayUser.bio}</p>}
 
@@ -523,66 +580,6 @@ export default function Profile() {
                   <Calendar className="h-4 w-4" />
                   <span>Member since {new Date(displayUser.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'Europe/London' })}</span>
                 </div>
-
-                {(displayUser.youtubeUrl || displayUser.facebookUrl || displayUser.twitterUrl || displayUser.instagramUrl || displayUser.tiktokUrl) && (
-                  <div className="border-t pt-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold">Social Media:</span>
-                      <div className="flex gap-2">
-                        {displayUser.youtubeUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.youtubeUrl && window.open(displayUser.youtubeUrl, '_blank')}
-                            data-testid="button-youtube"
-                          >
-                            <SiYoutube className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.facebookUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.facebookUrl && window.open(displayUser.facebookUrl, '_blank')}
-                            data-testid="button-facebook"
-                          >
-                            <SiFacebook className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.twitterUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.twitterUrl && window.open(displayUser.twitterUrl, '_blank')}
-                            data-testid="button-twitter"
-                          >
-                            <SiX className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.instagramUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
-                            data-testid="button-instagram"
-                          >
-                            <SiInstagram className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.tiktokUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.tiktokUrl && window.open(displayUser.tiktokUrl, '_blank')}
-                            data-testid="button-tiktok"
-                          >
-                            <SiTiktok className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-2">
