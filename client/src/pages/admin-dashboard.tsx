@@ -65,7 +65,7 @@ interface AdminUser {
   firstName?: string;
   lastName?: string;
   name?: string;
-  role?: "admin" | "manager";
+  role?: "admin" | "manager" | "marshal";
 }
 
 export default function AdminDashboard() {
@@ -73,11 +73,18 @@ export default function AdminDashboard() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
 
-  // Check authentication
+  // Check authentication first to get role
   const { data: admin, isLoading: isCheckingAuth } = useQuery<AdminUser>({
     queryKey: ["/api/admin/me"],
     retry: false,
   });
+
+  // Set default section based on role - marshal only sees competitions
+  const [hasSetInitialSection, setHasSetInitialSection] = useState(false);
+  if (admin?.role === "marshal" && !hasSetInitialSection && activeSection === "dashboard") {
+    setActiveSection("competitions");
+    setHasSetInitialSection(true);
+  }
 
   // Fetch dashboard data
   const { data: dashboardStats } = useQuery<{
@@ -138,20 +145,25 @@ export default function AdminDashboard() {
     return null;
   }
 
-  const menuItems = [
-    { id: "dashboard" as const, title: "Dashboard", icon: BarChart3 },
-    { id: "competitions" as const, title: "Competitions", icon: Trophy },
-    { id: "teams" as const, title: "Teams", icon: UsersRound },
-    { id: "anglers" as const, title: "Anglers", icon: Users },
-    { id: "sponsors" as const, title: "Sponsors", icon: Coins },
-    { id: "news" as const, title: "News", icon: Newspaper },
-    { id: "gallery" as const, title: "Gallery", icon: ImageIcon },
-    { id: "youtube-videos" as const, title: "YouTube Videos", icon: Youtube },
-    { id: "slider" as const, title: "Slider & Logo", icon: Images },
-    // Show staff management only to admins
-    ...(admin?.role === "admin" ? [{ id: "staff" as const, title: "Staff", icon: ShieldCheck }] : []),
-    // { id: "settings" as const, title: "Settings", icon: Settings },
-  ];
+  // Marshal role only sees competitions for view-only access
+  const menuItems = admin?.role === "marshal" 
+    ? [
+        { id: "competitions" as const, title: "Competitions", icon: Trophy },
+      ]
+    : [
+        { id: "dashboard" as const, title: "Dashboard", icon: BarChart3 },
+        { id: "competitions" as const, title: "Competitions", icon: Trophy },
+        { id: "teams" as const, title: "Teams", icon: UsersRound },
+        { id: "anglers" as const, title: "Anglers", icon: Users },
+        { id: "sponsors" as const, title: "Sponsors", icon: Coins },
+        { id: "news" as const, title: "News", icon: Newspaper },
+        { id: "gallery" as const, title: "Gallery", icon: ImageIcon },
+        { id: "youtube-videos" as const, title: "YouTube Videos", icon: Youtube },
+        { id: "slider" as const, title: "Slider & Logo", icon: Images },
+        // Show staff management only to admins
+        ...(admin?.role === "admin" ? [{ id: "staff" as const, title: "Staff", icon: ShieldCheck }] : []),
+        // { id: "settings" as const, title: "Settings", icon: Settings },
+      ];
 
   const liveCompetitions = allCompetitions
     .filter(comp => getCompetitionStatus(comp) === "live")
@@ -216,12 +228,15 @@ export default function AdminDashboard() {
         return (
           <div className="space-y-8">
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-              <StatCard
-                title="Total Revenue"
-                value={dashboardStats?.totalRevenue ?? "£0"}
-                icon={Coins}
-                description="This month"
-              />
+              {/* Only show revenue to admin - hide from manager and marshal */}
+              {admin?.role === "admin" && (
+                <StatCard
+                  title="Total Revenue"
+                  value={dashboardStats?.totalRevenue ?? "£0"}
+                  icon={Coins}
+                  description="This month"
+                />
+              )}
               <StatCard
                 title="Active Competitions"
                 value={dashboardStats?.activeCompetitions?.toString() ?? "0"}

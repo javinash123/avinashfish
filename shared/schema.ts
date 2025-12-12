@@ -104,7 +104,7 @@ export const anglerDirectoryQuerySchema = z.object({
 export type AnglerDirectoryQuery = z.infer<typeof anglerDirectoryQuerySchema>;
 
 // Staff roles enum
-export const staffRoles = ['admin', 'manager'] as const;
+export const staffRoles = ['admin', 'manager', 'marshal'] as const;
 export type StaffRole = typeof staffRoles[number];
 
 export const staff = pgTable("staff", {
@@ -122,7 +122,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
   createdAt: true,
 }).extend({
-  role: z.enum(['admin', 'manager']),
+  role: z.enum(['admin', 'manager', 'marshal']),
 });
 
 export const updateStaffSchema = createInsertSchema(staff).omit({
@@ -130,7 +130,7 @@ export const updateStaffSchema = createInsertSchema(staff).omit({
   createdAt: true,
   password: true,
 }).extend({
-  role: z.enum(['admin', 'manager']).optional(),
+  role: z.enum(['admin', 'manager', 'marshal']).optional(),
 }).partial();
 
 export const updateStaffPasswordSchema = z.object({

@@ -59,6 +59,15 @@ import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { convertToOunces, formatWeight, convertFromOunces } from "@shared/weight-utils";
 
+interface AdminUser {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  role?: "admin" | "manager" | "marshal";
+}
+
 export default function AdminCompetitions() {
   const { toast } = useToast();
   const [isCreateOpen, setIsCreateOpen] = useState(false);
@@ -70,6 +79,15 @@ export default function AdminCompetitions() {
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [competitionToDelete, setCompetitionToDelete] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
+
+  // Get admin role for permission checks
+  const { data: admin } = useQuery<AdminUser>({
+    queryKey: ["/api/admin/me"],
+  });
+
+  // Role-based permission helpers
+  const canModify = admin?.role === "admin" || admin?.role === "manager";
+  const canViewPayments = admin?.role === "admin";
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [entryToDelete, setEntryToDelete] = useState<{ id: string; weight: string } | null>(null);
   
@@ -1024,23 +1042,27 @@ export default function AdminCompetitions() {
           </p>
         </div>
         <div className="flex gap-2">
-          <Button 
-            variant="outline" 
-            onClick={() => regenerateThumbnailsMutation.mutate()}
-            disabled={regenerateThumbnailsMutation.isPending}
-            data-testid="button-regenerate-thumbnails"
-          >
-            {regenerateThumbnailsMutation.isPending ? (
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            ) : (
-              <RefreshCw className="h-4 w-4 mr-2" />
-            )}
-            {regenerateThumbnailsMutation.isPending ? "Regenerating..." : "Fix Images"}
-          </Button>
-          <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
-            <Plus className="h-4 w-4 mr-2" />
-            Create Competition
-          </Button>
+          {canModify && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => regenerateThumbnailsMutation.mutate()}
+                disabled={regenerateThumbnailsMutation.isPending}
+                data-testid="button-regenerate-thumbnails"
+              >
+                {regenerateThumbnailsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {regenerateThumbnailsMutation.isPending ? "Regenerating..." : "Fix Images"}
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Competition
+              </Button>
+            </>
+          )}
         </div>
       </div>
 
@@ -1088,7 +1110,7 @@ export default function AdminCompetitions() {
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Lake</TableHead>
                 <TableHead>Pegs</TableHead>
-                <TableHead>Entry Fee</TableHead>
+                {canViewPayments && <TableHead>Entry Fee</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -1135,7 +1157,7 @@ export default function AdminCompetitions() {
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>£{competition.entryFee}</TableCell>
+                  {canViewPayments && <TableCell>£{competition.entryFee}</TableCell>}
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(getCompetitionStatus(competition))}>
                       {getCompetitionStatus(competition)}
@@ -1176,29 +1198,35 @@ export default function AdminCompetitions() {
                           <Users className="h-4 w-4 mr-2" />
                           Anglers
                         </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => openPaymentsDialog(competition)}
-                          data-testid={`action-payments-${competition.id}`}
-                        >
-                          <CreditCard className="h-4 w-4 mr-2" />
-                          Payments
-                        </DropdownMenuItem>
-                        <DropdownMenuSeparator />
-                        <DropdownMenuItem 
-                          onClick={() => openEditDialog(competition)}
-                          data-testid={`action-edit-${competition.id}`}
-                        >
-                          <Pencil className="h-4 w-4 mr-2" />
-                          Edit
-                        </DropdownMenuItem>
-                        <DropdownMenuItem 
-                          onClick={() => handleDelete(competition)}
-                          data-testid={`action-delete-${competition.id}`}
-                          className="text-destructive"
-                        >
-                          <Trash2 className="h-4 w-4 mr-2" />
-                          Delete
-                        </DropdownMenuItem>
+                        {canViewPayments && (
+                          <DropdownMenuItem 
+                            onClick={() => openPaymentsDialog(competition)}
+                            data-testid={`action-payments-${competition.id}`}
+                          >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Payments
+                          </DropdownMenuItem>
+                        )}
+                        {canModify && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => openEditDialog(competition)}
+                              data-testid={`action-edit-${competition.id}`}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(competition)}
+                              data-testid={`action-delete-${competition.id}`}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
