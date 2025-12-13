@@ -35,6 +35,34 @@
 
 ---
 
+### December 12, 2025 - Latest Changes (Mobile Radio, News Optimization, Marshal Verification)
+
+[x] **Mobile PegSlam Radio Button**
+    - Added PegSlam Radio button to mobile menu in header.tsx
+    - Button shows in the Sheet mobile menu with play/stop states
+    - Includes animated indicator when playing
+    - Uses same audio element as desktop version
+
+[x] **News Section Loading Optimization**
+    - Added staleTime (5 minutes) and gcTime (10 minutes) to news queries
+    - Updated client/src/pages/news.tsx with caching configuration
+    - Updated client/src/pages/home.tsx with caching for featured news
+    - This prevents unnecessary API calls and speeds up content display
+
+[x] **Marshal Role Verification (Already Implemented)**
+    - Marshal role was already properly restricted in the codebase
+    - admin-dashboard.tsx: Marshal only sees Competitions menu (line 149-152)
+    - admin-competitions.tsx: `canModify` excludes Marshal from add/edit/delete (line 89)
+    - admin-competitions.tsx: `canViewPayments` hides payments from Marshal (line 90)
+    - Staff management only visible to admin role (line 164)
+
+### Files Modified This Session:
+- `client/src/components/header.tsx` - Added mobile radio button in Sheet menu
+- `client/src/pages/news.tsx` - Added staleTime/gcTime for caching
+- `client/src/pages/home.tsx` - Added staleTime/gcTime for featured news caching
+
+---
+
 ### December 12, 2025 - Import Re-verification
 
 **Issue Found:** The workflow was failing because `tsx` was not found in PATH.

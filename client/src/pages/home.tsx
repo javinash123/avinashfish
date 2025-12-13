@@ -28,6 +28,8 @@ export default function Home() {
 
   const { data: featuredNews = [] } = useQuery<News[]>({
     queryKey: ["/api/news/featured"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   const { data: featuredGallery = [] } = useQuery<GalleryImage[]>({

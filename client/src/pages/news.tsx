@@ -23,6 +23,8 @@ export default function News() {
 
   const { data: newsArticles = [], isLoading } = useQuery<News[]>({
     queryKey: ["/api/news"],
+    staleTime: 5 * 60 * 1000,
+    gcTime: 10 * 60 * 1000,
   });
 
   // Handle deep linking - auto-open article from URL parameter and browser navigation
