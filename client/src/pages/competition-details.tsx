@@ -404,24 +404,13 @@ export default function CompetitionDetails() {
 
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           <div className="lg:col-span-2">
-            <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden" style={{ aspectRatio: '16 / 9' }}>
-              {(competition as any).thumbnailUrlLg || (competition as any).thumbnailUrlMd || (competition as any).thumbnailUrl || competition.imageUrl ? (
-                <picture>
-                  {(competition as any).thumbnailUrlLg && (
-                    <source media="(min-width: 1024px)" srcSet={(competition as any).thumbnailUrlLg} type="image/webp" />
-                  )}
-                  {(competition as any).thumbnailUrlMd && (
-                    <source media="(min-width: 640px)" srcSet={(competition as any).thumbnailUrlMd} type="image/webp" />
-                  )}
-                  {(competition as any).thumbnailUrl && (
-                    <source srcSet={(competition as any).thumbnailUrl} type="image/webp" />
-                  )}
-                  <img
-                    src={(competition as any).thumbnailUrlLg || (competition as any).thumbnailUrlMd || (competition as any).thumbnailUrl || competition.imageUrl}
-                    alt={competition.name}
-                    className="w-full h-full object-cover object-center"
-                  />
-                </picture>
+            <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
+              {competition.imageUrl ? (
+                <img
+                  src={competition.imageUrl}
+                  alt={competition.name}
+                  className="w-full h-full object-cover object-center"
+                />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
                   <div className="text-center text-primary/20">

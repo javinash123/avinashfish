@@ -1,9 +1,51 @@
-# Import Progress Tracker - LATEST SESSION (December 12, 2025)
+# Import Progress Tracker - LATEST SESSION (December 13, 2025)
 
 [x] 1. Install the required packages
 [x] 2. Restart the workflow to see if the project is working
 [x] 3. Verify the project is working using the screenshot tool
 [x] 4. Inform user the import is completed and they can start building, mark the import as completed using the complete_project_import tool
+
+### December 13, 2025 - Import Verification Session
+
+**Issue Found:** The workflow was failing because `tsx` was not found in PATH despite being installed.
+
+**Fix Applied:** Reconfigured workflow with proper `output_type: webview` and `wait_for_port: 5000` settings.
+
+**Status:** Application is now running successfully on port 5000. Screenshot verified the homepage is displaying correctly.
+
+---
+
+### December 13, 2025 - Competition Image Fix
+
+[x] **Fixed Competition Images Not Showing Properly**
+    - Issue: Competition images were using `<picture>` elements with `<source type="image/webp">` which wasn't working
+    - Changed to use simple `<img>` tags with the original uploaded image (jpg/png/jpeg)
+    - Updated `client/src/components/competition-card.tsx` - Removed picture/source elements, using direct img with imageUrl
+    - Updated `client/src/pages/competition-details.tsx` - Same fix, using competition.imageUrl directly
+    - Removed aspect-ratio: 16/9 style from image container divs
+    - This ensures compatibility with AWS EC2 deployment using MongoDB
+
+---
+
+### December 13, 2025 - News Section Optimization
+
+[x] **Homepage News Loading Optimization**
+    - `/api/news/featured` now returns only essential fields (id, title, excerpt, image, category, date, readTime, author)
+    - Excludes full `content` field to reduce payload size
+
+[x] **News Page Pagination**
+    - Added pagination to `/api/news` endpoint (default 6 items per page)
+    - Returns paginated response with metadata: page, limit, totalItems, totalPages, hasMore
+    - News listing excludes full content (only summary data)
+    - Full article content loaded on-demand when opening dialog via `/api/news/:id`
+    - Added pagination UI with prev/next buttons and page numbers
+    - Lazy loading images with `loading="lazy"` attribute
+
+### Files Modified:
+- `server/routes.ts` - Updated `/api/news` with pagination, added `/api/news/:id` for full article, optimized `/api/news/featured`
+- `client/src/pages/news.tsx` - Complete rewrite with pagination support and on-demand article loading
+
+---
 
 ### December 12, 2025 - User Requested Changes (Staff Roles & Competition Deletion)
 
@@ -60,16 +102,6 @@
 - `client/src/components/header.tsx` - Added mobile radio button in Sheet menu
 - `client/src/pages/news.tsx` - Added staleTime/gcTime for caching
 - `client/src/pages/home.tsx` - Added staleTime/gcTime for featured news caching
-
----
-
-### December 12, 2025 - Import Re-verification
-
-**Issue Found:** The workflow was failing because `tsx` was not found in PATH.
-
-**Fix Applied:** Installed `tsx` package using packager tool, then reconfigured workflow with `output_type: webview` and `wait_for_port: 5000`.
-
-**Status:** Application is now running successfully on port 5000.
 
 ---
 

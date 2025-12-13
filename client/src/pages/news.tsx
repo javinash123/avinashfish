@@ -8,66 +8,99 @@ import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2 } from "lucide-react";
+import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2, ChevronLeft, ChevronRight } from "lucide-react";
 import { SiFacebook, SiX } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
 import type { News } from "@shared/schema";
 import { updateMetaTags, resetMetaTags } from "@/lib/meta-tags";
+import { apiRequest } from "@/lib/queryClient";
 
-export default function News() {
+interface NewsSummary {
+  id: string;
+  title: string;
+  excerpt: string;
+  image: string;
+  category: string;
+  date: string;
+  readTime: string;
+  author: string;
+  featured?: boolean;
+}
+
+interface PaginatedNewsResponse {
+  news: NewsSummary[];
+  pagination: {
+    page: number;
+    limit: number;
+    totalItems: number;
+    totalPages: number;
+    hasMore: boolean;
+  };
+}
+
+export default function NewsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
   const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
+  const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
+  const ITEMS_PER_PAGE = 6;
 
-  const { data: newsArticles = [], isLoading } = useQuery<News[]>({
-    queryKey: ["/api/news"],
+  const { data: newsData, isLoading } = useQuery<PaginatedNewsResponse>({
+    queryKey: ["/api/news", currentPage, ITEMS_PER_PAGE],
+    queryFn: async () => {
+      const response = await fetch(`/api/news?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      if (!response.ok) throw new Error("Failed to fetch news");
+      return response.json();
+    },
     staleTime: 5 * 60 * 1000,
     gcTime: 10 * 60 * 1000,
   });
 
-  // Handle deep linking - auto-open article from URL parameter and browser navigation
+  const newsArticles = newsData?.news || [];
+  const pagination = newsData?.pagination;
+
+  // Fetch full article when opening dialog
+  const { data: fullArticle, isLoading: isLoadingArticle } = useQuery<News>({
+    queryKey: ["/api/news", selectedArticle?.id],
+    queryFn: async () => {
+      const response = await fetch(`/api/news/${selectedArticle?.id}`);
+      if (!response.ok) throw new Error("Failed to fetch article");
+      return response.json();
+    },
+    enabled: !!selectedArticle?.id,
+  });
+
+  // Handle deep linking - auto-open article from URL parameter
   useEffect(() => {
-    if (newsArticles.length > 0) {
-      const urlParams = new URLSearchParams(window.location.search);
-      const articleId = urlParams.get('article');
-      
-      if (articleId) {
-        const article = newsArticles.find(a => a.id === articleId);
-        if (article) {
-          setSelectedArticle(article);
-          // Update meta tags for social sharing
-          const articleUrl = `${window.location.origin}/news?article=${article.id}`;
-          updateMetaTags({
-            title: article.title,
-            description: article.excerpt,
-            image: article.image,
-            url: articleUrl,
-            type: 'article',
-          });
-        }
-      } else {
-        setSelectedArticle(null);
-        resetMetaTags();
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleId = urlParams.get('article');
+    
+    if (articleId && newsArticles.length > 0) {
+      const article = newsArticles.find(a => a.id === articleId);
+      if (article) {
+        setSelectedArticle(article as unknown as News);
       }
     }
   }, [newsArticles, location]);
 
-  // Update URL when article is opened/closed using wouter
-  const handleArticleOpen = (article: News) => {
-    setSelectedArticle(article);
-    
-    // Update meta tags for social sharing
-    const articleUrl = `${window.location.origin}/news?article=${article.id}`;
-    updateMetaTags({
-      title: article.title,
-      description: article.excerpt,
-      image: article.image,
-      url: articleUrl,
-      type: 'article',
-    });
-    
+  // Update meta tags when full article is loaded
+  useEffect(() => {
+    if (fullArticle) {
+      const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
+      updateMetaTags({
+        title: fullArticle.title,
+        description: fullArticle.excerpt,
+        image: fullArticle.image,
+        url: articleUrl,
+        type: 'article',
+      });
+    }
+  }, [fullArticle]);
+
+  const handleArticleOpen = (article: NewsSummary) => {
+    setSelectedArticle(article as unknown as News);
     setLocation(`/news?article=${article.id}`);
   };
 
@@ -77,6 +110,7 @@ export default function News() {
     setLocation('/news');
   };
 
+  // Filter articles client-side (only for current page)
   const filteredArticles = newsArticles.filter((article) => {
     const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
       article.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
@@ -97,6 +131,11 @@ export default function News() {
       default:
         return { label: category, variant: "outline" as const, icon: Newspaper };
     }
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
@@ -187,6 +226,7 @@ export default function News() {
                         src={article.image}
                         alt={article.title}
                         className="w-full h-full object-contain"
+                        loading="lazy"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -238,32 +278,74 @@ export default function News() {
                 </p>
               </div>
             )}
+
+            {pagination && pagination.totalPages > 1 && (
+              <div className="flex items-center justify-center gap-2 mt-8">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(currentPage - 1)}
+                  disabled={currentPage === 1}
+                  data-testid="button-prev-page"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </Button>
+                
+                <div className="flex items-center gap-1">
+                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
+                    <Button
+                      key={page}
+                      variant={page === currentPage ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => handlePageChange(page)}
+                      data-testid={`button-page-${page}`}
+                    >
+                      {page}
+                    </Button>
+                  ))}
+                </div>
+
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => handlePageChange(currentPage + 1)}
+                  disabled={currentPage === pagination.totalPages}
+                  data-testid="button-next-page"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
           </>
         )}
       </div>
 
       <Dialog open={!!selectedArticle} onOpenChange={(open) => { if (!open) handleArticleClose(); }}>
         <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-news-detail">
-          {selectedArticle && (() => {
-            // Generate shareable URL for this specific article
-            const articleUrl = `${window.location.origin}/news?article=${selectedArticle.id}`;
-            
-            return (
-              <>
-                <DialogHeader>
-                  <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
-                </DialogHeader>
+          {selectedArticle && (
+            <>
+              <DialogHeader>
+                <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
+              </DialogHeader>
+              {isLoadingArticle ? (
+                <div className="space-y-4">
+                  <Skeleton className="aspect-video w-full rounded-md" />
+                  <Skeleton className="h-4 w-full" />
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-32 w-full" />
+                </div>
+              ) : fullArticle ? (
                 <div className="space-y-4">
                   <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
                     <img
-                      src={selectedArticle.image}
-                      alt={selectedArticle.title}
+                      src={fullArticle.image}
+                      alt={fullArticle.title}
                       className="w-full h-full object-contain"
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
                     {(() => {
-                      const categoryInfo = getCategoryBadge(selectedArticle.category);
+                      const categoryInfo = getCategoryBadge(fullArticle.category);
                       const CategoryIcon = categoryInfo.icon;
                       return (
                         <Badge variant={categoryInfo.variant}>
@@ -275,25 +357,25 @@ export default function News() {
                     <div className="flex items-center gap-4 text-sm text-muted-foreground">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-3 w-3" />
-                        <span data-testid="text-dialog-news-date">{selectedArticle.date}</span>
+                        <span data-testid="text-dialog-news-date">{fullArticle.date}</span>
                       </div>
                       <div className="flex items-center gap-1">
                         <Clock className="h-3 w-3" />
-                        <span>{selectedArticle.readTime}</span>
+                        <span>{fullArticle.readTime}</span>
                       </div>
                     </div>
                   </div>
                   <div className="space-y-3">
-                    <p className="text-muted-foreground font-medium">{selectedArticle.excerpt}</p>
-                    <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: selectedArticle.content }} />
+                    <p className="text-muted-foreground font-medium">{fullArticle.excerpt}</p>
+                    <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: fullArticle.content }} />
                     <div className="flex items-center gap-4 text-sm pt-4 border-t">
-                      <span className="text-muted-foreground">By {selectedArticle.author}</span>
-                      {selectedArticle.competition && (
+                      <span className="text-muted-foreground">By {fullArticle.author}</span>
+                      {fullArticle.competition && (
                         <>
-                          <span className="text-muted-foreground">•</span>
+                          <span className="text-muted-foreground">-</span>
                           <div className="flex items-center gap-2">
                             <Trophy className="h-4 w-4 text-muted-foreground" />
-                            <span data-testid="text-dialog-news-competition">{selectedArticle.competition}</span>
+                            <span data-testid="text-dialog-news-competition">{fullArticle.competition}</span>
                           </div>
                         </>
                       )}
@@ -305,7 +387,8 @@ export default function News() {
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          const text = selectedArticle.title;
+                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
+                          const text = fullArticle.title;
                           window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + articleUrl)}`, '_blank');
                         }}
                         data-testid="button-share-whatsapp"
@@ -316,6 +399,7 @@ export default function News() {
                         variant="outline"
                         size="icon"
                         onClick={() => {
+                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
                           window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`, '_blank');
                         }}
                         data-testid="button-share-facebook"
@@ -326,7 +410,8 @@ export default function News() {
                         variant="outline"
                         size="icon"
                         onClick={() => {
-                          const text = selectedArticle.title;
+                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
+                          const text = fullArticle.title;
                           window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(articleUrl)}`, '_blank');
                         }}
                         data-testid="button-share-x"
@@ -337,22 +422,23 @@ export default function News() {
                         variant="outline"
                         size="sm"
                         onClick={() => {
+                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
                           navigator.clipboard.writeText(articleUrl);
                           toast({
                             title: "Link copied",
                             description: "Article link copied to clipboard - share it anywhere!",
                           });
                         }}
-                        data-testid="button-share-instagram"
+                        data-testid="button-copy-link"
                       >
                         Copy Link
                       </Button>
                     </div>
                   </div>
                 </div>
-              </>
-            );
-          })()}
+              ) : null}
+            </>
+          )}
         </DialogContent>
       </Dialog>
     </div>

@@ -2152,8 +2152,45 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // News routes (public access for display)
   app.get("/api/news", async (req, res) => {
     try {
-      const news = await storage.getAllNews();
-      res.json(news);
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 6;
+      const allNews = await storage.getAllNews();
+      
+      // Sort by date descending (newest first)
+      const sortedNews = allNews.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      const totalItems = sortedNews.length;
+      const totalPages = Math.ceil(totalItems / limit);
+      const startIndex = (page - 1) * limit;
+      const endIndex = startIndex + limit;
+      
+      // Return summary data without full content for listing
+      const paginatedNews = sortedNews.slice(startIndex, endIndex).map(item => ({
+        id: item.id,
+        title: item.title,
+        excerpt: item.excerpt,
+        image: item.image,
+        category: item.category,
+        date: item.date,
+        readTime: item.readTime,
+        author: item.author,
+        featured: item.featured,
+      }));
+      
+      res.json({
+        news: paginatedNews,
+        pagination: {
+          page,
+          limit,
+          totalItems,
+          totalPages,
+          hasMore: page < totalPages
+        }
+      });
     } catch (error: any) {
       console.error("Error fetching news:", error);
       res.status(500).json({ message: "Error fetching news: " + error.message });
@@ -2163,11 +2200,38 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.get("/api/news/featured", async (req, res) => {
     try {
       const allNews = await storage.getAllNews();
-      const featuredNews = allNews.filter(item => item.featured === true);
+      // Return only essential fields for featured news on homepage
+      const featuredNews = allNews
+        .filter(item => item.featured === true)
+        .map(item => ({
+          id: item.id,
+          title: item.title,
+          excerpt: item.excerpt,
+          image: item.image,
+          category: item.category,
+          date: item.date,
+          readTime: item.readTime,
+          author: item.author,
+        }));
       res.json(featuredNews);
     } catch (error: any) {
       console.error("Error fetching featured news:", error);
       res.status(500).json({ message: "Error fetching featured news: " + error.message });
+    }
+  });
+
+  // Get single news article with full content
+  app.get("/api/news/:id", async (req, res) => {
+    try {
+      const allNews = await storage.getAllNews();
+      const article = allNews.find(n => n.id === req.params.id);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+      res.json(article);
+    } catch (error: any) {
+      console.error("Error fetching news article:", error);
+      res.status(500).json({ message: "Error fetching news article: " + error.message });
     }
   });
 
