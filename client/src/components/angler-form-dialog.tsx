@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -18,7 +18,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Loader2, Camera, Trash2 } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
+import { Separator } from "@/components/ui/separator";
 
 interface AnglerFormDialogProps {
   open: boolean;
@@ -39,6 +42,15 @@ const getInitialFormData = (angler?: any) => ({
   location: angler?.location || "",
   favouriteMethod: angler?.favouriteMethod || "",
   favouriteSpecies: angler?.favouriteSpecies || "",
+  mobileNumber: angler?.mobileNumber || "",
+  dateOfBirth: angler?.dateOfBirth || "",
+  youtubeUrl: angler?.youtubeUrl || "",
+  youtubeVideoUrl: angler?.youtubeVideoUrl || "",
+  facebookUrl: angler?.facebookUrl || "",
+  twitterUrl: angler?.twitterUrl || "",
+  instagramUrl: angler?.instagramUrl || "",
+  tiktokUrl: angler?.tiktokUrl || "",
+  avatar: angler?.avatar || "",
   status: angler?.status || "active",
 });
 
@@ -49,7 +61,10 @@ export function AnglerFormDialog({
   onSubmit,
   isSubmitting,
 }: AnglerFormDialogProps) {
+  const { toast } = useToast();
   const [formData, setFormData] = useState(getInitialFormData(angler));
+  const [isUploadingAvatar, setIsUploadingAvatar] = useState(false);
+  const avatarInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (open) {
@@ -57,23 +72,98 @@ export function AnglerFormDialog({
     }
   }, [open, angler]);
 
+  const handleAvatarUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      toast({
+        title: "Invalid file",
+        description: "Please select an image file",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      toast({
+        title: "File too large",
+        description: "Please select an image under 5MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingAvatar(true);
+    try {
+      const uploadFormData = new FormData();
+      uploadFormData.append('image', file);
+      uploadFormData.append('type', 'avatar');
+      
+      const uploadResponse = await fetch('/api/upload', {
+        method: 'POST',
+        body: uploadFormData,
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload image');
+      }
+
+      const uploadData = await uploadResponse.json();
+      setFormData({ ...formData, avatar: uploadData.url });
+      
+      toast({
+        title: "Avatar uploaded",
+        description: "Profile picture has been uploaded successfully.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Upload failed",
+        description: error.message || "Failed to upload avatar",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingAvatar(false);
+      if (avatarInputRef.current) {
+        avatarInputRef.current.value = '';
+      }
+    }
+  };
+
+  const handleRemoveAvatar = () => {
+    setFormData({ ...formData, avatar: "" });
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
     let submitData: any;
     
     if (!angler) {
+      // For new anglers, exclude status from initial data
       const { status, ...dataWithoutStatus } = formData;
       submitData = dataWithoutStatus;
     } else {
+      // For editing existing anglers
+      // Only include password if it's not empty (user wants to change it)
       const { password, ...dataWithoutPassword } = formData;
-      submitData = formData.password ? formData : dataWithoutPassword;
+      if (formData.password && formData.password.trim() !== '') {
+        submitData = formData;
+      } else {
+        submitData = dataWithoutPassword;
+      }
     }
     
     onSubmit(submitData);
   };
 
   const isEdit = !!angler;
+
+  const getInitials = (firstName: string, lastName: string) => {
+    const first = firstName?.[0] || '';
+    const last = lastName?.[0] || '';
+    return (first + last).toUpperCase() || 'AN';
+  };
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
@@ -86,6 +176,59 @@ export function AnglerFormDialog({
         </DialogHeader>
         <form onSubmit={handleSubmit}>
           <div className="grid gap-4 py-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                <Avatar className="h-20 w-20">
+                  {formData.avatar && <AvatarImage src={formData.avatar} alt="Avatar" className="object-cover" />}
+                  <AvatarFallback className="text-lg">
+                    {getInitials(formData.firstName, formData.lastName)}
+                  </AvatarFallback>
+                </Avatar>
+              </div>
+              <div className="flex flex-col gap-2">
+                <div className="flex gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => avatarInputRef.current?.click()}
+                    disabled={isUploadingAvatar}
+                    data-testid="button-upload-avatar"
+                  >
+                    {isUploadingAvatar ? (
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    ) : (
+                      <Camera className="h-4 w-4 mr-2" />
+                    )}
+                    {formData.avatar ? "Change Photo" : "Upload Photo"}
+                  </Button>
+                  {formData.avatar && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={handleRemoveAvatar}
+                      data-testid="button-remove-avatar"
+                    >
+                      <Trash2 className="h-4 w-4 mr-2" />
+                      Remove
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-muted-foreground">Max 5MB. Recommended: 200x200px</p>
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarUpload}
+                  data-testid="input-avatar-file"
+                />
+              </div>
+            </div>
+
+            <Separator />
+
             <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="firstName">First Name *</Label>
@@ -131,19 +274,50 @@ export function AnglerFormDialog({
                 />
               </div>
             </div>
-            {!isEdit && (
+            <div className="grid gap-2">
+              <Label htmlFor="password">
+                {isEdit ? "New Password (leave blank to keep current)" : "Password *"}
+              </Label>
+              <Input
+                id="password"
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                required={!isEdit}
+                placeholder={isEdit ? "Enter new password to change" : "Enter password"}
+                data-testid="input-password"
+              />
+              {isEdit && (
+                <p className="text-xs text-muted-foreground">Leave empty to keep the current password</p>
+              )}
+            </div>
+
+            <Separator />
+            <h3 className="font-semibold text-sm">Personal Information</h3>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="grid gap-2">
-                <Label htmlFor="password">Password *</Label>
+                <Label htmlFor="mobileNumber">Mobile Number</Label>
                 <Input
-                  id="password"
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required={!isEdit}
-                  data-testid="input-password"
+                  id="mobileNumber"
+                  type="tel"
+                  value={formData.mobileNumber}
+                  onChange={(e) => setFormData({ ...formData, mobileNumber: e.target.value })}
+                  placeholder="e.g., 07123456789"
+                  data-testid="input-mobile-number"
                 />
               </div>
-            )}
+              <div className="grid gap-2">
+                <Label htmlFor="dateOfBirth">Date of Birth</Label>
+                <Input
+                  id="dateOfBirth"
+                  type="date"
+                  value={formData.dateOfBirth}
+                  onChange={(e) => setFormData({ ...formData, dateOfBirth: e.target.value })}
+                  data-testid="input-date-of-birth"
+                />
+              </div>
+            </div>
             <div className="grid gap-2">
               <Label htmlFor="club">Club</Label>
               <Input
@@ -169,6 +343,7 @@ export function AnglerFormDialog({
                   id="favouriteMethod"
                   value={formData.favouriteMethod}
                   onChange={(e) => setFormData({ ...formData, favouriteMethod: e.target.value })}
+                  placeholder="e.g., Feeder, Float, Method"
                   data-testid="input-favourite-method"
                 />
               </div>
@@ -178,6 +353,7 @@ export function AnglerFormDialog({
                   id="favouriteSpecies"
                   value={formData.favouriteSpecies}
                   onChange={(e) => setFormData({ ...formData, favouriteSpecies: e.target.value })}
+                  placeholder="e.g., Carp, Bream, Roach"
                   data-testid="input-favourite-species"
                 />
               </div>
@@ -189,9 +365,84 @@ export function AnglerFormDialog({
                 value={formData.bio}
                 onChange={(e) => setFormData({ ...formData, bio: e.target.value })}
                 rows={3}
+                placeholder="Tell us about this angler..."
                 data-testid="input-bio"
               />
             </div>
+
+            <Separator />
+            <h3 className="font-semibold text-sm">Social Media</h3>
+            <p className="text-xs text-muted-foreground -mt-2">Add social media profiles (optional)</p>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="youtubeUrl">YouTube Channel URL</Label>
+                <Input
+                  id="youtubeUrl"
+                  value={formData.youtubeUrl}
+                  onChange={(e) => setFormData({ ...formData, youtubeUrl: e.target.value })}
+                  placeholder="https://youtube.com/@channel"
+                  data-testid="input-youtube-url"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="youtubeVideoUrl">Featured YouTube Video</Label>
+                <Input
+                  id="youtubeVideoUrl"
+                  value={formData.youtubeVideoUrl}
+                  onChange={(e) => setFormData({ ...formData, youtubeVideoUrl: e.target.value })}
+                  placeholder="https://youtube.com/watch?v=..."
+                  data-testid="input-youtube-video-url"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="facebookUrl">Facebook URL</Label>
+                <Input
+                  id="facebookUrl"
+                  value={formData.facebookUrl}
+                  onChange={(e) => setFormData({ ...formData, facebookUrl: e.target.value })}
+                  placeholder="https://facebook.com/username"
+                  data-testid="input-facebook-url"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="twitterUrl">Twitter/X URL</Label>
+                <Input
+                  id="twitterUrl"
+                  value={formData.twitterUrl}
+                  onChange={(e) => setFormData({ ...formData, twitterUrl: e.target.value })}
+                  placeholder="https://twitter.com/username"
+                  data-testid="input-twitter-url"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="grid gap-2">
+                <Label htmlFor="instagramUrl">Instagram URL</Label>
+                <Input
+                  id="instagramUrl"
+                  value={formData.instagramUrl}
+                  onChange={(e) => setFormData({ ...formData, instagramUrl: e.target.value })}
+                  placeholder="https://instagram.com/username"
+                  data-testid="input-instagram-url"
+                />
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="tiktokUrl">TikTok URL</Label>
+                <Input
+                  id="tiktokUrl"
+                  value={formData.tiktokUrl}
+                  onChange={(e) => setFormData({ ...formData, tiktokUrl: e.target.value })}
+                  placeholder="https://tiktok.com/@username"
+                  data-testid="input-tiktok-url"
+                />
+              </div>
+            </div>
+
+            <Separator />
+            
             <div className="grid gap-2">
               <Label htmlFor="status">Status</Label>
               <Select
@@ -218,7 +469,7 @@ export function AnglerFormDialog({
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting} data-testid="button-save">
+            <Button type="submit" disabled={isSubmitting || isUploadingAvatar} data-testid="button-save">
               {isSubmitting ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

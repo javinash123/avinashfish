@@ -58,6 +58,14 @@ interface Angler {
   location?: string;
   favouriteMethod?: string;
   favouriteSpecies?: string;
+  mobileNumber?: string;
+  dateOfBirth?: string;
+  youtubeUrl?: string;
+  youtubeVideoUrl?: string;
+  facebookUrl?: string;
+  twitterUrl?: string;
+  instagramUrl?: string;
+  tiktokUrl?: string;
   createdAt: string;
   status: "active" | "pending" | "blocked";
 }

@@ -1794,7 +1794,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const user = await storage.updateUser(req.params.id, req.body);
+      // Check if email is being changed and if it's already in use
+      if (req.body.email) {
+        const existingUser = await storage.getUserByEmail(req.body.email);
+        if (existingUser && existingUser.id !== req.params.id) {
+          return res.status(400).json({ message: "Email already in use by another user" });
+        }
+      }
+
+      // Check if username is being changed and if it's already in use
+      if (req.body.username) {
+        const existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser && existingUser.id !== req.params.id) {
+          return res.status(400).json({ message: "Username already in use by another user" });
+        }
+      }
+
+      // If password is empty string, remove it from the update data
+      const updateData = { ...req.body };
+      if (updateData.password === '') {
+        delete updateData.password;
+      }
+
+      const user = await storage.updateUser(req.params.id, updateData);
       if (!user) {
         return res.status(404).json({ message: "Angler not found" });
       }
