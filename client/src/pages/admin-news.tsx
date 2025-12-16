@@ -102,7 +102,7 @@ export default function AdminNews() {
   });
 
   const { data: articles = [], isLoading } = useQuery<News[]>({
-    queryKey: ["/api/news"],
+    queryKey: ["/api/admin/news"],
   });
 
   const createMutation = useMutation({
@@ -111,6 +111,7 @@ export default function AdminNews() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
       setIsCreateOpen(false);
       resetForm();
@@ -134,6 +135,7 @@ export default function AdminNews() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
       setIsEditOpen(false);
       setSelectedArticle(null);
@@ -158,6 +160,7 @@ export default function AdminNews() {
       return response.json();
     },
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/news"] });
       queryClient.invalidateQueries({ queryKey: ["/api/news"] });
     },
     onError: (error: Error) => {

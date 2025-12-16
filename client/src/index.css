@@ -356,3 +356,39 @@
   }
 }
 
+/* News content styles - prevent horizontal scrolling on mobile */
+.prose img,
+.prose video,
+.prose iframe,
+.prose embed,
+.prose object {
+  max-width: 100% !important;
+  width: auto !important;
+  height: auto !important;
+}
+
+.prose {
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
+}
+
+.prose pre,
+.prose code {
+  max-width: 100% !important;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.prose table {
+  display: block;
+  max-width: 100% !important;
+  overflow-x: auto;
+}
+
+/* Ensure all embedded content fits within container */
+.prose * {
+  max-width: 100%;
+}
+

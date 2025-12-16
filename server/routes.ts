@@ -164,6 +164,47 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       
       const fileUrl = `/attached-assets/uploads/${type}/${fileName}`;
 
+      // Optimize news images for faster loading
+      if (type === 'news') {
+        try {
+          const sharp = (await import('sharp')).default;
+          const ext = path.extname(fileName);
+          const nameWithoutExt = path.basename(fileName, ext);
+          const optimizedFileName = `${nameWithoutExt}-optimized.webp`;
+          const optimizedPath = path.join(targetDir, optimizedFileName);
+          
+          // Resize and compress news image - max width 1200px for good quality on all devices
+          await sharp(targetPath)
+            .resize(1200, null, {
+              fit: 'inside',
+              withoutEnlargement: true
+            })
+            .webp({ quality: 80 })
+            .toFile(optimizedPath);
+          
+          // Return the optimized version URL
+          const optimizedUrl = `/attached-assets/uploads/${type}/${optimizedFileName}`;
+          console.log(`Optimized news image: ${optimizedFileName}`);
+          
+          res.json({ 
+            url: optimizedUrl,
+            originalUrl: fileUrl,
+            filename: optimizedFileName,
+            message: "News image uploaded and optimized successfully" 
+          });
+          return;
+        } catch (optimizeError) {
+          console.error("News image optimization error:", optimizeError);
+          // Fall back to original if optimization fails
+          res.json({ 
+            url: fileUrl,
+            filename: fileName,
+            message: "File uploaded successfully (optimization failed)" 
+          });
+          return;
+        }
+      }
+
       // Generate thumbnails for competition images
       if (type === 'competitions') {
         try {
@@ -2258,6 +2299,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // Admin news management routes
+  // GET all news for admin panel (returns full array, not paginated)
+  app.get("/api/admin/news", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const allNews = await storage.getAllNews();
+      // Sort by date descending (newest first)
+      const sortedNews = allNews.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      res.json(sortedNews);
+    } catch (error: any) {
+      console.error("Error fetching admin news:", error);
+      res.status(500).json({ message: "Error fetching news: " + error.message });
+    }
+  });
+
   app.post("/api/admin/news", async (req, res) => {
     try {
       const adminId = req.session?.adminId;
