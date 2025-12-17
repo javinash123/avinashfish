@@ -3525,6 +3525,22 @@ export default function App() {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   const [teamDetails, setTeamDetails] = useState<any>(null);
   const [teamLoading, setTeamLoading] = useState(false);
+  
+  // Contact form state
+  const [contactFirstName, setContactFirstName] = useState('');
+  const [contactLastName, setContactLastName] = useState('');
+  const [contactEmail, setContactEmail] = useState('');
+  const [contactMobile, setContactMobile] = useState('');
+  const [contactMessage, setContactMessage] = useState('');
+  const [contactSubmitting, setContactSubmitting] = useState(false);
+  
+  // Gallery detail modal state
+  const [selectedGalleryImage, setSelectedGalleryImage] = useState<any>(null);
+  const [currentGalleryImageIndex, setCurrentGalleryImageIndex] = useState(0);
+  
+  // News search and filter state
+  const [newsSearch, setNewsSearch] = useState('');
+  const [newsCategory, setNewsCategory] = useState('all');
 
   useEffect(() => {
     checkUser();
@@ -3644,6 +3660,71 @@ export default function App() {
       return 0;
     });
     
+    return filtered;
+  };
+
+  // Contact form submission
+  const handleContactSubmit = async () => {
+    if (!contactFirstName || !contactLastName || !contactEmail || !contactMobile || !contactMessage) {
+      Alert.alert('Error', 'Please fill in all fields');
+      return;
+    }
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(contactEmail)) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+    if (contactMobile.length < 10) {
+      Alert.alert('Error', 'Please enter a valid mobile number');
+      return;
+    }
+    if (contactMessage.length < 10) {
+      Alert.alert('Error', 'Message must be at least 10 characters');
+      return;
+    }
+    
+    setContactSubmitting(true);
+    try {
+      await apiClient.post('/api/contact', {
+        firstName: contactFirstName,
+        lastName: contactLastName,
+        email: contactEmail,
+        mobileNumber: contactMobile,
+        comment: contactMessage,
+      });
+      Alert.alert('Success', 'Thank you for contacting us. We\'ll get back to you soon.');
+      setContactFirstName('');
+      setContactLastName('');
+      setContactEmail('');
+      setContactMobile('');
+      setContactMessage('');
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to send message. Please try again.');
+    } finally {
+      setContactSubmitting(false);
+    }
+  };
+  
+  // Get filtered gallery images
+  const getFilteredGallery = () => {
+    if (galleryFilter === 'all') return gallery;
+    return gallery.filter((item: any) => item.category === galleryFilter);
+  };
+  
+  // Get filtered news
+  const getFilteredNews = () => {
+    let filtered = news;
+    if (newsSearch) {
+      const query = newsSearch.toLowerCase();
+      filtered = filtered.filter((item: any) =>
+        item.title?.toLowerCase().includes(query) ||
+        item.excerpt?.toLowerCase().includes(query) ||
+        item.description?.toLowerCase().includes(query)
+      );
+    }
+    if (newsCategory !== 'all') {
+      filtered = filtered.filter((item: any) => item.category === newsCategory);
+    }
     return filtered;
   };
 
@@ -3941,17 +4022,60 @@ export default function App() {
         {currentPage === 'news' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>News & Updates</Text>
+            <Text style={styles.sectionSubtitle}>Stay up to date with match reports, announcements, and the latest from the UK fishing competition scene</Text>
+            
+            {/* Search Input */}
+            <View style={styles.newsSearchContainer}>
+              <TextInput
+                style={styles.newsSearchInput}
+                placeholder="Search articles..."
+                placeholderTextColor="#666"
+                value={newsSearch}
+                onChangeText={setNewsSearch}
+              />
+            </View>
+            
+            {/* Category Filter */}
+            <View style={styles.newsCategoryContainer}>
+              <TouchableOpacity 
+                style={[styles.newsCategoryButton, newsCategory === 'all' && styles.newsCategoryButtonActive]}
+                onPress={() => setNewsCategory('all')}
+              >
+                <Text style={[styles.newsCategoryButtonText, newsCategory === 'all' && styles.newsCategoryButtonTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.newsCategoryButton, newsCategory === 'match-report' && styles.newsCategoryButtonActive]}
+                onPress={() => setNewsCategory('match-report')}
+              >
+                <Text style={[styles.newsCategoryButtonText, newsCategory === 'match-report' && styles.newsCategoryButtonTextActive]}>Match Reports</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.newsCategoryButton, newsCategory === 'announcement' && styles.newsCategoryButtonActive]}
+                onPress={() => setNewsCategory('announcement')}
+              >
+                <Text style={[styles.newsCategoryButtonText, newsCategory === 'announcement' && styles.newsCategoryButtonTextActive]}>Announcements</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.newsCategoryButton, newsCategory === 'general' && styles.newsCategoryButtonActive]}
+                onPress={() => setNewsCategory('general')}
+              >
+                <Text style={[styles.newsCategoryButtonText, newsCategory === 'general' && styles.newsCategoryButtonTextActive]}>General</Text>
+              </TouchableOpacity>
+            </View>
+            
             {dataLoading ? (
               <ActivityIndicator size="large" color="#1B7342" />
-            ) : news.length > 0 ? (
+            ) : getFilteredNews().length > 0 ? (
               <FlatList
-                data={news}
+                data={getFilteredNews()}
                 renderItem={({ item }) => <NewsCard item={item} onPress={setSelectedNews} />}
                 keyExtractor={(item) => item.id}
                 scrollEnabled={false}
               />
             ) : (
-              <Text style={styles.emptyText}>No news available</Text>
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>{newsSearch || newsCategory !== 'all' ? 'No articles found matching your search' : 'No news available'}</Text>
+              </View>
             )}
           </View>
         )}
@@ -3961,22 +4085,39 @@ export default function App() {
           <View style={styles.section}>
             <Text style={styles.gallerySubtitle}>Relive the best moments from our competitions - from epic catches to unforgettable events</Text>
             <View style={styles.galleryFilterTabs}>
-              <TouchableOpacity style={[styles.galleryFilterTab, galleryFilter === 'all' && styles.galleryFilterTabActive]}>
+              <TouchableOpacity 
+                style={[styles.galleryFilterTab, galleryFilter === 'all' && styles.galleryFilterTabActive]}
+                onPress={() => setGalleryFilter('all')}
+              >
                 <Text style={[styles.galleryFilterTabText, galleryFilter === 'all' && styles.galleryFilterTabTextActive]}>All Photos</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.galleryFilterTab, galleryFilter === 'event' && styles.galleryFilterTabActive]}>
+              <TouchableOpacity 
+                style={[styles.galleryFilterTab, galleryFilter === 'event' && styles.galleryFilterTabActive]}
+                onPress={() => setGalleryFilter('event')}
+              >
                 <Text style={[styles.galleryFilterTabText, galleryFilter === 'event' && styles.galleryFilterTabTextActive]}>Events</Text>
               </TouchableOpacity>
-              <TouchableOpacity style={[styles.galleryFilterTab, galleryFilter === 'catch' && styles.galleryFilterTabActive]}>
+              <TouchableOpacity 
+                style={[styles.galleryFilterTab, galleryFilter === 'catch' && styles.galleryFilterTabActive]}
+                onPress={() => setGalleryFilter('catch')}
+              >
                 <Text style={[styles.galleryFilterTabText, galleryFilter === 'catch' && styles.galleryFilterTabTextActive]}>Big Catches</Text>
               </TouchableOpacity>
             </View>
             {dataLoading ? (
               <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 40 }} />
-            ) : gallery.length > 0 ? (
+            ) : getFilteredGallery().length > 0 ? (
               <View style={styles.galleryCardGrid}>
-                {gallery.slice(0, 8).map((item: any, idx: number) => (
-                  <TouchableOpacity key={idx} style={styles.galleryCard} activeOpacity={0.7}>
+                {getFilteredGallery().map((item: any, idx: number) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={styles.galleryCard} 
+                    activeOpacity={0.7}
+                    onPress={() => {
+                      setSelectedGalleryImage(item);
+                      setCurrentGalleryImageIndex(0);
+                    }}
+                  >
                     <View style={styles.galleryCardImageContainer}>
                       <Image 
                         source={{ uri: item.urls && item.urls[0] ? item.urls[0] : 'https://via.placeholder.com/300x225' }} 
@@ -4145,14 +4286,92 @@ export default function App() {
         {/* CONTACT PAGE */}
         {currentPage === 'contact' && (
           <View style={styles.section}>
+            <Text style={styles.sectionSubtitle}>Have a question about competitions, sponsorships, or anything else? We'd love to hear from you.</Text>
+            
             <View style={styles.contactCard}>
               <Text style={styles.contactCardTitle}>Send Us a Message</Text>
-              <TextInput style={styles.contactFormInput} placeholder="Your Name" placeholderTextColor="#666" />
-              <TextInput style={styles.contactFormInput} placeholder="Your Email" placeholderTextColor="#666" keyboardType="email-address" />
-              <TextInput style={[styles.contactFormInput, { height: 100 }]} placeholder="Your Message" placeholderTextColor="#666" multiline numberOfLines={4} textAlignVertical="top" />
-              <TouchableOpacity style={styles.contactSubmitButton}>
-                <Text style={styles.contactSubmitButtonText}>Send Message</Text>
+              
+              <View style={styles.contactNameRow}>
+                <TextInput 
+                  style={[styles.contactFormInput, styles.contactHalfInput]} 
+                  placeholder="First Name *" 
+                  placeholderTextColor="#666"
+                  value={contactFirstName}
+                  onChangeText={setContactFirstName}
+                />
+                <TextInput 
+                  style={[styles.contactFormInput, styles.contactHalfInput]} 
+                  placeholder="Last Name *" 
+                  placeholderTextColor="#666"
+                  value={contactLastName}
+                  onChangeText={setContactLastName}
+                />
+              </View>
+              
+              <TextInput 
+                style={styles.contactFormInput} 
+                placeholder="Email Address *" 
+                placeholderTextColor="#666" 
+                keyboardType="email-address"
+                autoCapitalize="none"
+                value={contactEmail}
+                onChangeText={setContactEmail}
+              />
+              
+              <TextInput 
+                style={styles.contactFormInput} 
+                placeholder="Mobile Number *" 
+                placeholderTextColor="#666" 
+                keyboardType="phone-pad"
+                value={contactMobile}
+                onChangeText={setContactMobile}
+              />
+              
+              <TextInput 
+                style={[styles.contactFormInput, { height: 120 }]} 
+                placeholder="Your Message *" 
+                placeholderTextColor="#666" 
+                multiline 
+                numberOfLines={5} 
+                textAlignVertical="top"
+                value={contactMessage}
+                onChangeText={setContactMessage}
+              />
+              
+              <TouchableOpacity 
+                style={[styles.contactSubmitButton, contactSubmitting && styles.contactSubmitButtonDisabled]}
+                onPress={handleContactSubmit}
+                disabled={contactSubmitting}
+              >
+                <Text style={styles.contactSubmitButtonText}>
+                  {contactSubmitting ? 'Sending...' : 'Send Message'}
+                </Text>
               </TouchableOpacity>
+            </View>
+            
+            <View style={styles.contactInfoSection}>
+              <Text style={styles.contactInfoTitle}>Other Ways to Reach Us</Text>
+              <View style={styles.contactInfoItem}>
+                <Text style={styles.contactInfoLabel}>Email</Text>
+                <Text style={styles.contactInfoValue}>info@pegslam.com</Text>
+              </View>
+              <View style={styles.contactInfoItem}>
+                <Text style={styles.contactInfoLabel}>Social Media</Text>
+                <View style={styles.contactSocialRow}>
+                  <TouchableOpacity 
+                    style={styles.contactSocialButton}
+                    onPress={() => Linking.openURL('https://facebook.com/pegslam')}
+                  >
+                    <Text style={styles.contactSocialButtonText}>Facebook</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.contactSocialButton}
+                    onPress={() => Linking.openURL('https://instagram.com/pegslam')}
+                  >
+                    <Text style={styles.contactSocialButtonText}>Instagram</Text>
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
           </View>
         )}
