@@ -3477,7 +3477,45 @@ export default function App() {
   const [gallery, setGallery] = useState<any[]>([]);
   const [sponsors, setSponsors] = useState<any[]>([]);
   const [anglers, setAnglers] = useState<any[]>([]);
+  const [youtubeVideos, setYoutubeVideos] = useState<any[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
+  
+  // Radio player state
+  const [isRadioPlaying, setIsRadioPlaying] = useState(false);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  
+  // Initialize audio element for web
+  useEffect(() => {
+    if (isWeb && typeof window !== 'undefined') {
+      audioRef.current = new Audio('https://data.webstreamer.co.uk/listen/pegslam/radio.mp3');
+      audioRef.current.addEventListener('ended', () => setIsRadioPlaying(false));
+      audioRef.current.addEventListener('error', () => setIsRadioPlaying(false));
+    }
+    return () => {
+      if (audioRef.current) {
+        audioRef.current.pause();
+        audioRef.current = null;
+      }
+    };
+  }, []);
+  
+  const toggleRadio = () => {
+    if (!isWeb || !audioRef.current) {
+      Alert.alert('Radio', 'PegSlam Radio is available on the web version');
+      return;
+    }
+    if (isRadioPlaying) {
+      audioRef.current.pause();
+      setIsRadioPlaying(false);
+    } else {
+      audioRef.current.play().then(() => {
+        setIsRadioPlaying(true);
+      }).catch((err) => {
+        console.error('Audio play error:', err);
+        Alert.alert('Radio Error', 'Unable to play radio stream');
+      });
+    }
+  };
   const [anglersLoading, setAnglersLoading] = useState(false);
   const [search, setSearch] = useState('');
   const [sortBy, setSortBy] = useState('name-asc');
@@ -3511,12 +3549,13 @@ export default function App() {
   const fetchAllData = async () => {
     try {
       setDataLoading(true);
-      const [compRes, newsRes, galRes, anglersRes, spRes] = await Promise.all([
+      const [compRes, newsRes, galRes, anglersRes, spRes, ytRes] = await Promise.all([
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news'),
         apiClient.get('/api/gallery/featured').catch(() => ({ data: [] })),
         apiClient.get('/api/anglers?limit=100').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
+        apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
       ]);
       
       console.log('Competitions data:', compRes.data?.[0]);
@@ -3524,12 +3563,14 @@ export default function App() {
       console.log('Gallery data:', galRes.data?.[0]);
       console.log('Anglers data:', anglersRes.data?.data?.[0]);
       console.log('Sponsors data:', spRes.data?.[0]);
+      console.log('YouTube videos:', ytRes.data?.[0]);
       
       setCompetitions(compRes.data || []);
       setNews(newsRes.data || []);
       setGallery(galRes.data || []);
       setAnglers(anglersRes.data?.data || []);
       setSponsors(spRes.data || []);
+      setYoutubeVideos(ytRes.data || []);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -3655,14 +3696,25 @@ export default function App() {
           <Text style={styles.hamburger}>☰</Text>
         </TouchableOpacity>
         <Text style={styles.headerLogo}>{getPageTitle()}</Text>
-        <TouchableOpacity
-          onPress={() => isLoggedIn ? setCurrentPage('profile') : setShowLoginModal(true)}
-          style={styles.headerButton}
-        >
-          <Text style={styles.headerButtonText}>
-            {isLoggedIn ? '👤' : 'Login'}
-          </Text>
-        </TouchableOpacity>
+        <View style={styles.headerRightSection}>
+          {/* Radio Button */}
+          <TouchableOpacity
+            onPress={toggleRadio}
+            style={[styles.radioButton, isRadioPlaying && styles.radioButtonActive]}
+          >
+            <Text style={styles.radioIcon}>{isRadioPlaying ? '⏹' : '📻'}</Text>
+            {isRadioPlaying && <View style={styles.radioIndicator} />}
+          </TouchableOpacity>
+          {/* Login/Profile Button */}
+          <TouchableOpacity
+            onPress={() => isLoggedIn ? setCurrentPage('profile') : setShowLoginModal(true)}
+            style={styles.headerButton}
+          >
+            <Text style={styles.headerButtonText}>
+              {isLoggedIn ? '👤' : 'Login'}
+            </Text>
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* Competition Details View */}
@@ -3767,6 +3819,81 @@ export default function App() {
               ) : (
                 <Text style={styles.emptyText}>No news available</Text>
               )}
+            </View>
+
+            {/* Latest Videos (YouTube) Section */}
+            {youtubeVideos.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Latest Videos</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
+                  <View style={{ paddingHorizontal: 16, flexDirection: 'row', gap: 12 }}>
+                    {youtubeVideos.slice(0, 6).map((video: any, idx: number) => (
+                      <TouchableOpacity
+                        key={video.id || idx}
+                        style={styles.youtubeCard}
+                        onPress={() => Linking.openURL(`https://www.youtube.com/watch?v=${video.videoId}`)}
+                      >
+                        <View style={styles.youtubeImageContainer}>
+                          <Image
+                            source={{ uri: `https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg` }}
+                            style={styles.youtubeImage}
+                            resizeMode="cover"
+                          />
+                          <View style={styles.youtubePlayButton}>
+                            <Text style={styles.youtubePlayIcon}>▶</Text>
+                          </View>
+                          <View style={styles.youtubeBadge}>
+                            <Text style={styles.youtubeBadgeText}>YouTube</Text>
+                          </View>
+                        </View>
+                        <View style={styles.youtubeContent}>
+                          <Text style={styles.youtubeTitle} numberOfLines={2}>{video.title}</Text>
+                          {video.description && (
+                            <Text style={styles.youtubeDescription} numberOfLines={2}>{video.description}</Text>
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
+
+            {/* Features Section */}
+            <View style={styles.featuresSection}>
+              <View style={styles.featureItem}>
+                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(27, 115, 66, 0.1)' }]}>
+                  <Text style={styles.featureIcon}>🏆</Text>
+                </View>
+                <Text style={styles.featureTitle}>Competitive Events</Text>
+                <Text style={styles.featureDescription}>From qualifiers to finals, experience the thrill of match fishing</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
+                  <Text style={styles.featureIcon}>👥</Text>
+                </View>
+                <Text style={styles.featureTitle}>Anglers Directory</Text>
+                <Text style={styles.featureDescription}>Connect with anglers across the UK and build your reputation</Text>
+              </View>
+              <View style={styles.featureItem}>
+                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
+                  <Text style={styles.featureIcon}>📅</Text>
+                </View>
+                <Text style={styles.featureTitle}>Easy Booking</Text>
+                <Text style={styles.featureDescription}>Secure your peg online with instant confirmation</Text>
+              </View>
+            </View>
+
+            {/* CTA Section */}
+            <View style={styles.ctaSection}>
+              <Text style={styles.ctaTitle}>Ready to Join the Competition?</Text>
+              <Text style={styles.ctaSubtitle}>Create your angler profile and start booking today</Text>
+              <TouchableOpacity
+                style={styles.ctaButton}
+                onPress={() => isLoggedIn ? setCurrentPage('competitions') : setShowLoginModal(true)}
+              >
+                <Text style={styles.ctaButtonText}>{isLoggedIn ? 'View Competitions' : 'Register Now'}</Text>
+              </TouchableOpacity>
             </View>
           </>
         )}
@@ -4236,6 +4363,35 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '600',
     fontSize: 14,
+  },
+  headerRightSection: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  radioButton: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#2a2a2a',
+    justifyContent: 'center',
+    alignItems: 'center',
+    position: 'relative',
+  },
+  radioButtonActive: {
+    backgroundColor: '#1B7342',
+  },
+  radioIcon: {
+    fontSize: 18,
+  },
+  radioIndicator: {
+    position: 'absolute',
+    top: 2,
+    right: 2,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
   },
   content: {
     flex: 1,
@@ -6388,6 +6544,135 @@ const styles = StyleSheet.create({
     color: '#1B7342',
     fontWeight: '600',
     fontSize: 13,
+  },
+  // YouTube Section Styles
+  youtubeCard: {
+    width: 280,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  youtubeImageContainer: {
+    width: '100%',
+    height: 160,
+    position: 'relative',
+  },
+  youtubeImage: {
+    width: '100%',
+    height: '100%',
+    backgroundColor: '#0a0a0a',
+  },
+  youtubePlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: [{ translateX: -24 }, { translateY: -24 }],
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#ef4444',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  youtubePlayIcon: {
+    color: '#fff',
+    fontSize: 20,
+    marginLeft: 4,
+  },
+  youtubeBadge: {
+    position: 'absolute',
+    bottom: 8,
+    left: 8,
+    backgroundColor: 'rgba(0,0,0,0.7)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+  },
+  youtubeBadgeText: {
+    color: '#fff',
+    fontSize: 10,
+    fontWeight: '600',
+  },
+  youtubeContent: {
+    padding: 12,
+  },
+  youtubeTitle: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 4,
+  },
+  youtubeDescription: {
+    color: '#999',
+    fontSize: 12,
+    lineHeight: 18,
+  },
+  // Features Section Styles
+  featuresSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    marginBottom: 24,
+  },
+  featureItem: {
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  featureIconContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 32,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  featureIcon: {
+    fontSize: 32,
+  },
+  featureTitle: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  featureDescription: {
+    color: '#999',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 20,
+  },
+  // CTA Section Styles
+  ctaSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 32,
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  ctaTitle: {
+    color: '#fff',
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 12,
+  },
+  ctaSubtitle: {
+    color: '#999',
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 24,
+  },
+  ctaButton: {
+    backgroundColor: '#1B7342',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
+    borderRadius: 8,
+  },
+  ctaButtonText: {
+    color: '#000',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
 

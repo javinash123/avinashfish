@@ -6,7 +6,7 @@ const path = require('path');
 const url = require('url');
 
 const PORT = 5000;
-const publicDir = path.join(__dirname, 'web');
+const publicDir = path.join(__dirname, 'dist');
 
 const server = http.createServer((req, res) => {
   // Parse URL
