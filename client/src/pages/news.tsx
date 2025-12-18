@@ -199,7 +199,7 @@ export default function NewsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="flex flex-col overflow-hidden">
-                <Skeleton className="aspect-video w-full" />
+                <Skeleton className="w-full h-48" />
                 <CardHeader>
                   <Skeleton className="h-6 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-full" />
@@ -221,7 +221,7 @@ export default function NewsPage() {
                 
                 return (
                   <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
-                    <div className="relative aspect-video overflow-hidden bg-muted">
+                    <div className="relative w-full h-48 overflow-hidden bg-muted">
                       <img
                         src={article.image}
                         alt={article.title}

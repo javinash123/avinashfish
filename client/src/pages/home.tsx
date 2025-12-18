@@ -210,11 +210,11 @@ export default function Home() {
                 
                 return (
                   <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
-                    <div className="relative aspect-video overflow-hidden bg-muted">
+                    <div className="relative w-full h-48 overflow-hidden bg-muted">
                       <img
                         src={news.image}
                         alt={news.title}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -407,7 +407,7 @@ export default function Home() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {featuredGallery.slice(0, 4).map((image) => (
                 <Card key={image.id} className="group overflow-hidden hover-elevate active-elevate-2" data-testid={`card-gallery-${image.id}`}>
-                  <div className="relative aspect-[4/3] overflow-hidden">
+                  <div className="relative w-full h-48 overflow-hidden">
                     <img
                       src={image.urls[0]}
                       alt={image.title}

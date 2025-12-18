@@ -548,21 +548,40 @@ function CompetitionCard({ item, onViewDetails }: any) {
 
   const imageUrl = getImageUrl();
   const pegsAvailable = item.pegsTotal - item.pegsBooked;
+  const getStatusBadgeColor = (status: string) => {
+    switch (status) {
+      case 'live':
+        return '#FF4444';
+      case 'completed':
+        return '#888';
+      case 'upcoming':
+        return '#1B7342';
+      default:
+        return '#666';
+    }
+  };
 
   return (
     <View style={styles.competitionCard}>
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.competitionImage}
-          resizeMode="cover"
-          onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
-        />
-      ) : (
-        <View style={[styles.competitionImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: '#666', fontSize: 14, textAlign: 'center' }}>No Image Available</Text>
-        </View>
-      )}
+      <View style={{ position: 'relative' }}>
+        {imageUrl ? (
+          <Image
+            source={{ uri: imageUrl }}
+            style={styles.competitionImage}
+            resizeMode="cover"
+            onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
+          />
+        ) : (
+          <View style={[styles.competitionImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center' }}>No Image Available</Text>
+          </View>
+        )}
+        {item.status && (
+          <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColor(item.status) }]}>
+            <Text style={styles.statusBadgeText}>{item.status.toUpperCase()}</Text>
+          </View>
+        )}
+      </View>
       <View style={styles.cardContent}>
         <View style={styles.cardHeader}>
           <Text style={styles.competitionTitle} numberOfLines={2}>
@@ -585,6 +604,18 @@ function CompetitionCard({ item, onViewDetails }: any) {
           <Text style={styles.detailLabel}>Entry Fee</Text>
           <Text style={styles.priceValue}>£{item.entryFee || '0'}</Text>
         </View>
+        {item.prizePool && (
+          <View style={styles.cardDetails}>
+            <Text style={styles.detailLabel}>Prize Pool</Text>
+            <Text style={styles.prizeValue}>£{item.prizePool}</Text>
+          </View>
+        )}
+        {item.prizeType && (
+          <View style={styles.cardDetails}>
+            <Text style={styles.detailLabel}>Prize Type</Text>
+            <Text style={styles.detailValue}>{item.prizeType}</Text>
+          </View>
+        )}
         <TouchableOpacity style={styles.cardButton} onPress={() => onViewDetails(item)}>
           <Text style={styles.cardButtonText}>View Details</Text>
         </TouchableOpacity>
@@ -729,6 +760,15 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     }
   };
 
+  const getCompetitionStatus = (compId: string) => {
+    const comp = competitions.find((c: any) => c.id === compId);
+    if (!comp) return 'unknown';
+    const compDate = new Date(comp.date);
+    const now = new Date();
+    if (compDate < now) return 'completed';
+    return 'upcoming';
+  };
+
   // Show message if no competitions available
   if (!competitions || competitions.length === 0) {
     return (
@@ -741,13 +781,33 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     );
   }
 
+  // Filter to only live/completed
+  const filteredComps = competitions.filter((c: any) => {
+    const compDate = new Date(c.date);
+    const now = new Date();
+    return compDate < now; // Only completed
+  }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  if (filteredComps.length === 0) {
+    return (
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Leaderboard</Text>
+        <View style={styles.placeholderCard}>
+          <Text style={styles.placeholderText}>No completed competitions yet</Text>
+        </View>
+      </View>
+    );
+  }
+
+  const selectedStatus = getCompetitionStatus(selectedCompId);
+
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Leaderboard</Text>
       
-      {/* Competition Selector */}
+      {/* Competition Selector with Status */}
       <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.compSelector}>
-        {competitions.map((comp: any) => (
+        {filteredComps.map((comp: any) => (
           <TouchableOpacity
             key={comp.id}
             style={[
@@ -756,15 +816,20 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
             ]}
             onPress={() => setSelectedCompId(comp.id)}
           >
-            <Text
-              style={[
-                styles.compSelectorText,
-                selectedCompId === comp.id && styles.compSelectorTextActive,
-              ]}
-              numberOfLines={1}
-            >
-              {comp.name}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+              <Text
+                style={[
+                  styles.compSelectorText,
+                  selectedCompId === comp.id && styles.compSelectorTextActive,
+                ]}
+                numberOfLines={1}
+              >
+                {comp.name}
+              </Text>
+              <View style={[styles.compStatusBadge, { backgroundColor: comp.status === 'live' ? '#FF4444' : '#888', marginLeft: 6 }]}>
+                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{comp.status === 'live' ? 'LIVE' : 'DONE'}</Text>
+              </View>
+            </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
@@ -773,37 +838,41 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
       {leaderLoading ? (
         <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
       ) : leaderboardData.length > 0 ? (
-        <View style={styles.leaderboardTable}>
+        <View style={{ marginVertical: 12, borderRadius: 8, overflow: 'hidden' }}>
           {/* Table Header */}
-          <View style={styles.leaderboardHeaderRow}>
-            <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Pos</Text>
-            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, styles.leaderboardCellWide]}>Angler</Text>
-            <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Peg</Text>
-            <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Fish</Text>
-            <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Weight</Text>
+          <View style={[styles.leaderboardHeaderRow, { backgroundColor: '#1a1a1a', borderBottomWidth: 2, borderBottomColor: '#1B7342' }]}>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.4 }]}>Pos</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 1.2 }]}>Angler</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.6 }]}>User</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.6 }]}>Club</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.5 }]}>Peg</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.4 }]}>Fish</Text>
+            <Text style={[styles.leaderboardCell, styles.leaderboardHeader, { flex: 0.5 }]}>Wgt</Text>
           </View>
-          {/* Table Rows */}
-          {leaderboardData.slice(0, 20).map((entry: any, idx: number) => (
-            <View key={idx} style={styles.leaderboardRow}>
-              <Text style={styles.leaderboardCell}>{entry.position || idx + 1}</Text>
+          {/* Table Rows - Show ALL entries, not just 20 */}
+          {leaderboardData.map((entry: any, idx: number) => (
+            <View key={idx} style={[styles.leaderboardRow, { backgroundColor: idx % 2 === 0 ? 'transparent' : 'rgba(27, 115, 66, 0.05)' }]}>
+              <Text style={[styles.leaderboardCell, { flex: 0.4, fontWeight: 'bold' }]}>{entry.position || idx + 1}</Text>
               {entry.isTeam ? (
                 <TouchableOpacity 
-                  style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
+                  style={[styles.leaderboardCell, { flex: 1.2, flexDirection: 'row', alignItems: 'center' }]}
                   onPress={() => onTeamClick && onTeamClick(entry.teamId)}
                 >
-                  <Text style={styles.teamNameText} numberOfLines={1}>
+                  <Text style={[styles.teamNameText, { flex: 1 }]} numberOfLines={1}>
                     {entry.anglerName || entry.teamName || 'Team'}
                   </Text>
-                  <Text style={styles.teamIcon}> [Team]</Text>
+                  <Text style={styles.teamIcon}>[T]</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
-                  {entry.anglerName || entry.username || 'Unknown'}
+                <Text style={[styles.leaderboardCell, { flex: 1.2 }]} numberOfLines={1}>
+                  {entry.anglerName || 'Unknown'}
                 </Text>
               )}
-              <Text style={styles.leaderboardCell}>{entry.pegNumber}</Text>
-              <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
-              <Text style={styles.leaderboardCell}>{entry.weight || '0lb'}</Text>
+              <Text style={[styles.leaderboardCell, { flex: 0.6 }]} numberOfLines={1}>{entry.username || '-'}</Text>
+              <Text style={[styles.leaderboardCell, { flex: 0.6 }]} numberOfLines={1}>{entry.club ? entry.club.substring(0, 3) : '-'}</Text>
+              <Text style={[styles.leaderboardCell, { flex: 0.5 }]}>{entry.pegNumber || '-'}</Text>
+              <Text style={[styles.leaderboardCell, { flex: 0.4, color: entry.fishCount > 0 ? '#1B7342' : '#999' }]}>{entry.fishCount || 0}</Text>
+              <Text style={[styles.leaderboardCell, { flex: 0.5, fontWeight: '600' }]}>{entry.weight || '0'}</Text>
             </View>
           ))}
         </View>
@@ -3526,6 +3595,10 @@ export default function App() {
   const [teamDetails, setTeamDetails] = useState<any>(null);
   const [teamLoading, setTeamLoading] = useState(false);
   
+  // Competitions page filters
+  const [competitionsSearch, setCompetitionsSearch] = useState('');
+  const [competitionsStatusFilter, setCompetitionsStatusFilter] = useState('all');
+  
   // Contact form state
   const [contactFirstName, setContactFirstName] = useState('');
   const [contactLastName, setContactLastName] = useState('');
@@ -3581,7 +3654,14 @@ export default function App() {
       console.log('Sponsors data:', spRes.data?.[0]);
       console.log('YouTube videos:', ytRes.data?.[0]);
       
-      setCompetitions(compRes.data || []);
+      const withStatus = (compRes.data || []).map((comp: any) => {
+        const compDate = new Date(comp.date);
+        const now = new Date();
+        let status = 'upcoming';
+        if (compDate < now) status = 'completed';
+        return { ...comp, status };
+      });
+      setCompetitions(withStatus);
       setNews(newsRes.data || []);
       setGallery(galRes.data || []);
       setAnglers(anglersRes.data?.data || []);
@@ -3983,18 +4063,67 @@ export default function App() {
         {currentPage === 'competitions' && (
           <View style={styles.section}>
             <Text style={styles.sectionTitle}>All Competitions</Text>
+            
+            {/* Search Bar */}
+            <View style={styles.competitionSearchContainer}>
+              <TextInput
+                style={styles.competitionSearchInput}
+                placeholder="Search by name or venue..."
+                placeholderTextColor="#666"
+                value={competitionsSearch}
+                onChangeText={setCompetitionsSearch}
+              />
+            </View>
+            
+            {/* Status Filter */}
+            <View style={styles.competitionFilterContainer}>
+              <TouchableOpacity 
+                style={[styles.competitionFilterButton, competitionsStatusFilter === 'all' && styles.competitionFilterButtonActive]}
+                onPress={() => setCompetitionsStatusFilter('all')}
+              >
+                <Text style={[styles.competitionFilterButtonText, competitionsStatusFilter === 'all' && styles.competitionFilterButtonTextActive]}>All</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.competitionFilterButton, competitionsStatusFilter === 'upcoming' && styles.competitionFilterButtonActive]}
+                onPress={() => setCompetitionsStatusFilter('upcoming')}
+              >
+                <Text style={[styles.competitionFilterButtonText, competitionsStatusFilter === 'upcoming' && styles.competitionFilterButtonTextActive]}>Upcoming</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.competitionFilterButton, competitionsStatusFilter === 'live' && styles.competitionFilterButtonActive]}
+                onPress={() => setCompetitionsStatusFilter('live')}
+              >
+                <Text style={[styles.competitionFilterButtonText, competitionsStatusFilter === 'live' && styles.competitionFilterButtonTextActive]}>Live</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={[styles.competitionFilterButton, competitionsStatusFilter === 'completed' && styles.competitionFilterButtonActive]}
+                onPress={() => setCompetitionsStatusFilter('completed')}
+              >
+                <Text style={[styles.competitionFilterButtonText, competitionsStatusFilter === 'completed' && styles.competitionFilterButtonTextActive]}>Completed</Text>
+              </TouchableOpacity>
+            </View>
+            
             {dataLoading ? (
               <ActivityIndicator size="large" color="#1B7342" />
-            ) : competitions.length > 0 ? (
-              <FlatList
-                data={competitions}
-                renderItem={({ item }) => <CompetitionCard item={item} onViewDetails={() => setSelectedCompetition(item)} />}
-                keyExtractor={(item) => item.id}
-                scrollEnabled={false}
-              />
-            ) : (
-              <Text style={styles.emptyText}>No competitions available</Text>
-            )}
+            ) : (() => {
+              const filtered = competitions.filter((comp: any) => {
+                const matchesSearch = comp.name.toLowerCase().includes(competitionsSearch.toLowerCase()) ||
+                                     (comp.venue && comp.venue.toLowerCase().includes(competitionsSearch.toLowerCase()));
+                const matchesStatus = competitionsStatusFilter === 'all' || comp.status === competitionsStatusFilter;
+                return matchesSearch && matchesStatus;
+              });
+              
+              return filtered.length > 0 ? (
+                <FlatList
+                  data={filtered}
+                  renderItem={({ item }) => <CompetitionCard item={item} onViewDetails={() => setSelectedCompetition(item)} />}
+                  keyExtractor={(item) => item.id}
+                  scrollEnabled={false}
+                />
+              ) : (
+                <Text style={styles.emptyText}>{competitionsSearch || competitionsStatusFilter !== 'all' ? 'No competitions found matching your filters' : 'No competitions available'}</Text>
+              );
+            })()}
           </View>
         )}
 
@@ -6827,6 +6956,52 @@ const styles = StyleSheet.create({
     color: '#999',
     fontSize: 12,
     lineHeight: 18,
+  },
+  // Competitions Page Filter Styles
+  competitionSearchContainer: {
+    marginBottom: 16,
+    marginHorizontal: 0,
+  },
+  competitionSearchInput: {
+    backgroundColor: '#1a1a1a',
+    color: '#fff',
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    fontSize: 14,
+  },
+  competitionFilterContainer: {
+    flexDirection: 'row',
+    marginBottom: 16,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  competitionFilterButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    backgroundColor: 'transparent',
+  },
+  competitionFilterButtonActive: {
+    backgroundColor: '#1B7342',
+    borderColor: '#1B7342',
+  },
+  competitionFilterButtonText: {
+    color: '#999',
+    fontSize: 13,
+    fontWeight: '600',
+  },
+  competitionFilterButtonTextActive: {
+    color: '#fff',
+  },
+  compStatusBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 3,
+    borderRadius: 3,
   },
   // Features Section Styles
   featuresSection: {

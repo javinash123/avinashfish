@@ -57,7 +57,7 @@ export default function Gallery() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
             {[1, 2, 3, 4, 5, 6, 7, 8].map((i) => (
               <Card key={i} className="overflow-hidden">
-                <Skeleton className="aspect-[4/3] w-full" />
+                <Skeleton className="w-full h-48" />
                 <div className="p-4">
                   <Skeleton className="h-5 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-full mb-1" />
@@ -79,7 +79,7 @@ export default function Gallery() {
                   }}
                   data-testid={`card-gallery-${image.id}`}
                 >
-                  <div className="relative aspect-[4/3] overflow-hidden">
+                  <div className="relative w-full h-48 overflow-hidden">
                     <img
                       src={image.urls[0]}
                       alt={image.title}
@@ -148,7 +148,7 @@ export default function Gallery() {
                 <DialogTitle data-testid="text-dialog-title">{selectedImage.title}</DialogTitle>
               </DialogHeader>
               <div className="space-y-4">
-                <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
+                <div className="relative w-full h-96 overflow-hidden rounded-md bg-muted">
                   <img
                     src={selectedImage.urls[currentImageIndex]}
                     alt={`${selectedImage.title} - Image ${currentImageIndex + 1}`}
