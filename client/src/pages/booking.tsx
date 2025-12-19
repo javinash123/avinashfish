@@ -27,18 +27,45 @@ declare global {
   }
 }
 
-// Lazy load Stripe - keys might be injected later via window.RUNTIME_CONFIG
+// Lazy load Stripe - fetch keys from runtime config endpoint for live updates
 let stripePromise: ReturnType<typeof loadStripe> | null = null;
 let stripePromiseLoaded = false;
 
-function getStripePromise() {
+async function getStripePublicKey(): Promise<string> {
+  try {
+    // Fetch from runtime config endpoint - this returns live environment variables
+    const response = await fetch('/api/runtime-config');
+    if (response.ok) {
+      const config = await response.json();
+      const key = config.VITE_STRIPE_PUBLIC_KEY;
+      if (key) {
+        console.log('[Booking] Loaded Stripe public key from runtime config');
+        return key;
+      }
+    }
+  } catch (error) {
+    console.warn('[Booking] Failed to fetch runtime config:', error);
+  }
+  
+  // Fallback to build-time environment variable if runtime config fails
+  const fallbackKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+  if (fallbackKey) {
+    console.log('[Booking] Using fallback Stripe public key from build-time env');
+    return fallbackKey;
+  }
+  
+  console.warn('[Booking] Stripe public key not found');
+  return '';
+}
+
+async function getStripePromise() {
   if (!stripePromiseLoaded) {
-    const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    const stripePublicKey = await getStripePublicKey();
     if (stripePublicKey) {
       console.log('[Booking] Loading Stripe with public key');
       stripePromise = loadStripe(stripePublicKey);
     } else {
-      console.warn('[Booking] Stripe public key not found in RUNTIME_CONFIG or environment');
+      console.warn('[Booking] Stripe public key not found - Stripe payment will not work');
     }
     stripePromiseLoaded = true;
   }

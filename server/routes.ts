@@ -3969,6 +3969,14 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Runtime configuration endpoint - returns live environment variables
+  // This allows frontend to use current Stripe keys without requiring a rebuild
+  app.get("/api/runtime-config", (req, res) => {
+    res.json({
+      VITE_STRIPE_PUBLIC_KEY: process.env.VITE_STRIPE_PUBLIC_KEY || ''
+    });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

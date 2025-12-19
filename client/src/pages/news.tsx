@@ -225,7 +225,7 @@ export default function NewsPage() {
                       <img
                         src={article.image}
                         alt={article.title}
-                        className="w-full h-full object-contain"
+                        className="w-full h-full object-cover"
                         loading="lazy"
                       />
                       <div className="absolute top-2 left-2">
@@ -329,18 +329,19 @@ export default function NewsPage() {
               </DialogHeader>
               {isLoadingArticle ? (
                 <div className="space-y-4">
-                  <Skeleton className="aspect-video w-full rounded-md" />
+                  <Skeleton className="w-full h-64 rounded-md" />
                   <Skeleton className="h-4 w-full" />
                   <Skeleton className="h-4 w-3/4" />
                   <Skeleton className="h-32 w-full" />
                 </div>
               ) : fullArticle ? (
                 <div className="space-y-4">
-                  <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
+                  <div className="relative w-full h-64 overflow-hidden rounded-md bg-muted">
                     <img
                       src={fullArticle.image}
                       alt={fullArticle.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-4">
