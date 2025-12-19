@@ -88,11 +88,26 @@ function PaymentForm({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasProcessed, setHasProcessed] = useState(false);
+  const [isStripeReady, setIsStripeReady] = useState(false);
+
+  // Check when Stripe and elements are ready
+  useEffect(() => {
+    if (stripe && elements) {
+      setIsStripeReady(true);
+    }
+  }, [stripe, elements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements || isProcessing || hasProcessed) {
+    if (!stripe || !elements || !isStripeReady || isProcessing || hasProcessed) {
+      console.warn('[PaymentForm] Form submission blocked:', { 
+        hasStripe: !!stripe, 
+        hasElements: !!elements, 
+        isStripeReady,
+        isProcessing,
+        hasProcessed 
+      });
       return;
     }
 
@@ -200,12 +215,17 @@ function PaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {!isStripeReady && (
+        <div className="text-sm text-muted-foreground">
+          Loading payment processor...
+        </div>
+      )}
       <PaymentElement />
       <Button 
         type="submit"
         className="w-full" 
         size="lg"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || !isStripeReady || isProcessing}
         data-testid="button-submit-payment"
       >
         {isProcessing ? (
