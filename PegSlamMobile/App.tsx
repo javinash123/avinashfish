@@ -3851,14 +3851,13 @@ export default function App() {
     <SafeAreaView style={styles.container}>
       <StatusBar backgroundColor="#0a0a0a" />
 
-      {/* Header */}
+      {/* Header with Logo, Radio, Login */}
       <View style={styles.header}>
-        <TouchableOpacity onPress={() => setShowDrawer(true)}>
-          <Text style={styles.hamburger}>☰</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerLogo}>{getPageTitle()}</Text>
+        <Image
+          source={require('./assets/logo-new.png')}
+          style={{ width: 50, height: 50, resizeMode: 'contain' }}
+        />
         <View style={styles.headerRightSection}>
-          {/* Radio Button */}
           <TouchableOpacity
             onPress={toggleRadio}
             style={[styles.radioButton, isRadioPlaying && styles.radioButtonActive]}
@@ -3866,7 +3865,6 @@ export default function App() {
             <Text style={styles.radioIcon}>{isRadioPlaying ? '⏹' : '📻'}</Text>
             {isRadioPlaying && <View style={styles.radioIndicator} />}
           </TouchableOpacity>
-          {/* Login/Profile Button */}
           <TouchableOpacity
             onPress={() => isLoggedIn ? setCurrentPage('profile') : setShowLoginModal(true)}
             style={styles.headerButton}
@@ -3914,8 +3912,6 @@ export default function App() {
         {/* HOME PAGE */}
         {currentPage === 'home' && (
           <>
-            <HeroCarousel />
-
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured Competitions</Text>
@@ -4020,42 +4016,6 @@ export default function App() {
               </View>
             )}
 
-            {/* Features Section */}
-            <View style={styles.featuresSection}>
-              <View style={styles.featureItem}>
-                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(27, 115, 66, 0.1)' }]}>
-                  <Text style={styles.featureIcon}>🏆</Text>
-                </View>
-                <Text style={styles.featureTitle}>Competitive Events</Text>
-                <Text style={styles.featureDescription}>From qualifiers to finals, experience the thrill of match fishing</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.1)' }]}>
-                  <Text style={styles.featureIcon}>👥</Text>
-                </View>
-                <Text style={styles.featureTitle}>Anglers Directory</Text>
-                <Text style={styles.featureDescription}>Connect with anglers across the UK and build your reputation</Text>
-              </View>
-              <View style={styles.featureItem}>
-                <View style={[styles.featureIconContainer, { backgroundColor: 'rgba(234, 179, 8, 0.1)' }]}>
-                  <Text style={styles.featureIcon}>📅</Text>
-                </View>
-                <Text style={styles.featureTitle}>Easy Booking</Text>
-                <Text style={styles.featureDescription}>Secure your peg online with instant confirmation</Text>
-              </View>
-            </View>
-
-            {/* CTA Section */}
-            <View style={styles.ctaSection}>
-              <Text style={styles.ctaTitle}>Ready to Join the Competition?</Text>
-              <Text style={styles.ctaSubtitle}>Create your angler profile and start booking today</Text>
-              <TouchableOpacity
-                style={styles.ctaButton}
-                onPress={() => isLoggedIn ? setCurrentPage('competitions') : setShowLoginModal(true)}
-              >
-                <Text style={styles.ctaButtonText}>{isLoggedIn ? 'View Competitions' : 'Register Now'}</Text>
-              </TouchableOpacity>
-            </View>
           </>
         )}
 
@@ -4673,6 +4633,49 @@ export default function App() {
           </View>
         </View>
       </Modal>
+
+      {/* Bottom Navigation */}
+      <View style={styles.bottomNav}>
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'home' && styles.navItemActive]}
+          onPress={() => handleMenuSelect('home')}
+        >
+          <Text style={[styles.navIcon, currentPage === 'home' && styles.navLabelActive]}>🏠</Text>
+          <Text style={[styles.navLabel, currentPage === 'home' && styles.navLabelActive]}>Home</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'competitions' && styles.navItemActive]}
+          onPress={() => handleMenuSelect('competitions')}
+        >
+          <Text style={[styles.navIcon, currentPage === 'competitions' && styles.navLabelActive]}>🎣</Text>
+          <Text style={[styles.navLabel, currentPage === 'competitions' && styles.navLabelActive]}>Competitions</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'leaderboard' && styles.navItemActive]}
+          onPress={() => handleMenuSelect('leaderboard')}
+        >
+          <Text style={[styles.navIcon, currentPage === 'leaderboard' && styles.navLabelActive]}>🏆</Text>
+          <Text style={[styles.navLabel, currentPage === 'leaderboard' && styles.navLabelActive]}>Leaderboard</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, currentPage === 'news' && styles.navItemActive]}
+          onPress={() => handleMenuSelect('news')}
+        >
+          <Text style={[styles.navIcon, currentPage === 'news' && styles.navLabelActive]}>📰</Text>
+          <Text style={[styles.navLabel, currentPage === 'news' && styles.navLabelActive]}>News</Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity 
+          style={[styles.navItem, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navItemActive]}
+          onPress={() => setShowDrawer(true)}
+        >
+          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>☰</Text>
+          <Text style={[styles.navLabel, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>More</Text>
+        </TouchableOpacity>
+      </View>
     </SafeAreaView>
   );
 }
@@ -4802,13 +4805,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#2a2a2a',
   },
+  competitionCardMobile: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    overflow: 'hidden',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    flexDirection: 'row',
+    height: 140,
+  },
   competitionImage: {
     width: '100%',
     height: 180,
     backgroundColor: '#0a0a0a',
   },
+  competitionImageMobile: {
+    width: 120,
+    height: '100%',
+    backgroundColor: '#0a0a0a',
+  },
   cardContent: {
     padding: 16,
+  },
+  cardContentMobile: {
+    flex: 1,
+    padding: 12,
+    justifyContent: 'space-between',
   },
   cardHeader: {
     marginBottom: 12,
@@ -4817,6 +4840,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
     color: '#fff',
+  },
+  competitionTitleMobile: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#fff',
+    marginBottom: 8,
   },
   carouselContainer: {
     marginBottom: 20,
@@ -4866,10 +4895,50 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#ddd',
   },
+  detailsGridMobile: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+    marginBottom: 6,
+  },
+  detailCellMobile: {
+    flex: 1,
+  },
+  detailLabelMobile: {
+    fontSize: 10,
+    color: '#999',
+    marginBottom: 2,
+  },
+  detailValueMobile: {
+    fontSize: 12,
+    color: '#ddd',
+  },
   priceValue: {
     fontSize: 14,
     color: '#1B7342',
     fontWeight: 'bold',
+  },
+  priceValueMobile: {
+    fontSize: 12,
+    color: '#1B7342',
+    fontWeight: 'bold',
+  },
+  statusBadgeMobile: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 3,
+    marginBottom: 4,
+    alignSelf: 'flex-start',
+  },
+  statusBadgeTextMobile: {
+    fontSize: 9,
+    fontWeight: 'bold',
+    color: '#fff',
+  },
+  prizeRowMobile: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 4,
   },
   cardButton: {
     backgroundColor: '#1B7342',
@@ -7067,6 +7136,36 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  // Bottom Navigation Styles
+  bottomNav: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    borderTopWidth: 1,
+    borderTopColor: '#2a2a2a',
+    backgroundColor: '#0a0a0a',
+    paddingVertical: 8,
+    paddingBottom: 12,
+  },
+  navItem: {
+    alignItems: 'center',
+    paddingVertical: 4,
+  },
+  navItemActive: {
+    opacity: 1,
+  },
+  navIcon: {
+    fontSize: 24,
+    marginBottom: 2,
+  },
+  navLabel: {
+    fontSize: 11,
+    color: '#666',
+    fontWeight: '600',
+  },
+  navLabelActive: {
+    color: '#1B7342',
   },
 });
 

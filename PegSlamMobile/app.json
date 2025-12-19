@@ -1,13 +1,13 @@
 {
   "expo": {
-    "name": "Peg Slam",
+    "name": "PegSlam",
     "slug": "peg-slam-mobile",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/logo.png",
+    "icon": "./assets/logo-new.png",
     "userInterfaceStyle": "dark",
     "splash": {
-      "image": "./assets/logo.png",
+      "image": "./assets/logo-new.png",
       "resizeMode": "contain",
       "backgroundColor": "#0a0a0a"
     },
@@ -19,11 +19,11 @@
       "package": "com.pegslamfishing.mobile",
       "permissions": ["INTERNET"],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/logo.png",
+        "foregroundImage": "./assets/logo-new.png",
         "backgroundColor": "#0a0a0a"
       },
       "splash": {
-        "image": "./assets/splash.png",
+        "image": "./assets/logo-new.png",
         "resizeMode": "contain",
         "backgroundColor": "#0a0a0a"
       }
