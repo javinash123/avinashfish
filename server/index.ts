@@ -19,7 +19,8 @@ import cors from "cors";
 // Log environment info for debugging
 console.log('📋 ENVIRONMENT STARTUP INFO:');
 console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
-console.log(`   Stripe Key: ${process.env.VITE_STRIPE_PUBLIC_KEY ? (process.env.VITE_STRIPE_PUBLIC_KEY.substring(0, 10) + '...') : 'NOT SET'}`);
+console.log(`   Stripe Public Key: ${process.env.VITE_STRIPE_PUBLIC_KEY ? (process.env.VITE_STRIPE_PUBLIC_KEY.substring(0, 10) + '... ' + (process.env.VITE_STRIPE_PUBLIC_KEY.startsWith('pk_live_') ? '✅ LIVE' : '⚠️ TEST')) : 'NOT SET'}`);
+console.log(`   Stripe Secret Key: ${process.env.STRIPE_SECRET_KEY ? (process.env.STRIPE_SECRET_KEY.substring(0, 10) + '... ' + (process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? '✅ LIVE' : '⚠️ TEST')) : 'NOT SET'}`);
 console.log(`   MongoDB: ${process.env.MONGODB_URI ? 'configured' : 'not configured'}`);
 console.log('');
 
@@ -149,7 +150,7 @@ app.use(session({
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: false, // ⚠️ temporary fix until you use HTTPS
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production (nginx handles HTTPS)
     sameSite: "lax",
     httpOnly: true,
   },
