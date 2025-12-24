@@ -538,7 +538,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
   );
 }
 
-// Competition Card
+// Competition Card - Redesigned for better mobile UX
 function CompetitionCard({ item, onViewDetails }: any) {
   const getImageUrl = () => {
     const url = item.thumbnailUrl || item.thumbnailUrlMd || item.imageUrl;
@@ -548,6 +548,8 @@ function CompetitionCard({ item, onViewDetails }: any) {
 
   const imageUrl = getImageUrl();
   const pegsAvailable = item.pegsTotal - item.pegsBooked;
+  const pegsPercentage = (item.pegsBooked / item.pegsTotal) * 100;
+  
   const getStatusBadgeColor = (status: string) => {
     switch (status) {
       case 'live':
@@ -562,65 +564,93 @@ function CompetitionCard({ item, onViewDetails }: any) {
   };
 
   return (
-    <View style={styles.competitionCard}>
-      <View style={{ position: 'relative' }}>
+    <TouchableOpacity 
+      style={styles.competitionCard}
+      onPress={() => onViewDetails(item)}
+      activeOpacity={0.8}
+    >
+      {/* Image Container with Status Badge */}
+      <View style={{ position: 'relative', marginBottom: 12 }}>
         {imageUrl ? (
           <Image
             source={{ uri: imageUrl }}
-            style={styles.competitionImage}
+            style={[styles.competitionImage, { height: 200, borderRadius: 12 }]}
             resizeMode="cover"
             onError={(e) => console.log('Image load error:', e.nativeEvent.error)}
           />
         ) : (
-          <View style={[styles.competitionImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center' }}>No Image Available</Text>
+          <View style={[styles.competitionImage, { height: 200, backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center', borderRadius: 12 }]}>
+            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center' }}>🎣</Text>
           </View>
         )}
         {item.status && (
-          <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColor(item.status) }]}>
+          <View style={[styles.statusBadge, { backgroundColor: getStatusBadgeColor(item.status), top: 8, right: 8 }]}>
             <Text style={styles.statusBadgeText}>{item.status.toUpperCase()}</Text>
           </View>
         )}
       </View>
-      <View style={styles.cardContent}>
-        <View style={styles.cardHeader}>
-          <Text style={styles.competitionTitle} numberOfLines={2}>
-            {item.name}
-          </Text>
+
+      {/* Competition Info */}
+      <Text style={[styles.competitionTitle, { marginBottom: 8, fontSize: 16, fontWeight: '600' }]} numberOfLines={2}>
+        {item.name}
+      </Text>
+
+      {/* Quick Info Row */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>📅 Date</Text>
+          <Text style={{ fontSize: 13, color: '#fff', fontWeight: '500' }}>{item.date || 'TBA'}</Text>
         </View>
-        <View style={styles.cardDetails}>
-          <Text style={styles.detailLabel}>Date</Text>
-          <Text style={styles.detailValue}>{item.date || 'TBA'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>📍 Venue</Text>
+          <Text style={{ fontSize: 13, color: '#fff', fontWeight: '500' }} numberOfLines={1}>{item.venue || 'N/A'}</Text>
         </View>
-        <View style={styles.cardDetails}>
-          <Text style={styles.detailLabel}>Venue</Text>
-          <Text style={styles.detailValue}>{item.venue || 'N/A'}</Text>
+        <View style={{ flex: 1 }}>
+          <Text style={{ fontSize: 11, color: '#999', marginBottom: 4 }}>💷 Fee</Text>
+          <Text style={{ fontSize: 13, color: '#1B7342', fontWeight: '600' }}>£{item.entryFee || '0'}</Text>
         </View>
-        <View style={styles.cardDetails}>
-          <Text style={styles.detailLabel}>Pegs Available</Text>
-          <Text style={styles.detailValue}>{pegsAvailable}/{item.pegsTotal}</Text>
-        </View>
-        <View style={styles.cardDetails}>
-          <Text style={styles.detailLabel}>Entry Fee</Text>
-          <Text style={styles.priceValue}>£{item.entryFee || '0'}</Text>
-        </View>
-        {item.prizePool && (
-          <View style={styles.cardDetails}>
-            <Text style={styles.detailLabel}>Prize Pool</Text>
-            <Text style={styles.prizeValue}>£{item.prizePool}</Text>
-          </View>
-        )}
-        {item.prizeType && (
-          <View style={styles.cardDetails}>
-            <Text style={styles.detailLabel}>Prize Type</Text>
-            <Text style={styles.detailValue}>{item.prizeType}</Text>
-          </View>
-        )}
-        <TouchableOpacity style={styles.cardButton} onPress={() => onViewDetails(item)}>
-          <Text style={styles.cardButtonText}>View Details</Text>
-        </TouchableOpacity>
       </View>
-    </View>
+
+      {/* Pegs Progress Bar */}
+      <View style={{ marginBottom: 10 }}>
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
+          <Text style={{ fontSize: 12, color: '#999' }}>Pegs Available</Text>
+          <Text style={{ fontSize: 12, color: '#1B7342', fontWeight: '600' }}>{pegsAvailable}/{item.pegsTotal}</Text>
+        </View>
+        <View style={{ height: 6, backgroundColor: '#222', borderRadius: 3, overflow: 'hidden' }}>
+          <View 
+            style={{ 
+              height: '100%', 
+              backgroundColor: pegsPercentage > 80 ? '#FF4444' : '#1B7342',
+              width: `${pegsPercentage}%`
+            }} 
+          />
+        </View>
+      </View>
+
+      {/* Prize Pool & Type Row */}
+      {(item.prizePool || item.prizeType) && (
+        <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12, gap: 8 }}>
+          {item.prizePool && (
+            <View style={{ flex: 1, backgroundColor: '#1a1a1a', padding: 8, borderRadius: 8 }}>
+              <Text style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>🏆 Prize Pool</Text>
+              <Text style={{ fontSize: 13, color: '#1B7342', fontWeight: '600' }}>£{item.prizePool}</Text>
+            </View>
+          )}
+          {item.prizeType && (
+            <View style={{ flex: 1, backgroundColor: '#1a1a1a', padding: 8, borderRadius: 8 }}>
+              <Text style={{ fontSize: 11, color: '#999', marginBottom: 2 }}>🎯 Type</Text>
+              <Text style={{ fontSize: 13, color: '#fff' }}>{item.prizeType}</Text>
+            </View>
+          )}
+        </View>
+      )}
+
+      {/* View Details Button */}
+      <TouchableOpacity style={[styles.cardButton, { backgroundColor: '#1B7342', paddingVertical: 12 }]} onPress={() => onViewDetails(item)}>
+        <Text style={[styles.cardButtonText, { fontSize: 14, fontWeight: '600' }]}>View Details →</Text>
+      </TouchableOpacity>
+    </TouchableOpacity>
   );
 }
 
@@ -1490,6 +1520,33 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
             ) : (
               <View style={styles.emptyContainer}>
                 <Text style={styles.emptyText}>No leaderboard data available</Text>
+              </View>
+            )}
+          </View>
+        )}
+
+        {/* Rules & Regulations Section */}
+        {competition.rules && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsSectionTitle}>Rules & Regulations</Text>
+            <Text style={styles.competitionDescription}>{stripHtml(competition.rules)}</Text>
+          </View>
+        )}
+
+        {/* Additional Info Section */}
+        {(competition.maxTeamSize || competition.minParticipants) && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsSectionTitle}>Additional Information</Text>
+            {competition.maxTeamSize && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailRowLabel}>👥 Max Team Size</Text>
+                <Text style={styles.detailRowValue}>{competition.maxTeamSize} members</Text>
+              </View>
+            )}
+            {competition.minParticipants && (
+              <View style={styles.detailRow}>
+                <Text style={styles.detailRowLabel}>⛳ Minimum Participants</Text>
+                <Text style={styles.detailRowValue}>{competition.minParticipants}</Text>
               </View>
             )}
           </View>
@@ -2988,7 +3045,7 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
             </View>
 
             <View style={styles.editSection}>
-              <Text style={styles.editSectionTitle}>Social Media Links</Text>
+              <Text style={styles.editSectionTitle}>Social Media & Video</Text>
               <View style={styles.socialInputGroup}>
                 <Text style={styles.socialLabel}>YouTube</Text>
                 <TextInput
