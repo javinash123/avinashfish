@@ -3569,10 +3569,16 @@ export default function App() {
   }, []);
   
   const toggleRadio = () => {
-    if (!isWeb || !audioRef.current) {
-      Alert.alert('Radio', 'PegSlam Radio is available on the web version');
-      return;
+    if (!audioRef.current) {
+      Alert.alert('Radio', 'Initializing radio player...');
+      // Initialize audio on demand for mobile
+      if (!isWeb && typeof window === 'undefined') {
+        Alert.alert('Radio', 'PegSlam Radio is available in web or mobile app');
+        return;
+      }
+      audioRef.current = new Audio('https://data.webstreamer.co.uk/listen/pegslam/radio.mp3');
     }
+    
     if (isRadioPlaying) {
       audioRef.current.pause();
       setIsRadioPlaying(false);
@@ -3581,7 +3587,7 @@ export default function App() {
         setIsRadioPlaying(true);
       }).catch((err) => {
         console.error('Audio play error:', err);
-        Alert.alert('Radio Error', 'Unable to play radio stream');
+        Alert.alert('Radio Error', 'Unable to play radio stream. Make sure it\'s a valid URL.');
       });
     }
   };
@@ -4672,7 +4678,7 @@ export default function App() {
           style={[styles.navItem, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navItemActive]}
           onPress={() => setShowDrawer(true)}
         >
-          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>☰</Text>
+          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>⋮</Text>
           <Text style={[styles.navLabel, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>More</Text>
         </TouchableOpacity>
       </View>
@@ -4689,6 +4695,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 16,
     paddingVertical: 12,
+    paddingTop: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',

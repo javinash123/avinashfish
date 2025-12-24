@@ -247,6 +247,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   // Stripe payment intent route for competition bookings
   app.post("/api/create-payment-intent", async (req, res) => {
+    var stripeKey = process.env.STRIPE_SECRET_KEY;
+    var stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" }) : null;
+
     if (!stripe) {
       return res.status(503).json({ 
         message: "Payment processing is not configured. Please set up Stripe API keys." 

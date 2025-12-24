@@ -126,31 +126,30 @@ app.use(cors({
 // const MemoryStore = createMemoryStore(session);
 const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
 
-// Original session configuration (commented out for AWS EC2 deployment)
+// Commented out - replaced with simplified configuration below
 // app.use(session({
-//   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-//   resave: false,
-//   saveUninitialized: true,
-//   store: new MemoryStore({
-//     checkPeriod: 86400000, // prune expired entries every 24h
-//   }),
-//   cookie: {
-//     path: EXPRESS_BASE_PATH || '/',
-//     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-//     sameSite: "lax",
-//   },
-//   proxy: true
+// secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+// resave: false,
+// saveUninitialized: true,
+// store: new MemoryStore({
+// checkPeriod: 86400000, // prune expired entries every 24h
+// }),
+// cookie: {
+// path: EXPRESS_BASE_PATH || '/',
+// maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+// httpOnly: true,
+// secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+// sameSite: "lax",
+// },
+// proxy: true
 // }));
 
-// Simplified session configuration for AWS EC2 deployment
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
   resave: false,
   saveUninitialized: true,
   cookie: {
-    secure: process.env.NODE_ENV === "production", // Use secure cookies in production (nginx handles HTTPS)
+    secure: false, // ⚠️ temporary fix until you use HTTPS
     sameSite: "lax",
     httpOnly: true,
   },
