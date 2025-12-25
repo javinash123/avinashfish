@@ -3916,10 +3916,14 @@ export default function App() {
 
       {/* Header with Logo, Radio, Login */}
       <View style={styles.header}>
-        <Image
-          source={require('./assets/logo-new.png')}
-          style={{ width: 50, height: 50, resizeMode: 'contain' }}
-        />
+        <View style={styles.headerLeft}>
+          <Image
+            source={require('./assets/logo.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
+          />
+          <Text style={styles.logoText}>Peg Slam</Text>
+        </View>
         <View style={styles.headerRightSection}>
           <TouchableOpacity
             onPress={toggleRadio}
@@ -4752,12 +4756,27 @@ const styles = StyleSheet.create({
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    paddingTop: 8,
+    paddingTop: Platform.OS === 'ios' ? 44 : 8,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
+    zIndex: 1000,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  logoImage: {
+    width: 40,
+    height: 40,
+    marginRight: 10,
+  },
+  logoText: {
+    color: '#fff',
+    fontSize: 18,
+    fontWeight: 'bold',
   },
   hamburger: {
     fontSize: 28,
@@ -7208,9 +7227,26 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderTopWidth: 1,
     borderTopColor: '#2a2a2a',
-    backgroundColor: '#0a0a0a',
-    paddingVertical: 8,
-    paddingBottom: 12,
+    backgroundColor: '#1a1a1a',
+    paddingVertical: 10,
+    paddingBottom: Platform.OS === 'ios' ? 25 : 12,
+  },
+  navItem: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+  },
+  navIcon: {
+    fontSize: 22,
+    marginBottom: 4,
+  },
+  navLabel: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+  },
+  navLabelActive: {
+    color: '#1B7342',
   },
   navItem: {
     alignItems: 'center',
