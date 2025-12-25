@@ -6,7 +6,7 @@
   "scripts": {
     "start": "expo start",
     "build": "expo export --platform web",
-    "web": "expo start --web --clear --port 5000",
+    "web": "npx expo start --web --clear --port 5000",
     "web:export": "expo export --platform web",
     "web:server": "npx http-server dist -p 5000 -c-1 -g"
   },

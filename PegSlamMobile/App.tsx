@@ -879,28 +879,11 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     </View>
   );
 }
-  }, [selectedCompId]);
 
-  // Update selected competition when competitions list changes
-  useEffect(() => {
-    if (competitions?.length > 0 && !selectedCompId) {
-      setSelectedCompId(competitions[0].id);
-    }
-  }, [competitions]);
-
-  const fetchLeaderboard = async (compId: string) => {
-    if (!compId) return;
-    setLeaderLoading(true);
-    try {
-      const response = await apiClient.get(`/api/competitions/${compId}/leaderboard`);
-      setLeaderboardData(response.data || []);
-    } catch (error) {
-      console.error('Error fetching leaderboard:', error);
-      setLeaderboardData([]);
-    } finally {
-      setLeaderLoading(false);
-    }
-  };
+const LeaderboardSection = ({ competitions }: { competitions: any[] }) => {
+  const [selectedCompId, setSelectedCompId] = useState<string>('');
+  const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
+  const [leaderLoading, setLeaderLoading] = useState(false);
 
   const getCompetitionStatus = (compId: string) => {
     const comp = competitions.find((c: any) => c.id === compId);
@@ -1243,15 +1226,29 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
     </Modal>
   );
 }
-  };
 
-  const getCompetitionStatus = () => {
-    if (!competition.date) return 'upcoming';
-    const compDate = new Date(competition.date);
-    const now = new Date();
-    if (compDate < now) return 'completed';
-    return 'upcoming';
-  };
+const getCompetitionStatus = (competition: any) => {
+  if (!competition.date) return 'upcoming';
+  const compDate = new Date(competition.date);
+  const now = new Date();
+  if (compDate < now) return 'completed';
+  return 'upcoming';
+};
+
+function CompetitionDetailsModal({ competition, onClose, user, onLogin }: any) {
+  const [leaderboard, setLeaderboard] = useState<any[]>([]);
+  const [participants, setParticipants] = useState<any[]>([]);
+  const [activeTab, setActiveTab] = useState('details');
+  const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
+  const [loadingParticipants, setLoadingParticipants] = useState(false);
+  const [isJoined, setIsJoined] = useState(false);
+  const [userTeam, setUserTeam] = useState<any>(null);
+  const [allTeams, setAllTeams] = useState<any[]>([]);
+  const [showBookingModal, setShowBookingModal] = useState(false);
+
+  const isTeamCompetition = competition.competitionMode === 'team';
+  const entryFee = parseFloat(competition.entryFee) || 0;
+  const isPaidCompetition = entryFee > 0;
 
   useEffect(() => {
     checkIsJoined();
@@ -1266,8 +1263,6 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
       fetchLeaderboard();
     } else if (activeTab === 'participants') {
       fetchParticipants();
-    } else if (activeTab === 'teams' && isTeamCompetition) {
-      fetchAllTeams();
     }
   }, [activeTab]);
 
@@ -1327,8 +1322,14 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
     }
   };
 
+  const getImageUrl = () => {
+    const url = competition.imageUrl;
+    if (!url) return null;
+    return url.startsWith('http') ? url : `${API_URL}${url}`;
+  };
+
   const imageUrl = getImageUrl();
-  const status = getCompetitionStatus();
+  const status = getCompetitionStatus(competition);
   const pegsRemaining = competition.pegsTotal - competition.pegsBooked;
 
   const handleBookPeg = async () => {
@@ -1339,43 +1340,156 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
       ]);
       return;
     }
-
-    if (pegsRemaining <= 0) {
-      Alert.alert('Sold Out', 'This competition is fully booked');
-      return;
-    }
-
-    if (isTeamCompetition) {
-      if (!userTeam) {
-        Alert.alert('Team Required', 'You must be part of a team to book this competition. Please create or join a team first.');
-        return;
-      }
-      
-      if (isPaidCompetition && userTeam.createdBy !== user.id) {
-        Alert.alert('Permission Denied', 'Only the team captain can make the booking and payment for the team.');
-        return;
-      }
-
-      if (userTeam.paymentStatus === 'succeeded') {
-        Alert.alert('Already Booked', 'Your team is already registered for this competition.');
-        return;
-      }
-    }
-
-    if (isPaidCompetition) {
-      setShowBookingModal(true);
-    } else {
-      handleFreeJoin();
-    }
+    setShowBookingModal(true);
   };
 
   const handleFreeJoin = async () => {
-    setJoiningLeaving(true);
     try {
-      if (isTeamCompetition && userTeam) {
-        const response = await apiClient.post('/api/confirm-payment-and-join', {
-          paymentIntentId: 'free-competition',
-          competitionId: competition.id,
+      const response = await apiClient.post(`/api/competitions/${competition.id}/join`, {
+        pegNumber: Math.floor(Math.random() * competition.pegsTotal) + 1
+      });
+      if (response.data) {
+        Alert.alert('Success', 'You have joined the competition!');
+        checkIsJoined();
+        fetchParticipants();
+      }
+    } catch (error: any) {
+      Alert.alert('Error', error.response?.data?.message || 'Failed to join competition');
+    }
+  };
+
+  return (
+    <Modal visible={true} animationType="slide">
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.editModalHeader}>
+          <Text style={styles.editModalTitle} numberOfLines={1}>{competition.name}</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.editModalClose}>Close</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.editModalContent}>
+          <View style={styles.detailsImageContainer}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={{ width: '100%', height: 200, borderRadius: 12 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: '100%', height: 200, backgroundColor: '#1a1a1a', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 40 }}>🎣</Text>
+              </View>
+            )}
+            <View style={[styles.statusBadge, { backgroundColor: competition.status === 'live' ? '#FF4444' : '#1B7342' }]}>
+              <Text style={styles.statusBadgeText}>{competition.status?.toUpperCase() || status.toUpperCase()}</Text>
+            </View>
+          </View>
+
+          <View style={styles.competitionModeRow}>
+            <Text style={styles.competitionModeLabel}>
+              Mode: <Text style={{ color: '#fff' }}>{competition.competitionMode === 'team' ? '👥 Team' : '👤 Individual'}</Text>
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.competitionDescription}>{stripHtml(competition.description)}</Text>
+          </View>
+
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'details' && styles.tabActive]}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={[styles.tabText, activeTab === 'details' && styles.tabTextActive]}>Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'participants' && styles.tabActive]}
+              onPress={() => setActiveTab('participants')}
+            >
+              <Text style={[styles.tabText, activeTab === 'participants' && styles.tabTextActive]}>Participants</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'leaderboard' && styles.tabActive]}
+              onPress={() => setActiveTab('leaderboard')}
+            >
+              <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.tabTextActive]}>Leaderboard</Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeTab === 'details' && (
+            <View style={styles.tabContent}>
+              <View style={styles.contactCard}>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Venue</Text>
+                  <Text style={styles.contactInfoValue}>{competition.venue}</Text>
+                </View>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Date</Text>
+                  <Text style={styles.contactInfoValue}>{competition.date}</Text>
+                </View>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Entry Fee</Text>
+                  <Text style={styles.contactInfoValue}>£{competition.entryFee}</Text>
+                </View>
+              </View>
+
+              {!isJoined && competition.status !== 'completed' && (
+                <TouchableOpacity style={styles.authButton} onPress={handleBookPeg}>
+                  <Text style={styles.authButtonText}>Book Peg Now</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'participants' && (
+            <View style={styles.tabContent}>
+              {loadingParticipants ? (
+                <ActivityIndicator size="small" color="#1B7342" />
+              ) : participants.length > 0 ? (
+                participants.map((p, i) => (
+                  <View key={i} style={styles.participantCard}>
+                    <View style={styles.participantAvatarPlaceholder}>
+                      <Text style={styles.participantAvatarText}>{p.user?.firstName?.charAt(0) || '?'}</Text>
+                    </View>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>{p.user?.firstName} {p.user?.lastName}</Text>
+                      <Text style={styles.participantClub}>{p.team?.name || 'Individual'}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>No participants yet</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'leaderboard' && (
+            <View style={styles.tabContent}>
+              {loadingLeaderboard ? (
+                <ActivityIndicator size="small" color="#1B7342" />
+              ) : leaderboard.length > 0 ? (
+                leaderboard.map((entry, i) => (
+                  <View key={i} style={styles.participantCard}>
+                    <Text style={[styles.participantAvatarText, { marginRight: 12, color: '#1B7342' }]}>{i + 1}</Text>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>{entry.name}</Text>
+                      <Text style={styles.participantClub}>{entry.weight}kg</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Leaderboard not available yet</Text>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
+
+// Main App Component
+function App() {
+  const [user, setUser] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
           teamId: userTeam.id,
         });
         Alert.alert('Success', 'Your team has been registered for the competition!');
