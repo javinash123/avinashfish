@@ -14,6 +14,10 @@ run = ["node", "./dist/index.cjs"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 5001
+externalPort = 3000
+
 [env]
 PORT = "5000"
 
@@ -38,7 +42,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && CI=1 npx expo start --web --clear --port 5000 --non-interactive"
+args = "export CI=1 && npx expo start --web --port 5000 --non-interactive"
 waitForPort = 5000
 
 [agent]
