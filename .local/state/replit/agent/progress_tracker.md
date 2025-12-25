@@ -3,8 +3,8 @@
 ## Import Migration Tasks - ALL COMPLETED
 
 - [x] Install the required packages (npm install completed)
-- [x] Restart the workflow to see if the project is working (Start website workflow running on port 5000)
-- [x] Verify the project is working using the feedback tool (Screenshot confirmed website loads correctly)
+- [x] Restart the workflow to see if the project is working (Start application workflow running on port 5000)
+- [x] Verify the project is working using the feedback tool (Server running, Express serving on port 5000)
 - [x] Inform user the import is completed and they can start building
 
 ## Project Status: READY

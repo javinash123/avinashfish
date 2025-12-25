@@ -27,19 +27,19 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Mobile App Preview"
+args = "Mobile Web Preview"
 
 [[workflows.workflow]]
-name = "Mobile App Preview"
+name = "Mobile Web Preview"
 author = "agent"
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace/PegSlamMobile && npm run web"
+args = "cd PegSlamMobile && npm run web"
 waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_websocket:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "stripe:1.0.0"]

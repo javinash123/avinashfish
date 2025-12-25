@@ -55,17 +55,71 @@ const getTierInfo = (tier: string) => {
   }
 };
 
-// Menu Items matching website navigation
-const MENU_ITEMS = [
+function Header({ onOpenMenu, isLoggedIn, toggleRadio, isRadioPlaying }: any) {
+  const [logoUrl, setLogoUrl] = useState('');
+
+  useEffect(() => {
+    apiClient.get('/api/site-settings')
+      .then(res => {
+        let url = res.data?.logoUrl;
+        if (url && !url.startsWith('http')) {
+          url = API_URL + url;
+        }
+        setLogoUrl(url || '');
+      })
+      .catch(err => console.log('Logo fetch error:', err.message));
+  }, []);
+
+  return (
+    <View style={styles.header}>
+      <View style={styles.headerLeft}>
+        <TouchableOpacity onPress={() => onOpenMenu('more')} style={styles.menuButton}>
+          <Text style={styles.menuButtonIcon}>☰</Text>
+        </TouchableOpacity>
+        <View style={styles.headerLogoContainer}>
+          {logoUrl ? (
+            <Image 
+              source={{ uri: logoUrl }} 
+              style={styles.headerLogo} 
+              resizeMode="contain"
+            />
+          ) : (
+            <Image
+              source={require('./assets/logo.png')}
+              style={styles.headerLogo}
+              resizeMode="contain"
+            />
+          )}
+        </View>
+      </View>
+
+      <View style={styles.headerRightSection}>
+        <TouchableOpacity
+          onPress={toggleRadio}
+          style={[styles.radioButton, isRadioPlaying && styles.radioButtonActive]}
+        >
+          <Text style={styles.radioIcon}>{isRadioPlaying ? '⏹' : '📻'}</Text>
+          {isRadioPlaying && <View style={styles.radioIndicator} />}
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => isLoggedIn ? onOpenMenu('profile') : onOpenMenu('login')}
+          style={styles.headerButton}
+        >
+          <Text style={styles.headerButtonText}>
+            {isLoggedIn ? '👤' : 'Login'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </View>
+  );
+}
+
+const TABS = [
   { id: 'home', label: 'Home', icon: '🏠' },
   { id: 'competitions', label: 'Competitions', icon: '🎣' },
   { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
-  { id: 'anglers', label: 'Angler Directory', icon: '👥' },
   { id: 'news', label: 'News', icon: '📰' },
-  { id: 'gallery', label: 'Gallery', icon: '📸' },
-  { id: 'sponsors', label: 'Sponsors', icon: '💼' },
-  { id: 'about', label: 'About', icon: 'ℹ️' },
-  { id: 'contact', label: 'Contact', icon: '✉️' },
+  { id: 'more', label: 'More', icon: '⋮' },
 ];
 
 // Login Modal
@@ -762,11 +816,69 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
   const [selectedCompId, setSelectedCompId] = useState(competitions?.[0]?.id || '');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderLoading, setLeaderLoading] = useState(false);
+  const [mode, setMode] = useState('individual');
+
+  const fetchLeaderboard = async (id: string) => {
+    try {
+      setLeaderLoading(true);
+      const res = await apiClient.get(`/api/competitions/${id}/leaderboard`);
+      setLeaderboardData(res.data || []);
+      
+      const comp = competitions.find((c: any) => c.id === id);
+      if (comp) setMode(comp.competitionMode || 'individual');
+    } catch (err) {
+      console.log('Leaderboard fetch error:', err);
+    } finally {
+      setLeaderLoading(false);
+    }
+  };
 
   useEffect(() => {
     if (selectedCompId) {
       fetchLeaderboard(selectedCompId);
     }
+  }, [selectedCompId]);
+
+  return (
+    <View style={styles.section}>
+      <Text style={styles.sectionTitle}>Global Leaderboards</Text>
+      
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: 16 }}>
+        {competitions.filter((c: any) => c.status === 'live' || c.status === 'completed').map((comp: any) => (
+          <TouchableOpacity 
+            key={comp.id}
+            style={[styles.tab, selectedCompId === comp.id && styles.tabActive, { minWidth: 120, marginRight: 8 }]}
+            onPress={() => setSelectedCompId(comp.id)}
+          >
+            <Text style={[styles.tabText, selectedCompId === comp.id && styles.tabTextActive]} numberOfLines={1}>{comp.name}</Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+
+      <View style={styles.contactCard}>
+        <View style={[styles.teamMemberRow, { borderBottomWidth: 1, borderColor: '#2a2a2a', paddingBottom: 8 }]}>
+          <Text style={[styles.navLabel, { width: 30 }]}>Pos</Text>
+          <Text style={[styles.navLabel, { flex: 1 }]}>{mode === 'team' ? 'Team' : 'Angler'}</Text>
+          <Text style={[styles.navLabel, { width: 60, textAlign: 'right' }]}>Weight</Text>
+        </View>
+
+        {leaderLoading ? (
+          <ActivityIndicator size="small" color="#1B7342" style={{ marginVertical: 20 }} />
+        ) : leaderboardData.length > 0 ? (
+          leaderboardData.map((entry, i) => (
+            <View key={i} style={styles.teamMemberRow}>
+              <Text style={{ color: i < 3 ? '#1B7342' : '#fff', width: 30, fontWeight: 'bold' }}>{i + 1}</Text>
+              <Text style={{ color: '#fff', flex: 1 }} numberOfLines={1}>{entry.name}</Text>
+              <Text style={{ color: '#1B7342', width: 60, textAlign: 'right', fontWeight: 'bold' }}>{entry.weight}kg</Text>
+            </View>
+          ))
+        ) : (
+          <Text style={[styles.emptyText, { padding: 20 }]}>No data available</Text>
+        )}
+      </View>
+    </View>
+  );
+}
   }, [selectedCompId]);
 
   // Update selected competition when competitions list changes
@@ -940,10 +1052,197 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
   const entryFee = parseFloat(competition.entryFee) || 0;
   const isPaidCompetition = entryFee > 0;
 
+  const fetchCompetitionDetails = async () => {
+    try {
+      setLoadingParticipants(true);
+      const res = await apiClient.get(`/api/competitions/${competition.id}/participants`);
+      setParticipants(res.data || []);
+      
+      if (user) {
+        const joined = res.data.some((p: any) => p.userId === user.id);
+        setIsJoined(joined);
+      }
+    } catch (err) {
+      console.log('Error fetching participants:', err);
+    } finally {
+      setLoadingParticipants(false);
+    }
+  };
+
+  const fetchLeaderboard = async () => {
+    try {
+      setLoadingLeaderboard(true);
+      const res = await apiClient.get(`/api/competitions/${competition.id}/leaderboard`);
+      setLeaderboard(res.data || []);
+    } catch (err) {
+      console.log('Error fetching leaderboard:', err);
+    } finally {
+      setLoadingLeaderboard(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCompetitionDetails();
+    fetchLeaderboard();
+  }, [competition.id]);
+
+  const handleBookPeg = () => {
+    if (!user) {
+      onLogin();
+      return;
+    }
+    setShowBookingModal(true);
+  };
+
   const getImageUrl = () => {
     const url = competition.imageUrl;
     if (!url) return null;
     return url.startsWith('http') ? url : `${API_URL}${url}`;
+  };
+
+  const imageUrl = getImageUrl();
+
+  return (
+    <Modal visible={true} animationType="slide">
+      <SafeAreaView style={styles.modalContainer}>
+        <View style={styles.editModalHeader}>
+          <Text style={styles.editModalTitle} numberOfLines={1}>{competition.name}</Text>
+          <TouchableOpacity onPress={onClose}>
+            <Text style={styles.editModalClose}>Close</Text>
+          </TouchableOpacity>
+        </View>
+
+        <ScrollView style={styles.editModalContent}>
+          <View style={styles.detailsImageContainer}>
+            {imageUrl ? (
+              <Image source={{ uri: imageUrl }} style={{ width: '100%', height: 200, borderRadius: 12 }} resizeMode="cover" />
+            ) : (
+              <View style={{ width: '100%', height: 200, backgroundColor: '#1a1a1a', borderRadius: 12, justifyContent: 'center', alignItems: 'center' }}>
+                <Text style={{ fontSize: 40 }}>🎣</Text>
+              </View>
+            )}
+            <View style={[styles.statusBadge, { backgroundColor: competition.status === 'live' ? '#FF4444' : '#1B7342' }]}>
+              <Text style={styles.statusBadgeText}>{competition.status?.toUpperCase() || 'UPCOMING'}</Text>
+            </View>
+          </View>
+
+          <View style={styles.competitionModeRow}>
+            <Text style={styles.competitionModeLabel}>
+              Mode: <Text style={{ color: '#fff' }}>{competition.competitionMode === 'team' ? '👥 Team' : '👤 Individual'}</Text>
+            </Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>Description</Text>
+            <Text style={styles.competitionDescription}>{stripHtml(competition.description)}</Text>
+          </View>
+
+          <View style={styles.tabContainer}>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'details' && styles.tabActive]}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={[styles.tabText, activeTab === 'details' && styles.tabTextActive]}>Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'participants' && styles.tabActive]}
+              onPress={() => setActiveTab('participants')}
+            >
+              <Text style={[styles.tabText, activeTab === 'participants' && styles.tabTextActive]}>Participants</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.tab, activeTab === 'leaderboard' && styles.tabActive]}
+              onPress={() => setActiveTab('leaderboard')}
+            >
+              <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.tabTextActive]}>Leaderboard</Text>
+            </TouchableOpacity>
+          </View>
+
+          {activeTab === 'details' && (
+            <View style={styles.tabContent}>
+              <View style={styles.contactCard}>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Venue</Text>
+                  <Text style={styles.contactInfoValue}>{competition.venue}</Text>
+                </View>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Date</Text>
+                  <Text style={styles.contactInfoValue}>{competition.date}</Text>
+                </View>
+                <View style={styles.contactInfoItem}>
+                  <Text style={styles.contactInfoLabel}>Entry Fee</Text>
+                  <Text style={styles.contactInfoValue}>£{competition.entryFee}</Text>
+                </View>
+                {competition.prizePool && (
+                  <View style={styles.contactInfoItem}>
+                    <Text style={styles.contactInfoLabel}>Prize Pool</Text>
+                    <Text style={styles.contactInfoValue}>£{competition.prizePool}</Text>
+                  </View>
+                )}
+              </View>
+
+              {!isJoined && competition.status !== 'completed' && (
+                <TouchableOpacity style={styles.authButton} onPress={handleBookPeg}>
+                  <Text style={styles.authButtonText}>Book Peg Now</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'participants' && (
+            <View style={styles.tabContent}>
+              {loadingParticipants ? (
+                <ActivityIndicator size="small" color="#1B7342" />
+              ) : participants.length > 0 ? (
+                participants.map((p, i) => (
+                  <View key={i} style={styles.participantCard}>
+                    <View style={styles.participantAvatarPlaceholder}>
+                      <Text style={styles.participantAvatarText}>{p.user?.firstName?.charAt(0) || '?'}</Text>
+                    </View>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>{p.user?.firstName} {p.user?.lastName}</Text>
+                      <Text style={styles.participantClub}>{p.team?.name || 'Individual'}</Text>
+                    </View>
+                    <View style={styles.pegBadge}>
+                      <Text style={styles.pegBadgeText}>Peg {p.pegNumber}</Text>
+                    </View>
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>No participants yet</Text>
+              )}
+            </View>
+          )}
+
+          {activeTab === 'leaderboard' && (
+            <View style={styles.tabContent}>
+              {loadingLeaderboard ? (
+                <ActivityIndicator size="small" color="#1B7342" />
+              ) : leaderboard.length > 0 ? (
+                leaderboard.map((entry, i) => (
+                  <View key={i} style={styles.participantCard}>
+                    <Text style={[styles.participantAvatarText, { marginRight: 12, color: '#1B7342' }]}>{i + 1}</Text>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName}>{entry.name}</Text>
+                      <Text style={styles.participantClub}>{entry.weight}kg</Text>
+                    </View>
+                    {entry.pegNumber && (
+                      <View style={styles.pegBadge}>
+                        <Text style={styles.pegBadgeText}>Peg {entry.pegNumber}</Text>
+                      </View>
+                    )}
+                  </View>
+                ))
+              ) : (
+                <Text style={styles.emptyText}>Leaderboard not available yet</Text>
+              )}
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+  );
+}
   };
 
   const getCompetitionStatus = () => {
@@ -7223,49 +7522,75 @@ const styles = StyleSheet.create({
   // Bottom Navigation Styles
   bottomNav: {
     flexDirection: 'row',
-    justifyContent: 'space-around',
-    alignItems: 'center',
+    height: 65,
+    backgroundColor: '#0f0f0f',
     borderTopWidth: 1,
-    borderTopColor: '#2a2a2a',
-    backgroundColor: '#1a1a1a',
-    paddingVertical: 10,
-    paddingBottom: Platform.OS === 'ios' ? 25 : 12,
+    borderTopColor: '#1a1a1a',
+    paddingBottom: Platform.OS === 'ios' ? 20 : 0,
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -2 },
+    shadowOpacity: 0.3,
+    shadowRadius: 4,
   },
   navItem: {
+    flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    flex: 1,
+    paddingVertical: 8,
+  },
+  navItemActive: {
+    borderTopWidth: 2,
+    borderTopColor: '#1B7342',
   },
   navIcon: {
     fontSize: 22,
-    marginBottom: 4,
+    color: '#666',
+    marginBottom: 2,
   },
   navLabel: {
-    fontSize: 11,
-    color: '#999',
+    fontSize: 10,
+    color: '#666',
     fontWeight: '500',
   },
   navLabelActive: {
     color: '#1B7342',
   },
-  navItem: {
+  header: {
+    height: 60,
+    flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 4,
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    backgroundColor: '#0a0a0a',
+    borderBottomWidth: 1,
+    borderBottomColor: '#1a1a1a',
+    zIndex: 100,
   },
-  navItemActive: {
-    opacity: 1,
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  navIcon: {
-    fontSize: 24,
-    marginBottom: 2,
+  menuButton: {
+    padding: 8,
+    marginRight: 8,
   },
-  navLabel: {
-    fontSize: 11,
-    color: '#666',
-    fontWeight: '600',
-  },
-  navLabelActive: {
+  menuButtonIcon: {
     color: '#1B7342',
+    fontSize: 24,
+  },
+  headerLogoContainer: {
+    height: 40,
+    width: 120,
+    justifyContent: 'center',
+  },
+  headerLogo: {
+    height: '100%',
+    width: '100%',
+  },
+  headerActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
 });
 
