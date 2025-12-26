@@ -2199,6 +2199,19 @@ function AnglerProfilePage({ angler, onClose }: any) {
     if (url.startsWith('http')) return url;
     return `${API_URL}${url}`;
   };
+
+  const extractYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
   
   const [stats, setStats] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
@@ -2207,6 +2220,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
   const [galleryLoading, setGalleryLoading] = useState(false);
   const [participationsLoading, setParticipationsLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('history');
+  const [videoId, setVideoId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [editForm, setEditForm] = useState({ firstName: angler.firstName, lastName: angler.lastName, club: angler.club, bio: angler.bio, location: angler.location, favouriteMethod: angler.favouriteMethod, favouriteSpecies: angler.favouriteSpecies, avatar: angler.avatar });
@@ -2220,7 +2234,10 @@ function AnglerProfilePage({ angler, onClose }: any) {
     fetchStats();
     fetchGallery();
     fetchParticipations();
-  }, [angler.username]);
+    if (angler.youtubeUrl) {
+      setVideoId(extractYouTubeVideoId(angler.youtubeUrl));
+    }
+  }, [angler.username, angler.youtubeUrl]);
 
   const fetchStats = async () => {
     try {
@@ -2404,6 +2421,26 @@ function AnglerProfilePage({ angler, onClose }: any) {
           </View>
         )}
 
+        {/* Featured Video */}
+        {videoId && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsSectionTitle}>Featured Video</Text>
+            <TouchableOpacity 
+              style={styles.videoThumbnail}
+              onPress={() => angler.youtubeUrl && Linking.openURL(angler.youtubeUrl)}
+            >
+              <Image
+                source={{ uri: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` }}
+                style={styles.videoThumbnailImage}
+                resizeMode="cover"
+              />
+              <View style={styles.videoPlayButton}>
+                <Text style={styles.videoPlayIcon}>▶</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Stats Cards */}
         {statsLoading ? (
           <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
@@ -2448,31 +2485,36 @@ function AnglerProfilePage({ angler, onClose }: any) {
         {/* Social Media Links */}
         {hasSocialLinks && (
           <View style={styles.detailsSection}>
-            <Text style={styles.detailsSectionTitle}>Social Media</Text>
-            <View style={styles.socialLinksContainer}>
+            <Text style={styles.detailsSectionTitle}>Follow on Social Media</Text>
+            <View style={styles.socialIconsRow}>
               {angler.youtubeUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.youtubeUrl)}>
-                  <Text style={styles.socialButtonText}>▶ YouTube</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.youtubeUrl)}>
+                  <Text style={styles.socialIconButtonText}>▶</Text>
+                  <Text style={styles.socialIconLabel}>YouTube</Text>
                 </TouchableOpacity>
               )}
               {angler.facebookUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.facebookUrl)}>
-                  <Text style={styles.socialButtonText}>f Facebook</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.facebookUrl)}>
+                  <Text style={styles.socialIconButtonText}>f</Text>
+                  <Text style={styles.socialIconLabel}>Facebook</Text>
                 </TouchableOpacity>
               )}
               {angler.twitterUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.twitterUrl)}>
-                  <Text style={styles.socialButtonText}>𝕏 Twitter</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.twitterUrl)}>
+                  <Text style={styles.socialIconButtonText}>𝕏</Text>
+                  <Text style={styles.socialIconLabel}>Twitter</Text>
                 </TouchableOpacity>
               )}
               {angler.instagramUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
-                  <Text style={styles.socialButtonText}>📷 Instagram</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
+                  <Text style={styles.socialIconButtonText}>📷</Text>
+                  <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
               {angler.tiktokUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.tiktokUrl)}>
-                  <Text style={styles.socialButtonText}>♪ TikTok</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.tiktokUrl)}>
+                  <Text style={styles.socialIconButtonText}>♪</Text>
+                  <Text style={styles.socialIconLabel}>TikTok</Text>
                 </TouchableOpacity>
               )}
             </View>
@@ -2481,19 +2523,23 @@ function AnglerProfilePage({ angler, onClose }: any) {
 
         {/* Share Profile */}
         <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>Share Profile</Text>
-          <View style={styles.shareButtonsContainer}>
-            <TouchableOpacity style={styles.shareButton} onPress={() => shareProfile('whatsapp')}>
-              <Text style={styles.shareButtonText}>💬 WhatsApp</Text>
+          <Text style={styles.detailsSectionTitle}>Share This Profile</Text>
+          <View style={styles.shareIconsRow}>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('whatsapp')}>
+              <Text style={styles.shareIconButtonText}>💬</Text>
+              <Text style={styles.shareIconLabel}>WhatsApp</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={() => shareProfile('facebook')}>
-              <Text style={styles.shareButtonText}>f Facebook</Text>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('facebook')}>
+              <Text style={styles.shareIconButtonText}>f</Text>
+              <Text style={styles.shareIconLabel}>Facebook</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={() => shareProfile('x')}>
-              <Text style={styles.shareButtonText}>𝕏 Twitter</Text>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('x')}>
+              <Text style={styles.shareIconButtonText}>𝕏</Text>
+              <Text style={styles.shareIconLabel}>Twitter</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.shareButton} onPress={() => shareProfile('copy')}>
-              <Text style={styles.shareButtonText}>🔗 Copy Link</Text>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('copy')}>
+              <Text style={styles.shareIconButtonText}>🔗</Text>
+              <Text style={styles.shareIconLabel}>Copy</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -6051,6 +6097,70 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 12,
     fontWeight: '600',
+  },
+  // Video Styles
+  videoThumbnail: {
+    position: 'relative',
+    width: '100%',
+    height: 180,
+    borderRadius: 8,
+    overflow: 'hidden',
+    backgroundColor: '#1a1a1a',
+  },
+  videoThumbnailImage: {
+    width: '100%',
+    height: '100%',
+  },
+  videoPlayButton: {
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: 'rgba(27, 115, 66, 0.9)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginTop: -30,
+    marginLeft: -30,
+  },
+  videoPlayIcon: {
+    fontSize: 28,
+    color: '#fff',
+  },
+  // Social Icons Row Styles
+  socialIconsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  socialIconButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  socialIconButtonText: {
+    fontSize: 28,
+    color: '#1B7342',
+  },
+  socialIconLabel: {
+    fontSize: 11,
+    color: '#999',
+    fontWeight: '500',
+  },
+  // Share Icons Row Styles
+  shareIconsRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    alignItems: 'center',
+    paddingVertical: 12,
+  },
+  shareIconButton: {
+    alignItems: 'center',
+    gap: 6,
+  },
+  shareIconButtonText: {
+    fontSize: 28,
   },
   // Tabs Styles
   tabsContainer: {
