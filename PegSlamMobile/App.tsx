@@ -1394,26 +1394,29 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
           </View>
         )}
 
-        {/* Tabs */}
-        <View style={styles.tabContainer}>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'details' && styles.tabActive]}
-            onPress={() => setActiveTab('details')}
-          >
-            <Text style={[styles.tabText, activeTab === 'details' && styles.tabTextActive]}>Details</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'participants' && styles.tabActive]}
-            onPress={() => setActiveTab('participants')}
-          >
-            <Text style={[styles.tabText, activeTab === 'participants' && styles.tabTextActive]}>Participants</Text>
-          </TouchableOpacity>
-          <TouchableOpacity 
-            style={[styles.tab, activeTab === 'leaderboard' && styles.tabActive]}
-            onPress={() => setActiveTab('leaderboard')}
-          >
-            <Text style={[styles.tabText, activeTab === 'leaderboard' && styles.tabTextActive]}>Leaderboard</Text>
-          </TouchableOpacity>
+        {/* Dropdown for Tab Selection */}
+        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2a2a2a' }}>
+          <Text style={{ color: '#999', fontSize: 12, marginBottom: 8 }}>View:</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+            <TouchableOpacity 
+              style={[styles.dropdownButton, activeTab === 'details' && styles.dropdownButtonActive]}
+              onPress={() => setActiveTab('details')}
+            >
+              <Text style={[styles.dropdownButtonText, activeTab === 'details' && styles.dropdownButtonTextActive]}>Details</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.dropdownButton, activeTab === 'participants' && styles.dropdownButtonActive]}
+              onPress={() => setActiveTab('participants')}
+            >
+              <Text style={[styles.dropdownButtonText, activeTab === 'participants' && styles.dropdownButtonTextActive]}>Participants</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.dropdownButton, activeTab === 'leaderboard' && styles.dropdownButtonActive]}
+              onPress={() => setActiveTab('leaderboard')}
+            >
+              <Text style={[styles.dropdownButtonText, activeTab === 'leaderboard' && styles.dropdownButtonTextActive]}>Leaderboard</Text>
+            </TouchableOpacity>
+          </ScrollView>
         </View>
 
         {/* Details Tab */}
@@ -1902,6 +1905,112 @@ function NewsDetailPage({ article, onClose }: any) {
   );
 }
 
+// Gallery Detail Page
+function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onPrevImage }: any) {
+  const galleryUrl = `https://pegslam.com/gallery?image=${image.id}`;
+  const shareGallery = (platform: string) => {
+    const text = `Check out: ${image.title}`;
+    try {
+      if (platform === 'whatsapp') {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' - ' + galleryUrl)}`;
+        window.open(waUrl, '_blank');
+      } else if (platform === 'facebook') {
+        const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(galleryUrl)}`;
+        window.open(fbUrl, '_blank');
+      } else if (platform === 'x') {
+        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(galleryUrl)}`;
+        window.open(xUrl, '_blank');
+      } else if (platform === 'copy') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(galleryUrl).then(() => {
+            Alert.alert('Success', 'Gallery link copied to clipboard!');
+          });
+        }
+      }
+    } catch (error) {
+      console.error('Sharing error:', error);
+      Alert.alert('Error', 'Failed to share gallery.');
+    }
+  };
+
+  const currentUrl = image.urls[currentImageIndex] ? (image.urls[currentImageIndex].startsWith('http') ? image.urls[currentImageIndex] : `${API_URL}${image.urls[currentImageIndex]}`) : null;
+
+  return (
+    <View style={styles.detailsContainer}>
+      <View style={styles.detailsHeader}>
+        <TouchableOpacity onPress={onClose} style={styles.detailsBackButton}>
+          <Text style={styles.detailsBackText}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={[styles.detailsTitle, { maxWidth: '70%' }]} numberOfLines={1}>{image.title}</Text>
+        <View style={{ width: 40 }} />
+      </View>
+
+      <ScrollView style={styles.detailsContent} showsVerticalScrollIndicator={false}>
+        {currentUrl ? (
+          <View style={{ position: 'relative' }}>
+            <Image
+              source={{ uri: currentUrl }}
+              style={styles.detailsImage}
+              resizeMode="contain"
+            />
+            {image.urls && image.urls.length > 1 && (
+              <>
+                <TouchableOpacity style={[styles.imageNavButton, { left: 10 }]} onPress={onPrevImage}>
+                  <Text style={styles.imageNavText}>← Prev</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={[styles.imageNavButton, { right: 10 }]} onPress={onNextImage}>
+                  <Text style={styles.imageNavText}>Next →</Text>
+                </TouchableOpacity>
+                <Text style={{ textAlign: 'center', color: '#999', fontSize: 12, marginTop: 8 }}>
+                  {currentImageIndex + 1} of {image.urls.length}
+                </Text>
+              </>
+            )}
+          </View>
+        ) : (
+          <View style={[styles.detailsImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={{ color: '#666', fontSize: 16, textAlign: 'center' }}>No Image Available</Text>
+          </View>
+        )}
+
+        <View style={styles.detailsSection}>
+          <Text style={styles.detailsSectionTitle}>{image.title}</Text>
+          <Text style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
+            {image.category === 'catch' ? 'Big Catch' : 'Event'} {image.date ? `• ${image.date}` : ''}
+          </Text>
+          {image.description && (
+            <Text style={styles.detailsDescription}>
+              {image.description}
+            </Text>
+          )}
+          {image.weight && (
+            <View style={{ marginTop: 12, padding: 12, backgroundColor: '#1a1a1a', borderRadius: 8 }}>
+              <Text style={{ color: '#1B7342', fontWeight: '600', fontSize: 16 }}>Weight: {image.weight}</Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.shareButtonsContainer}>
+          <TouchableOpacity style={styles.shareButton} onPress={() => shareGallery('whatsapp')}>
+            <Text style={styles.shareButtonText}>WhatsApp</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={() => shareGallery('facebook')}>
+            <Text style={styles.shareButtonText}>Facebook</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={() => shareGallery('x')}>
+            <Text style={styles.shareButtonText}>X/Twitter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.shareButton} onPress={() => shareGallery('copy')}>
+            <Text style={styles.shareButtonText}>Copy Link</Text>
+          </TouchableOpacity>
+        </View>
+
+        <View style={{ height: 20 }} />
+      </ScrollView>
+    </View>
+  );
+}
+
 // News Card
 function NewsCard({ item, onPress }: any) {
   const getImageUrl = () => {
@@ -1950,6 +2059,7 @@ function NewsCard({ item, onPress }: any) {
 // Angler Card Component
 function AnglerCard({ angler, onPress }: any) {
   const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
+  const [imageLoaded, setImageLoaded] = useState(true);
   
   const getImageUrl = (url: string) => {
     if (!url) return null;
@@ -1957,18 +2067,23 @@ function AnglerCard({ angler, onPress }: any) {
     return `${API_URL}${url}`;
   };
 
+  const imageUrl = angler.avatar ? getImageUrl(angler.avatar) : null;
+
   return (
     <TouchableOpacity style={styles.anglerCard} onPress={onPress}>
       <View style={styles.anglerAvatar}>
-        {angler.avatar ? (
+        {imageUrl && imageLoaded ? (
           <Image 
-            source={{ uri: getImageUrl(angler.avatar) }} 
+            source={{ uri: imageUrl }} 
             style={styles.avatarImage} 
             resizeMode="cover"
-            onError={(e) => console.log('Angler image error:', angler.username, e.nativeEvent.error)}
+            onError={() => setImageLoaded(false)}
+            defaultSource={{ uri: null }}
           />
         ) : (
-          <Text style={styles.avatarInitials}>{initials}</Text>
+          <View style={[styles.avatarImage, { backgroundColor: '#1B7342', justifyContent: 'center', alignItems: 'center' }]}>
+            <Text style={styles.avatarInitials}>{initials}</Text>
+          </View>
         )}
       </View>
       <Text style={styles.anglerName} numberOfLines={1}>{angler.firstName} {angler.lastName}</Text>
@@ -4006,8 +4121,19 @@ export default function App() {
         />
       )}
 
+      {/* Gallery Detail View */}
+      {selectedGalleryImage && (
+        <GalleryDetailPage 
+          image={selectedGalleryImage} 
+          currentImageIndex={currentGalleryImageIndex}
+          onClose={() => setSelectedGalleryImage(null)}
+          onNextImage={() => setCurrentGalleryImageIndex((prev) => (prev + 1) % selectedGalleryImage.urls.length)}
+          onPrevImage={() => setCurrentGalleryImageIndex((prev) => (prev === 0 ? selectedGalleryImage.urls.length - 1 : prev - 1))}
+        />
+      )}
+
       {/* Main Content */}
-      {!selectedCompetition && !selectedAngler && !selectedNews && (
+      {!selectedCompetition && !selectedAngler && !selectedNews && !selectedGalleryImage && (
       <ScrollView
         style={styles.content}
         showsVerticalScrollIndicator={false}
@@ -6377,6 +6503,28 @@ const styles = StyleSheet.create({
   },
   tabContent: {
     marginVertical: 16,
+  },
+  // Dropdown Button Styles
+  dropdownButton: {
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    marginRight: 8,
+    borderRadius: 6,
+    backgroundColor: '#1a1a1a',
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  dropdownButtonActive: {
+    backgroundColor: '#1B7342',
+    borderColor: '#1B7342',
+  },
+  dropdownButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#666',
+  },
+  dropdownButtonTextActive: {
+    color: '#fff',
   },
   // Participant Styles
   participantsList: {

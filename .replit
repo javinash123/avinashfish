@@ -29,29 +29,13 @@ author = "agent"
 task = "workflow.run"
 args = "Mobile App Preview"
 
-[[workflows.workflow.tasks]]
-task = "workflow.run"
-args = "Mobile App Preview (Expo)"
-
 [[workflows.workflow]]
 name = "Mobile App Preview"
 author = "agent"
 
-[workflows.workflow.metadata]
-outputType = "webview"
-
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd PegSlamMobile && npm run web:server"
-waitForPort = 5000
-
-[[workflows.workflow]]
-name = "Mobile App Preview (Expo)"
-author = "agent"
-
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "cd PegSlamMobile && npm start -- --web --clear --port 5000"
 waitForPort = 5000
 
 [workflows.workflow.metadata]
