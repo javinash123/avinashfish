@@ -4377,6 +4377,7 @@ export default function App() {
       'sponsors': 'Our Sponsors',
       'about': 'About Peg Slam',
       'contact': 'Contact Us',
+      'profile': 'My Profile',
     };
     return pageTitles[currentPage] || 'PEG SLAM';
   };
@@ -5082,6 +5083,8 @@ export default function App() {
           setCurrentUser(userData);
           setIsLoggedIn(true);
           setShowLoginModal(false);
+          // Auto-navigate to profile after successful login
+          setTimeout(() => setCurrentPage('profile'), 500);
         }}
       />
 
