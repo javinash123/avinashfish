@@ -29,6 +29,10 @@ author = "agent"
 task = "workflow.run"
 args = "Mobile App Preview"
 
+[[workflows.workflow.tasks]]
+task = "workflow.run"
+args = "Mobile App Preview (Expo)"
+
 [[workflows.workflow]]
 name = "Mobile App Preview"
 author = "agent"
@@ -38,8 +42,20 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && CI=1 npx expo start --web --port 5000 --host localhost --clear --no-dev"
+args = "cd PegSlamMobile && npm run web:server"
 waitForPort = 5000
+
+[[workflows.workflow]]
+name = "Mobile App Preview (Expo)"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd PegSlamMobile && npm start -- --web --clear --port 5000"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_websocket:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "stripe:1.0.0"]

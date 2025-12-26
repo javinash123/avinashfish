@@ -2499,7 +2499,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
                   {gallery.map((photo: any) => (
                     <View key={photo.id} style={styles.galleryPhoto}>
                       <Image
-                        source={{ uri: photo.url }}
+                        source={{ uri: photo.url?.startsWith('http') ? photo.url : `${API_URL}${photo.url}` }}
                         style={styles.galleryPhotoImage}
                         resizeMode="cover"
                       />
@@ -3717,15 +3717,15 @@ export default function App() {
       setDataLoading(true);
       const [compRes, newsRes, galRes, anglersRes, spRes, ytRes] = await Promise.all([
         apiClient.get('/api/competitions'),
-        apiClient.get('/api/news'),
-        apiClient.get('/api/gallery/featured').catch(() => ({ data: [] })),
+        apiClient.get('/api/news?limit=100'),
+        apiClient.get('/api/gallery').catch(() => ({ data: [] })),
         apiClient.get('/api/anglers?limit=100').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
       ]);
       
       console.log('Competitions data:', compRes.data?.[0]);
-      console.log('News data:', newsRes.data?.[0]);
+      console.log('News data:', newsRes.data?.news?.[0]);
       console.log('Gallery data:', galRes.data?.[0]);
       console.log('Anglers data:', anglersRes.data?.data?.[0]);
       console.log('Sponsors data:', spRes.data?.[0]);
@@ -3739,7 +3739,7 @@ export default function App() {
         return { ...comp, status };
       });
       setCompetitions(withStatus);
-      setNews(newsRes.data || []);
+      setNews(newsRes.data?.news || []);
       setGallery(galRes.data || []);
       setAnglers(anglersRes.data?.data || []);
       setSponsors(spRes.data || []);
@@ -3864,8 +3864,11 @@ export default function App() {
   
   // Get filtered gallery images
   const getFilteredGallery = () => {
-    if (galleryFilter === 'all') return gallery;
-    return gallery.filter((item: any) => item.category === galleryFilter);
+    let filtered = gallery;
+    if (galleryFilter !== 'all') {
+      filtered = filtered.filter((item: any) => item.category === galleryFilter);
+    }
+    return filtered;
   };
   
   // Get filtered news
@@ -3881,14 +3884,6 @@ export default function App() {
     }
     if (newsCategory !== 'all') {
       filtered = filtered.filter((item: any) => item.category === newsCategory);
-    }
-    return filtered;
-  };
-
-  const getFilteredGallery = () => {
-    let filtered = gallery;
-    if (galleryFilter !== 'all') {
-      filtered = filtered.filter((item: any) => item.category === galleryFilter);
     }
     return filtered;
   };
@@ -4317,7 +4312,7 @@ export default function App() {
                   >
                     <View style={styles.galleryCardImageContainer}>
                       <Image 
-                        source={{ uri: item.urls && item.urls[0] ? item.urls[0] : 'https://via.placeholder.com/300x225' }} 
+                        source={{ uri: item.urls && item.urls[0] ? (item.urls[0].startsWith('http') ? item.urls[0] : `${API_URL}${item.urls[0]}`) : 'https://via.placeholder.com/300x225' }} 
                         style={styles.galleryCardImage} 
                         resizeMode="cover" 
                       />
