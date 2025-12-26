@@ -3469,6 +3469,88 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
     Linking.openURL(url).catch(err => console.error("Failed to open URL:", err));
   };
 
+  const getImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
+  const extractYouTubeVideoId = (url: string): string | null => {
+    if (!url) return null;
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+      /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+    ];
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match) return match[1];
+    }
+    return null;
+  };
+
+  const shareProfile = (platform: string) => {
+    const profileUrl = `https://pegslam.com/profile/${user.username}`;
+    const text = `Check out ${user.firstName} ${user.lastName}'s fishing profile on Peg Slam!`;
+    
+    try {
+      if (platform === 'whatsapp') {
+        const waUrl = `https://wa.me/?text=${encodeURIComponent(text + ' - ' + profileUrl)}`;
+        if ((window as any).cordova) {
+          (window as any).cordova.InAppBrowser.open(waUrl, '_blank');
+        } else {
+          window.open(waUrl, '_blank');
+        }
+      } else if (platform === 'facebook') {
+        const fbUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(profileUrl)}`;
+        if ((window as any).cordova) {
+          (window as any).cordova.InAppBrowser.open(fbUrl, '_blank');
+        } else {
+          window.open(fbUrl, '_blank');
+        }
+      } else if (platform === 'x') {
+        const xUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(profileUrl)}`;
+        if ((window as any).cordova) {
+          (window as any).cordova.InAppBrowser.open(xUrl, '_blank');
+        } else {
+          window.open(xUrl, '_blank');
+        }
+      } else if (platform === 'copy') {
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(profileUrl).then(() => {
+            Alert.alert('Success', 'Profile link copied to clipboard!');
+          }).catch(() => {
+            const textarea = document.createElement('textarea');
+            textarea.value = profileUrl;
+            document.body.appendChild(textarea);
+            textarea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textarea);
+            Alert.alert('Success', 'Profile link copied to clipboard!');
+          });
+        } else {
+          const textarea = document.createElement('textarea');
+          textarea.value = profileUrl;
+          document.body.appendChild(textarea);
+          textarea.select();
+          document.execCommand('copy');
+          document.body.removeChild(textarea);
+          Alert.alert('Success', 'Profile link copied to clipboard!');
+        }
+      }
+    } catch (error) {
+      console.error('Sharing error:', error);
+      Alert.alert('Error', 'Failed to share profile. Please try again.');
+    }
+  };
+
+  const [videoId, setVideoId] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user.youtubeUrl) {
+      setVideoId(extractYouTubeVideoId(user.youtubeUrl));
+    }
+  }, [user.youtubeUrl]);
+
   return (
     <View style={styles.detailsContainer}>
       <View style={styles.detailsHeader}>
@@ -3483,8 +3565,8 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       <ScrollView style={styles.detailsContent} showsVerticalScrollIndicator={false}>
         {/* Avatar & Profile Header */}
         <View style={styles.profileAvatarContainer}>
-          {user.avatar ? (
-            <Image source={{ uri: user.avatar }} style={styles.profileAvatar} />
+          {user.avatar && getImageUrl(user.avatar) ? (
+            <Image source={{ uri: getImageUrl(user.avatar) }} style={styles.profileAvatar} />
           ) : (
             <View style={[styles.profileAvatar, styles.profileAvatarPlaceholder]}>
               <Text style={styles.profileAvatarText}>{initials}</Text>
@@ -3599,39 +3681,87 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
           </View>
         )}
 
+        {/* Featured Video */}
+        {videoId && (
+          <View style={styles.detailsSection}>
+            <Text style={styles.detailsSectionTitle}>Featured Video</Text>
+            <TouchableOpacity 
+              style={styles.videoThumbnail}
+              onPress={() => user.youtubeUrl && Linking.openURL(user.youtubeUrl)}
+            >
+              <Image
+                source={{ uri: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` }}
+                style={styles.videoThumbnailImage}
+                resizeMode="cover"
+              />
+              <View style={styles.videoPlayButton}>
+                <Text style={styles.videoPlayIcon}>▶</Text>
+              </View>
+            </TouchableOpacity>
+          </View>
+        )}
+
         {/* Social Media Links */}
         {hasSocialLinks && (
           <View style={styles.detailsSection}>
-            <Text style={styles.detailsSectionTitle}>Social Media</Text>
-            <View style={styles.socialLinksContainer}>
+            <Text style={styles.detailsSectionTitle}>Follow on Social Media</Text>
+            <View style={styles.socialIconsRow}>
               {user.youtubeUrl && (
-                <TouchableOpacity onPress={() => handleSocialLinkPress(user.youtubeUrl)} style={styles.socialIconBtn}>
-                  <Text style={styles.socialLinkText}>YouTube</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.youtubeUrl)}>
+                  <Text style={styles.socialIconButtonText}>▶</Text>
+                  <Text style={styles.socialIconLabel}>YouTube</Text>
                 </TouchableOpacity>
               )}
               {user.facebookUrl && (
-                <TouchableOpacity onPress={() => handleSocialLinkPress(user.facebookUrl)} style={styles.socialIconBtn}>
-                  <Text style={styles.socialLinkText}>Facebook</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.facebookUrl)}>
+                  <Text style={styles.socialIconButtonText}>f</Text>
+                  <Text style={styles.socialIconLabel}>Facebook</Text>
                 </TouchableOpacity>
               )}
               {user.twitterUrl && (
-                <TouchableOpacity onPress={() => handleSocialLinkPress(user.twitterUrl)} style={styles.socialIconBtn}>
-                  <Text style={styles.socialLinkText}>Twitter</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.twitterUrl)}>
+                  <Text style={styles.socialIconButtonText}>𝕏</Text>
+                  <Text style={styles.socialIconLabel}>Twitter</Text>
                 </TouchableOpacity>
               )}
               {user.instagramUrl && (
-                <TouchableOpacity onPress={() => handleSocialLinkPress(user.instagramUrl)} style={styles.socialIconBtn}>
-                  <Text style={styles.socialLinkText}>Instagram</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.instagramUrl)}>
+                  <Text style={styles.socialIconButtonText}>📷</Text>
+                  <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
               {user.tiktokUrl && (
-                <TouchableOpacity onPress={() => handleSocialLinkPress(user.tiktokUrl)} style={styles.socialIconBtn}>
-                  <Text style={styles.socialLinkText}>TikTok</Text>
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.tiktokUrl)}>
+                  <Text style={styles.socialIconButtonText}>♪</Text>
+                  <Text style={styles.socialIconLabel}>TikTok</Text>
                 </TouchableOpacity>
               )}
             </View>
           </View>
         )}
+
+        {/* Share Profile */}
+        <View style={styles.detailsSection}>
+          <Text style={styles.detailsSectionTitle}>Share This Profile</Text>
+          <View style={styles.shareIconsRow}>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('whatsapp')}>
+              <Text style={styles.shareIconButtonText}>💬</Text>
+              <Text style={styles.shareIconLabel}>WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('facebook')}>
+              <Text style={styles.shareIconButtonText}>f</Text>
+              <Text style={styles.shareIconLabel}>Facebook</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('x')}>
+              <Text style={styles.shareIconButtonText}>𝕏</Text>
+              <Text style={styles.shareIconLabel}>Twitter</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('copy')}>
+              <Text style={styles.shareIconButtonText}>🔗</Text>
+              <Text style={styles.shareIconLabel}>Copy</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
