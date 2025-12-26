@@ -768,6 +768,7 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
   const [selectedCompId, setSelectedCompId] = useState(filteredComps?.[0]?.id || '');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderLoading, setLeaderLoading] = useState(false);
+  const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
     if (selectedCompId) {
@@ -834,36 +835,41 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Leaderboard</Text>
       
-      {/* Competition Selector Dropdown-style View */}
+      {/* Competition Selector Dropdown */}
       <View style={styles.dropdownContainer}>
         <Text style={styles.dropdownLabel}>Select Competition:</Text>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.compSelector}>
-          {filteredComps.map((comp: any) => (
-            <TouchableOpacity
-              key={comp.id}
-              style={[
-                styles.compSelectorButton,
-                selectedCompId === comp.id && styles.compSelectorButtonActive,
-              ]}
-              onPress={() => setSelectedCompId(comp.id)}
-            >
-              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Text
-                  style={[
-                    styles.compSelectorText,
-                    selectedCompId === comp.id && styles.compSelectorTextActive,
-                  ]}
-                  numberOfLines={1}
+        <TouchableOpacity 
+          style={[styles.dropdownButton, selectedCompId && styles.dropdownButtonActive]}
+          onPress={() => setShowDropdown(!showDropdown)}
+        >
+          <Text style={styles.dropdownButtonText}>
+            {selectedComp ? selectedComp.name : 'Select Competition'}
+          </Text>
+          <Text style={styles.dropdownIcon}>{showDropdown ? '▲' : '▼'}</Text>
+        </TouchableOpacity>
+
+        {showDropdown && (
+          <View style={styles.dropdownMenu}>
+            <ScrollView style={{ maxHeight: 200 }}>
+              {filteredComps.map((comp: any) => (
+                <TouchableOpacity 
+                  key={comp.id}
+                  style={styles.dropdownItem} 
+                  onPress={() => { setSelectedCompId(comp.id); setShowDropdown(false); }}
                 >
-                  {comp.name}
-                </Text>
-                <View style={[styles.compStatusBadge, { backgroundColor: comp.status === 'live' ? '#FF4444' : '#888', marginLeft: 6 }]}>
-                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{comp.status === 'live' ? 'LIVE' : 'DONE'}</Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          ))}
-        </ScrollView>
+                  <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <Text style={[styles.dropdownItemText, selectedCompId === comp.id && styles.dropdownItemTextActive]}>
+                      {comp.name}
+                    </Text>
+                    <View style={[styles.compStatusBadge, { backgroundColor: comp.status === 'live' ? '#FF4444' : '#888' }]}>
+                      <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{comp.status === 'live' ? 'LIVE' : 'DONE'}</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
       </View>
 
       {/* Leaderboard Table */}
@@ -922,6 +928,7 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('details');
+  const [showDropdown, setShowDropdown] = useState(false);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
   const [isJoined, setIsJoined] = useState(false);
@@ -1394,29 +1401,52 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
           </View>
         )}
 
-        {/* Dropdown for Tab Selection */}
-        <View style={{ paddingHorizontal: 16, paddingVertical: 12, borderBottomWidth: 1, borderBottomColor: '#2a2a2a' }}>
-          <Text style={{ color: '#999', fontSize: 12, marginBottom: 8 }}>View:</Text>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, activeTab === 'details' && styles.dropdownButtonActive]}
-              onPress={() => setActiveTab('details')}
-            >
-              <Text style={[styles.dropdownButtonText, activeTab === 'details' && styles.dropdownButtonTextActive]}>Details</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, activeTab === 'participants' && styles.dropdownButtonActive]}
-              onPress={() => setActiveTab('participants')}
-            >
-              <Text style={[styles.dropdownButtonText, activeTab === 'participants' && styles.dropdownButtonTextActive]}>Participants</Text>
-            </TouchableOpacity>
-            <TouchableOpacity 
-              style={[styles.dropdownButton, activeTab === 'leaderboard' && styles.dropdownButtonActive]}
-              onPress={() => setActiveTab('leaderboard')}
-            >
-              <Text style={[styles.dropdownButtonText, activeTab === 'leaderboard' && styles.dropdownButtonTextActive]}>Leaderboard</Text>
-            </TouchableOpacity>
-          </ScrollView>
+        {/* Section Selection Dropdown */}
+        <View style={styles.dropdownContainer}>
+          <Text style={styles.dropdownLabel}>Select View:</Text>
+          <TouchableOpacity 
+            style={[styles.dropdownButton, (activeTab !== 'details') && styles.dropdownButtonActive]}
+            onPress={() => setShowDropdown(!showDropdown)}
+          >
+            <Text style={styles.dropdownButtonText}>
+              {activeTab === 'details' ? 'Details' : 
+               activeTab === 'participants' ? 'Participants' : 
+               activeTab === 'leaderboard' ? 'Leaderboard' : 
+               activeTab === 'teams' ? 'Teams' : 'Select Section'}
+            </Text>
+            <Text style={styles.dropdownIcon}>{showDropdown ? '▲' : '▼'}</Text>
+          </TouchableOpacity>
+
+          {showDropdown && (
+            <View style={styles.dropdownMenu}>
+              <TouchableOpacity 
+                style={styles.dropdownItem} 
+                onPress={() => { setActiveTab('details'); setShowDropdown(false); }}
+              >
+                <Text style={[styles.dropdownItemText, activeTab === 'details' && styles.dropdownItemTextActive]}>Details</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.dropdownItem} 
+                onPress={() => { setActiveTab('participants'); setShowDropdown(false); }}
+              >
+                <Text style={[styles.dropdownItemText, activeTab === 'participants' && styles.dropdownItemTextActive]}>Participants</Text>
+              </TouchableOpacity>
+              {isTeamCompetition && (
+                <TouchableOpacity 
+                  style={styles.dropdownItem} 
+                  onPress={() => { setActiveTab('teams'); setShowDropdown(false); }}
+                >
+                  <Text style={[styles.dropdownItemText, activeTab === 'teams' && styles.dropdownItemTextActive]}>Teams</Text>
+                </TouchableOpacity>
+              )}
+              <TouchableOpacity 
+                style={styles.dropdownItem} 
+                onPress={() => { setActiveTab('leaderboard'); setShowDropdown(false); }}
+              >
+                <Text style={[styles.dropdownItemText, activeTab === 'leaderboard' && styles.dropdownItemTextActive]}>Leaderboard</Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
 
         {/* Details Tab */}
@@ -4869,7 +4899,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'home' && styles.navItemActive]}
           onPress={() => handleMenuSelect('home')}
         >
-          <Text style={[styles.navIcon, currentPage === 'home' && styles.navLabelActive]}>◆</Text>
+          <Text style={styles.navIcon}>◆</Text>
           <Text style={[styles.navLabel, currentPage === 'home' && styles.navLabelActive]}>Home</Text>
         </TouchableOpacity>
 
@@ -4877,7 +4907,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'competitions' && styles.navItemActive]}
           onPress={() => handleMenuSelect('competitions')}
         >
-          <Text style={[styles.navIcon, currentPage === 'competitions' && styles.navLabelActive]}>※</Text>
+          <Text style={styles.navIcon}>※</Text>
           <Text style={[styles.navLabel, currentPage === 'competitions' && styles.navLabelActive]}>Competitions</Text>
         </TouchableOpacity>
 
@@ -4885,7 +4915,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'leaderboard' && styles.navItemActive]}
           onPress={() => handleMenuSelect('leaderboard')}
         >
-          <Text style={[styles.navIcon, currentPage === 'leaderboard' && styles.navLabelActive]}>▲</Text>
+          <Text style={styles.navIcon}>▲</Text>
           <Text style={[styles.navLabel, currentPage === 'leaderboard' && styles.navLabelActive]}>Leaderboard</Text>
         </TouchableOpacity>
 
@@ -4893,7 +4923,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'news' && styles.navItemActive]}
           onPress={() => handleMenuSelect('news')}
         >
-          <Text style={[styles.navIcon, currentPage === 'news' && styles.navLabelActive]}>≡</Text>
+          <Text style={styles.navIcon}>≡</Text>
           <Text style={[styles.navLabel, currentPage === 'news' && styles.navLabelActive]}>News</Text>
         </TouchableOpacity>
 
@@ -4901,7 +4931,7 @@ export default function App() {
           style={[styles.navItem, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navItemActive]}
           onPress={() => setShowDrawer(true)}
         >
-          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>⋯</Text>
+          <Text style={styles.navIcon}>⋯</Text>
           <Text style={[styles.navLabel, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>More</Text>
         </TouchableOpacity>
       </View>
@@ -7406,6 +7436,55 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  dropdownButton: {
+    backgroundColor: '#1a1a1a',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 8,
+  },
+  dropdownButtonActive: {
+    borderColor: '#1B7342',
+  },
+  dropdownButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  dropdownButtonTextActive: {
+    color: '#1B7342',
+  },
+  dropdownMenu: {
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+    marginTop: 4,
+    maxHeight: 200,
+    zIndex: 1000,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#2a2a2a',
+  },
+  dropdownItemText: {
+    color: '#ddd',
+    fontSize: 14,
+  },
+  dropdownItemTextActive: {
+    color: '#1B7342',
+    fontWeight: 'bold',
+  },
+  dropdownIcon: {
+    color: '#1B7342',
+    fontSize: 12,
+  },
   // Bottom Navigation Styles
   bottomNav: {
     flexDirection: 'row',
@@ -7427,14 +7506,15 @@ const styles = StyleSheet.create({
   navIcon: {
     fontSize: 24,
     marginBottom: 2,
+    color: '#fff',
   },
   navLabel: {
     fontSize: 11,
-    color: '#666',
+    color: '#fff',
     fontWeight: '600',
   },
   navLabelActive: {
-    color: '#1B7342',
+    color: '#fff',
   },
 });
 
