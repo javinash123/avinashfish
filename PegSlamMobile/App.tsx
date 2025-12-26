@@ -2268,6 +2268,11 @@ function AnglerProfilePage({ angler, onClose }: any) {
     return 'upcoming';
   };
 
+  const handleSocialLinkPress = (url: string) => {
+    if (!url) return;
+    Linking.openURL(url).catch(err => console.error("Failed to open URL:", err));
+  };
+
   const shareProfile = (platform: string) => {
     const profileUrl = `https://pegslam.com/profile/${angler.username}`;
     const text = `Check out ${angler.firstName} ${angler.lastName}'s fishing profile on Peg Slam!`;
@@ -2325,6 +2330,8 @@ function AnglerProfilePage({ angler, onClose }: any) {
       Alert.alert('Error', 'Failed to share profile. Please try again.');
     }
   };
+
+  const hasSocialLinks = angler.youtubeUrl || angler.facebookUrl || angler.twitterUrl || angler.instagramUrl || angler.tiktokUrl;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2439,32 +2446,32 @@ function AnglerProfilePage({ angler, onClose }: any) {
         )}
 
         {/* Social Media Links */}
-        {(angler.youtubeUrl || angler.facebookUrl || angler.twitterUrl || angler.instagramUrl || angler.tiktokUrl) && (
+        {hasSocialLinks && (
           <View style={styles.detailsSection}>
             <Text style={styles.detailsSectionTitle}>Social Media</Text>
             <View style={styles.socialLinksContainer}>
               {angler.youtubeUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => window.open(angler.youtubeUrl, '_blank')}>
+                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.youtubeUrl)}>
                   <Text style={styles.socialButtonText}>▶ YouTube</Text>
                 </TouchableOpacity>
               )}
               {angler.facebookUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => window.open(angler.facebookUrl, '_blank')}>
+                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.facebookUrl)}>
                   <Text style={styles.socialButtonText}>f Facebook</Text>
                 </TouchableOpacity>
               )}
               {angler.twitterUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => window.open(angler.twitterUrl, '_blank')}>
+                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.twitterUrl)}>
                   <Text style={styles.socialButtonText}>𝕏 Twitter</Text>
                 </TouchableOpacity>
               )}
               {angler.instagramUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => window.open(angler.instagramUrl, '_blank')}>
+                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
                   <Text style={styles.socialButtonText}>📷 Instagram</Text>
                 </TouchableOpacity>
               )}
               {angler.tiktokUrl && (
-                <TouchableOpacity style={styles.socialButton} onPress={() => window.open(angler.tiktokUrl, '_blank')}>
+                <TouchableOpacity style={styles.socialButton} onPress={() => handleSocialLinkPress(angler.tiktokUrl)}>
                   <Text style={styles.socialButtonText}>♪ TikTok</Text>
                 </TouchableOpacity>
               )}
@@ -3411,6 +3418,11 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const profileCompletion = calculateProfileCompletion();
   const hasSocialLinks = user.youtubeUrl || user.facebookUrl || user.twitterUrl || user.instagramUrl || user.tiktokUrl;
 
+  const handleSocialLinkPress = (url: string) => {
+    if (!url) return;
+    Linking.openURL(url).catch(err => console.error("Failed to open URL:", err));
+  };
+
   return (
     <View style={styles.detailsContainer}>
       <View style={styles.detailsHeader}>
@@ -3492,6 +3504,18 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.detailRowValue}>{user.location}</Text>
             </View>
           )}
+          {user.mobileNumber && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailRowLabel}>Mobile</Text>
+              <Text style={styles.detailRowValue}>{user.mobileNumber}</Text>
+            </View>
+          )}
+          {user.dateOfBirth && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailRowLabel}>Date of Birth</Text>
+              <Text style={styles.detailRowValue}>{new Date(user.dateOfBirth).toLocaleDateString('en-GB')}</Text>
+            </View>
+          )}
           {user.memberSince && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Member Since</Text>
@@ -3535,27 +3559,27 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
             <Text style={styles.detailsSectionTitle}>Social Media</Text>
             <View style={styles.socialLinksContainer}>
               {user.youtubeUrl && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSocialLinkPress(user.youtubeUrl)} style={styles.socialIconBtn}>
                   <Text style={styles.socialLinkText}>YouTube</Text>
                 </TouchableOpacity>
               )}
               {user.facebookUrl && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSocialLinkPress(user.facebookUrl)} style={styles.socialIconBtn}>
                   <Text style={styles.socialLinkText}>Facebook</Text>
                 </TouchableOpacity>
               )}
               {user.twitterUrl && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSocialLinkPress(user.twitterUrl)} style={styles.socialIconBtn}>
                   <Text style={styles.socialLinkText}>Twitter</Text>
                 </TouchableOpacity>
               )}
               {user.instagramUrl && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSocialLinkPress(user.instagramUrl)} style={styles.socialIconBtn}>
                   <Text style={styles.socialLinkText}>Instagram</Text>
                 </TouchableOpacity>
               )}
               {user.tiktokUrl && (
-                <TouchableOpacity>
+                <TouchableOpacity onPress={() => handleSocialLinkPress(user.tiktokUrl)} style={styles.socialIconBtn}>
                   <Text style={styles.socialLinkText}>TikTok</Text>
                 </TouchableOpacity>
               )}
