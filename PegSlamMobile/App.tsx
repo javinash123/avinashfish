@@ -23,6 +23,9 @@ import axios from 'axios';
 import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 
+// Import the Peg Slam logo
+const pegSlamLogo = require('./assets/peg-slam-logo.png');
+
 const API_URL = 'https://pegslam.com';
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51OkNT9CWRF6gYXTMFu18Bqv7h8lPJPHW8n4bQN5m1E8lDnOBm1y4l2QGmvKfB4Yp9WvFmPCnEJ5vP5X4SYnCjE9e00ZVF4zZqS';
 const { width } = Dimensions.get('window');
@@ -227,18 +230,11 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
 
             {/* Logo */}
             <View style={styles.logoSection}>
-              {logoUrl ? (
-                <Image
-                  source={{ uri: logoUrl }}
-                  style={[styles.authLogoImage, { width: 280, height: 150 }]}
-                  resizeMode="contain"
-                />
-              ) : (
-                <>
-                  <Text style={styles.logoTitle}>PEG SLAM</Text>
-                  <Text style={styles.logoSubtitle}>UK Fishing Competitions</Text>
-                </>
-              )}
+              <Image
+                source={pegSlamLogo}
+                style={[styles.authLogoImage, { width: 100, height: 100 }]}
+                resizeMode="contain"
+              />
             </View>
 
             {/* Header */}
@@ -298,18 +294,11 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
         <ScrollView contentContainerStyle={styles.modalContent}>
           {/* Logo */}
           <View style={styles.logoSection}>
-            {logoUrl ? (
-              <Image
-                source={{ uri: logoUrl }}
-                style={[styles.authLogoImage, { width: 280, height: 150 }]}
-                resizeMode="contain"
-              />
-            ) : (
-              <>
-                <Text style={styles.logoTitle}>PEG SLAM</Text>
-                <Text style={styles.logoSubtitle}>UK Fishing Competitions</Text>
-              </>
-            )}
+            <Image
+              source={pegSlamLogo}
+              style={[styles.authLogoImage, { width: 100, height: 100 }]}
+              resizeMode="contain"
+            />
           </View>
 
           {/* Header */}
@@ -472,7 +461,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
           <SafeAreaView style={styles.drawerInner}>
             <View style={styles.drawerHeader}>
               <Image
-                source={require('./assets/logo.png')}
+                source={pegSlamLogo}
                 style={styles.drawerLogoImage}
               />
               <TouchableOpacity onPress={onClose}>
@@ -2204,6 +2193,13 @@ function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSor
 // Angler Profile Page
 function AnglerProfilePage({ angler, onClose }: any) {
   const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
+  
+  const getImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+  
   const [stats, setStats] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
@@ -2342,8 +2338,8 @@ function AnglerProfilePage({ angler, onClose }: any) {
       <ScrollView style={styles.detailsContent} showsVerticalScrollIndicator={false}>
         {/* Avatar */}
         <View style={styles.profileAvatarContainer}>
-          {angler.avatar ? (
-            <Image source={{ uri: angler.avatar }} style={styles.profileAvatar} />
+          {angler.avatar && getImageUrl(angler.avatar) ? (
+            <Image source={{ uri: getImageUrl(angler.avatar) }} style={styles.profileAvatar} />
           ) : (
             <View style={[styles.profileAvatar, styles.profileAvatarPlaceholder]}>
               <Text style={styles.profileAvatarText}>{initials}</Text>
@@ -2692,8 +2688,8 @@ function AnglerProfilePage({ angler, onClose }: any) {
                     <View style={styles.avatarPreview}>
                       {avatarForm.photoUri ? (
                         <Image source={{ uri: avatarForm.photoUri }} style={styles.avatarPreviewImage} />
-                      ) : editForm.avatar ? (
-                        <Image source={{ uri: editForm.avatar }} style={styles.avatarPreviewImage} />
+                      ) : editForm.avatar && getImageUrl(editForm.avatar) ? (
+                        <Image source={{ uri: getImageUrl(editForm.avatar) }} style={styles.avatarPreviewImage} />
                       ) : (
                         <View style={styles.avatarPlaceholder}>
                           <Text style={styles.avatarPlaceholderText}>{initials}</Text>
@@ -4102,8 +4098,8 @@ export default function App() {
       {/* Header with Logo, Radio, Login */}
       <View style={styles.header}>
         <Image
-          source={require('./assets/logo.png')}
-          style={{ width: 50, height: 50, resizeMode: 'contain' }}
+          source={pegSlamLogo}
+          style={{ width: 45, height: 45, resizeMode: 'contain' }}
         />
         <View style={styles.headerRightSection}>
           <TouchableOpacity
@@ -5304,8 +5300,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   drawerLogoImage: {
-    width: 40,
-    height: 40,
+    width: 60,
+    height: 50,
     resizeMode: 'contain',
   },
   drawerLogo: {
