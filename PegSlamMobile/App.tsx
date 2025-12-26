@@ -57,15 +57,15 @@ const getTierInfo = (tier: string) => {
 
 // Menu Items matching website navigation
 const MENU_ITEMS = [
-  { id: 'home', label: 'Home', icon: '🏠' },
-  { id: 'competitions', label: 'Competitions', icon: '🎣' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: '🏆' },
-  { id: 'anglers', label: 'Angler Directory', icon: '👥' },
-  { id: 'news', label: 'News', icon: '📰' },
-  { id: 'gallery', label: 'Gallery', icon: '📸' },
-  { id: 'sponsors', label: 'Sponsors', icon: '💼' },
-  { id: 'about', label: 'About', icon: 'ℹ️' },
-  { id: 'contact', label: 'Contact', icon: '✉️' },
+  { id: 'home', label: 'Home', icon: '◆' },
+  { id: 'competitions', label: 'Competitions', icon: '※' },
+  { id: 'leaderboard', label: 'Leaderboard', icon: '▲' },
+  { id: 'anglers', label: 'Angler Directory', icon: '◉' },
+  { id: 'news', label: 'News', icon: '≡' },
+  { id: 'gallery', label: 'Gallery', icon: '⊞' },
+  { id: 'sponsors', label: 'Sponsors', icon: '◈' },
+  { id: 'about', label: 'About', icon: '◎' },
+  { id: 'contact', label: 'Contact', icon: '◇' },
 ];
 
 // Login Modal
@@ -476,7 +476,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
                 style={styles.drawerLogoImage}
               />
               <TouchableOpacity onPress={onClose}>
-                <Text style={styles.drawerClose}>✕</Text>
+                <Text style={styles.drawerClose}>×</Text>
               </TouchableOpacity>
             </View>
 
@@ -489,7 +489,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
                     onClose();
                   }}
                 >
-                  <Text style={styles.drawerMenuIcon}>👤</Text>
+                  <Text style={styles.drawerMenuIcon}>◉</Text>
                   <Text style={styles.drawerMenuLabel}>My Profile</Text>
                 </TouchableOpacity>
               )}
@@ -3917,7 +3917,7 @@ export default function App() {
       {/* Header with Logo, Radio, Login */}
       <View style={styles.header}>
         <Image
-          source={require('./assets/logo-new.png')}
+          source={require('./assets/logo.png')}
           style={{ width: 50, height: 50, resizeMode: 'contain' }}
         />
         <View style={styles.headerRightSection}>
@@ -3925,7 +3925,7 @@ export default function App() {
             onPress={toggleRadio}
             style={[styles.radioButton, isRadioPlaying && styles.radioButtonActive]}
           >
-            <Text style={styles.radioIcon}>{isRadioPlaying ? '⏹' : '📻'}</Text>
+            <Text style={styles.radioIcon}>{isRadioPlaying ? '◼' : '▶'}</Text>
             {isRadioPlaying && <View style={styles.radioIndicator} />}
           </TouchableOpacity>
           <TouchableOpacity
@@ -3933,7 +3933,7 @@ export default function App() {
             style={styles.headerButton}
           >
             <Text style={styles.headerButtonText}>
-              {isLoggedIn ? '👤' : 'Login'}
+              {isLoggedIn ? '◉' : 'Login'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -4703,7 +4703,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'home' && styles.navItemActive]}
           onPress={() => handleMenuSelect('home')}
         >
-          <Text style={[styles.navIcon, currentPage === 'home' && styles.navLabelActive]}>🏠</Text>
+          <Text style={[styles.navIcon, currentPage === 'home' && styles.navLabelActive]}>◆</Text>
           <Text style={[styles.navLabel, currentPage === 'home' && styles.navLabelActive]}>Home</Text>
         </TouchableOpacity>
 
@@ -4711,7 +4711,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'competitions' && styles.navItemActive]}
           onPress={() => handleMenuSelect('competitions')}
         >
-          <Text style={[styles.navIcon, currentPage === 'competitions' && styles.navLabelActive]}>🎣</Text>
+          <Text style={[styles.navIcon, currentPage === 'competitions' && styles.navLabelActive]}>※</Text>
           <Text style={[styles.navLabel, currentPage === 'competitions' && styles.navLabelActive]}>Competitions</Text>
         </TouchableOpacity>
 
@@ -4719,7 +4719,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'leaderboard' && styles.navItemActive]}
           onPress={() => handleMenuSelect('leaderboard')}
         >
-          <Text style={[styles.navIcon, currentPage === 'leaderboard' && styles.navLabelActive]}>🏆</Text>
+          <Text style={[styles.navIcon, currentPage === 'leaderboard' && styles.navLabelActive]}>▲</Text>
           <Text style={[styles.navLabel, currentPage === 'leaderboard' && styles.navLabelActive]}>Leaderboard</Text>
         </TouchableOpacity>
 
@@ -4727,7 +4727,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'news' && styles.navItemActive]}
           onPress={() => handleMenuSelect('news')}
         >
-          <Text style={[styles.navIcon, currentPage === 'news' && styles.navLabelActive]}>📰</Text>
+          <Text style={[styles.navIcon, currentPage === 'news' && styles.navLabelActive]}>≡</Text>
           <Text style={[styles.navLabel, currentPage === 'news' && styles.navLabelActive]}>News</Text>
         </TouchableOpacity>
 
@@ -4735,7 +4735,7 @@ export default function App() {
           style={[styles.navItem, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navItemActive]}
           onPress={() => setShowDrawer(true)}
         >
-          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>⋮</Text>
+          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>⋯</Text>
           <Text style={[styles.navLabel, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>More</Text>
         </TouchableOpacity>
       </View>

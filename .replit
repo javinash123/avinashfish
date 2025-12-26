@@ -58,7 +58,7 @@ outputType = "console"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd /home/runner/workspace/PegSlamMobile && npm run web 2>&1"
+args = "cd /home/runner/workspace/PegSlamMobile && npm run web:server"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_websocket:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "stripe:1.0.0"]
