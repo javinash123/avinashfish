@@ -34,6 +34,7 @@ const isWeb = Platform.OS === 'web';
 const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 15000,
+  withCredentials: true,
 });
 
 // Utility to strip HTML tags
@@ -3327,6 +3328,7 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
 // My Profile Page (for logged-in users)
 function MyProfilePage({ user: initialUser, onLogout }: any) {
   const [user, setUser] = useState(initialUser);
+  const [loadingUser, setLoadingUser] = useState(false);
   const initials = `${user.firstName?.[0] || 'U'}${user.lastName?.[0] || 'S'}`;
   const [stats, setStats] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
@@ -3343,10 +3345,55 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const [galleryUploading, setGalleryUploading] = useState(false);
 
   useEffect(() => {
-    fetchStats();
-    fetchGallery();
-    fetchParticipations();
-  }, [user.username]);
+    fetchUserProfile();
+    if (user && user.username) {
+      fetchStats();
+      fetchGallery();
+      fetchParticipations();
+    }
+  }, [user?.username]);
+
+  const fetchUserProfile = async () => {
+    try {
+      setLoadingUser(true);
+      // Try multiple profile endpoints
+      const profileEndpoints = ['/api/user', '/api/auth/user', '/api/profile'];
+      let profileData = null;
+
+      for (const endpoint of profileEndpoints) {
+        try {
+          const response = await apiClient.get(endpoint);
+          if (response.data && response.data.username) {
+            profileData = response.data;
+            console.log(`Successfully fetched user profile from ${endpoint}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed to fetch user profile from ${endpoint}`);
+        }
+      }
+
+      if (profileData) {
+        setUser(profileData);
+        await AsyncStorage.setItem('userToken', JSON.stringify(profileData));
+      } else if (initialUser && initialUser.username) {
+        // Fallback to fetching by username if the current session endpoint fails
+        try {
+          const fallbackResponse = await apiClient.get(`/api/anglers/${initialUser.username}`);
+          if (fallbackResponse.data) {
+            setUser(fallbackResponse.data);
+            console.log(`Successfully fetched user profile fallback from /api/anglers/${initialUser.username}`);
+          }
+        } catch (fallbackError) {
+          console.error('All profile fetch attempts failed');
+        }
+      }
+    } catch (error) {
+      console.error('Error in profile fetching logic:', error);
+    } finally {
+      setLoadingUser(false);
+    }
+  };
 
   const pickGalleryPhoto = async () => {
     try {
@@ -3403,10 +3450,34 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      const response = await apiClient.get(`/api/users/${user.username}/stats`);
-      setStats(response.data);
+      // Try multiple possible endpoints to find where stats are stored
+      const endpoints = [
+        '/api/user/stats',
+        `/api/users/${user.username}/stats`,
+        `/api/anglers/${user.username}/stats`,
+        '/api/stats'
+      ];
+      
+      let data = null;
+      for (const endpoint of endpoints) {
+        try {
+          const res = await apiClient.get(endpoint);
+          if (res.data) {
+            data = res.data;
+            console.log(`Successfully fetched stats from ${endpoint}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed to fetch stats from ${endpoint}`);
+        }
+      }
+      
+      // If we still have no data, set a default object to satisfy UI
+      setStats(data || { totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
     } catch (error) {
       console.error('Error fetching stats:', error);
+      // Ensure UI doesn't break even on error
+      setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
     } finally {
       setStatsLoading(false);
     }
@@ -3415,10 +3486,30 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchGallery = async () => {
     try {
       setGalleryLoading(true);
-      const response = await apiClient.get(`/api/users/${user.username}/gallery`);
-      setGallery(response.data || []);
+      const endpoints = [
+        '/api/user/gallery',
+        `/api/users/${user.username}/gallery`,
+        `/api/anglers/${user.username}/gallery`,
+        '/api/gallery/user'
+      ];
+      
+      let data = [];
+      for (const endpoint of endpoints) {
+        try {
+          const res = await apiClient.get(endpoint);
+          if (res.data) {
+            data = res.data;
+            console.log(`Successfully fetched gallery from ${endpoint}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed to fetch gallery from ${endpoint}`);
+        }
+      }
+      setGallery(data || []);
     } catch (error) {
       console.error('Error fetching gallery:', error);
+      setGallery([]);
     } finally {
       setGalleryLoading(false);
     }
@@ -3427,10 +3518,30 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchParticipations = async () => {
     try {
       setParticipationsLoading(true);
-      const response = await apiClient.get(`/api/users/${user.username}/participations`);
-      setParticipations(response.data || []);
+      const endpoints = [
+        '/api/user/participations',
+        `/api/users/${user.username}/participations`,
+        `/api/anglers/${user.username}/participations`,
+        '/api/participations/user'
+      ];
+      
+      let data = [];
+      for (const endpoint of endpoints) {
+        try {
+          const res = await apiClient.get(endpoint);
+          if (res.data) {
+            data = res.data;
+            console.log(`Successfully fetched participations from ${endpoint}`);
+            break;
+          }
+        } catch (e) {
+          console.log(`Failed to fetch participations from ${endpoint}`);
+        }
+      }
+      setParticipations(data || []);
     } catch (error) {
       console.error('Error fetching participations:', error);
+      setParticipations([]);
     } finally {
       setParticipationsLoading(false);
     }
@@ -3546,10 +3657,13 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const [videoId, setVideoId] = useState<string | null>(null);
 
   useEffect(() => {
-    if (user.youtubeUrl) {
-      setVideoId(extractYouTubeVideoId(user.youtubeUrl));
+    const videoUrl = user.youtubeVideoUrl || user.youtubeUrl;
+    if (videoUrl) {
+      setVideoId(extractYouTubeVideoId(videoUrl));
+    } else {
+      setVideoId(null);
     }
-  }, [user.youtubeUrl]);
+  }, [user.youtubeVideoUrl, user.youtubeUrl]);
 
   return (
     <View style={styles.detailsContainer}>
@@ -4471,6 +4585,35 @@ export default function App() {
               </View>
             )}
 
+            {/* Our Sponsors & Partners Section */}
+            {sponsors.length > 0 && (
+              <View style={styles.section}>
+                <Text style={styles.sectionTitle}>Our Sponsors & Partners</Text>
+                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16, marginTop: 12 }}>
+                  <View style={{ paddingHorizontal: 16, flexDirection: 'row', gap: 16 }}>
+                    {sponsors.map((sponsor: any, idx: number) => (
+                      <TouchableOpacity 
+                        key={sponsor.id || idx} 
+                        style={styles.sponsorLogoContainerHome}
+                        onPress={() => setSelectedSponsor(sponsor)}
+                      >
+                        {sponsor.logo ? (
+                          <Image
+                            source={{ uri: sponsor.logo.startsWith('http') ? sponsor.logo : `${API_URL}${sponsor.logo}` }}
+                            style={styles.sponsorLogoHome}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <View style={styles.sponsorLogoPlaceholderHome}>
+                            <Text style={styles.sponsorLogoTextHome}>{sponsor.name?.[0] || 'S'}</Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                </ScrollView>
+              </View>
+            )}
           </>
         )}
 
@@ -6715,6 +6858,31 @@ const styles = StyleSheet.create({
     color: '#000',
     fontWeight: '600',
     fontSize: 14,
+  },
+  // Home Sponsors Styles
+  sponsorLogoContainerHome: {
+    width: 100,
+    height: 60,
+    backgroundColor: '#1a1a1a',
+    borderRadius: 8,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 8,
+    borderWidth: 1,
+    borderColor: '#2a2a2a',
+  },
+  sponsorLogoHome: {
+    width: '100%',
+    height: '100%',
+  },
+  sponsorLogoPlaceholderHome: {
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  sponsorLogoTextHome: {
+    color: '#1B7342',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   // Competition Details New Styles
   detailsImageContainer: {
