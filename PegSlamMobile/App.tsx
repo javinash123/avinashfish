@@ -45,9 +45,9 @@ const getTierInfo = (tier: string) => {
     case 'platinum':
       return { label: 'Platinum', color: '#7B8894' };
     case 'gold':
-      return { label: 'Gold', color: '#D4AF37' };
+      return { label: 'Gold', color: '#FFD700' };
     case 'silver':
-      return { label: 'Silver', color: '#C0C0C0' };
+      return { label: 'Silver', color: '#E5E4E2' };
     case 'bronze':
       return { label: 'Bronze', color: '#CD7F32' };
     default:
@@ -57,15 +57,15 @@ const getTierInfo = (tier: string) => {
 
 // Menu Items matching website navigation
 const MENU_ITEMS = [
-  { id: 'home', label: 'Home', icon: '◆' },
-  { id: 'competitions', label: 'Competitions', icon: '※' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: '▲' },
-  { id: 'anglers', label: 'Angler Directory', icon: '◉' },
-  { id: 'news', label: 'News', icon: '≡' },
-  { id: 'gallery', label: 'Gallery', icon: '⊞' },
-  { id: 'sponsors', label: 'Sponsors', icon: '◈' },
-  { id: 'about', label: 'About', icon: '◎' },
-  { id: 'contact', label: 'Contact', icon: '◇' },
+  { id: 'home', label: 'Home', icon: '◆', color: '#fff' },
+  { id: 'competitions', label: 'Competitions', icon: '※', color: '#fff' },
+  { id: 'leaderboard', label: 'Leaderboard', icon: '▲', color: '#fff' },
+  { id: 'anglers', label: 'Angler Directory', icon: '◉', color: '#fff' },
+  { id: 'news', label: 'News', icon: '≡', color: '#fff' },
+  { id: 'gallery', label: 'Gallery', icon: '⊞', color: '#fff' },
+  { id: 'sponsors', label: 'Sponsors', icon: '◈', color: '#fff' },
+  { id: 'about', label: 'About', icon: '◎', color: '#fff' },
+  { id: 'contact', label: 'Contact', icon: '◇', color: '#fff' },
 ];
 
 // Login Modal
@@ -489,7 +489,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
                     onClose();
                   }}
                 >
-                  <Text style={styles.drawerMenuIcon}>◉</Text>
+                  <Text style={[styles.drawerMenuIcon, { color: '#fff' }]}>◉</Text>
                   <Text style={styles.drawerMenuLabel}>My Profile</Text>
                 </TouchableOpacity>
               )}
@@ -502,7 +502,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
                     onClose();
                   }}
                 >
-                  <Text style={styles.drawerMenuIcon}>{item.icon}</Text>
+                  <Text style={[styles.drawerMenuIcon, { color: item.color || '#fff' }]}>{item.icon}</Text>
                   <Text style={styles.drawerMenuLabel}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
@@ -759,7 +759,13 @@ function HeroCarousel() {
 
 // Leaderboard Page Component
 function LeaderboardPage({ competitions, onTeamClick }: any) {
-  const [selectedCompId, setSelectedCompId] = useState(competitions?.[0]?.id || '');
+  const filteredComps = competitions.filter((c: any) => {
+    const compDate = new Date(c.date);
+    const now = new Date();
+    return compDate < now; // Only completed
+  }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
+
+  const [selectedCompId, setSelectedCompId] = useState(filteredComps?.[0]?.id || '');
   const [leaderboardData, setLeaderboardData] = useState<any[]>([]);
   const [leaderLoading, setLeaderLoading] = useState(false);
 
@@ -771,8 +777,8 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
 
   // Update selected competition when competitions list changes
   useEffect(() => {
-    if (competitions?.length > 0 && !selectedCompId) {
-      setSelectedCompId(competitions[0].id);
+    if (filteredComps?.length > 0 && !selectedCompId) {
+      setSelectedCompId(filteredComps[0].id);
     }
   }, [competitions]);
 
@@ -811,13 +817,6 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     );
   }
 
-  // Filter to only live/completed
-  const filteredComps = competitions.filter((c: any) => {
-    const compDate = new Date(c.date);
-    const now = new Date();
-    return compDate < now; // Only completed
-  }).sort((a: any, b: any) => new Date(b.date).getTime() - new Date(a.date).getTime());
-
   if (filteredComps.length === 0) {
     return (
       <View style={styles.section}>
@@ -829,40 +828,43 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
     );
   }
 
-  const selectedStatus = getCompetitionStatus(selectedCompId);
+  const selectedComp = filteredComps.find(c => c.id === selectedCompId);
 
   return (
     <View style={styles.section}>
       <Text style={styles.sectionTitle}>Leaderboard</Text>
       
-      {/* Competition Selector with Status */}
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.compSelector}>
-        {filteredComps.map((comp: any) => (
-          <TouchableOpacity
-            key={comp.id}
-            style={[
-              styles.compSelectorButton,
-              selectedCompId === comp.id && styles.compSelectorButtonActive,
-            ]}
-            onPress={() => setSelectedCompId(comp.id)}
-          >
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
-              <Text
-                style={[
-                  styles.compSelectorText,
-                  selectedCompId === comp.id && styles.compSelectorTextActive,
-                ]}
-                numberOfLines={1}
-              >
-                {comp.name}
-              </Text>
-              <View style={[styles.compStatusBadge, { backgroundColor: comp.status === 'live' ? '#FF4444' : '#888', marginLeft: 6 }]}>
-                <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{comp.status === 'live' ? 'LIVE' : 'DONE'}</Text>
+      {/* Competition Selector Dropdown-style View */}
+      <View style={styles.dropdownContainer}>
+        <Text style={styles.dropdownLabel}>Select Competition:</Text>
+        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.compSelector}>
+          {filteredComps.map((comp: any) => (
+            <TouchableOpacity
+              key={comp.id}
+              style={[
+                styles.compSelectorButton,
+                selectedCompId === comp.id && styles.compSelectorButtonActive,
+              ]}
+              onPress={() => setSelectedCompId(comp.id)}
+            >
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+                <Text
+                  style={[
+                    styles.compSelectorText,
+                    selectedCompId === comp.id && styles.compSelectorTextActive,
+                  ]}
+                  numberOfLines={1}
+                >
+                  {comp.name}
+                </Text>
+                <View style={[styles.compStatusBadge, { backgroundColor: comp.status === 'live' ? '#FF4444' : '#888', marginLeft: 6 }]}>
+                  <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>{comp.status === 'live' ? 'LIVE' : 'DONE'}</Text>
+                </View>
               </View>
-            </View>
-          </TouchableOpacity>
-        ))}
-      </ScrollView>
+            </TouchableOpacity>
+          ))}
+        </ScrollView>
+      </View>
 
       {/* Leaderboard Table */}
       {leaderLoading ? (
@@ -1948,11 +1950,23 @@ function NewsCard({ item, onPress }: any) {
 // Angler Card Component
 function AnglerCard({ angler, onPress }: any) {
   const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
+  
+  const getImageUrl = (url: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    return `${API_URL}${url}`;
+  };
+
   return (
     <TouchableOpacity style={styles.anglerCard} onPress={onPress}>
       <View style={styles.anglerAvatar}>
         {angler.avatar ? (
-          <Image source={{ uri: angler.avatar }} style={styles.avatarImage} />
+          <Image 
+            source={{ uri: getImageUrl(angler.avatar) }} 
+            style={styles.avatarImage} 
+            resizeMode="cover"
+            onError={(e) => console.log('Angler image error:', angler.username, e.nativeEvent.error)}
+          />
         ) : (
           <Text style={styles.avatarInitials}>{initials}</Text>
         )}
@@ -3871,6 +3885,37 @@ export default function App() {
     return filtered;
   };
 
+  const getFilteredGallery = () => {
+    let filtered = gallery;
+    if (galleryFilter !== 'all') {
+      filtered = filtered.filter((item: any) => item.category === galleryFilter);
+    }
+    return filtered;
+  };
+
+  const fetchInitialData = async () => {
+    setDataLoading(true);
+    try {
+      const [compsRes, newsRes, galleryRes, sponsorsRes, videosRes] = await Promise.all([
+        apiClient.get('/api/competitions'),
+        apiClient.get('/api/news'),
+        apiClient.get('/api/gallery'),
+        apiClient.get('/api/sponsors'),
+        apiClient.get('/api/youtube-videos'),
+      ]);
+      
+      setCompetitions(compsRes.data || []);
+      setNews(newsRes.data || []);
+      setGallery(galleryRes.data || []);
+      setSponsors(sponsorsRes.data || []);
+      setYoutubeVideos(videosRes.data || []);
+    } catch (error) {
+      console.error('Error fetching initial data:', error);
+    } finally {
+      setDataLoading(false);
+    }
+  };
+
   const getPageTitle = () => {
     const pageTitles: { [key: string]: string } = {
       'home': 'PEG SLAM',
@@ -5226,10 +5271,24 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     fontSize: 14,
   },
-  emptyText: {
-    color: '#999',
-    textAlign: 'center',
-    paddingVertical: 20,
+  dropdownContainer: {
+    marginBottom: 16,
+    paddingHorizontal: 4,
+  },
+  dropdownLabel: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 8,
+  },
+  logoContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerLogo: {
+    width: 120,
+    height: 40,
   },
   compSelector: {
     marginBottom: 16,
@@ -6932,6 +6991,9 @@ const styles = StyleSheet.create({
     maxWidth: 400,
     maxHeight: '80%',
     overflow: 'hidden',
+    alignSelf: 'center',
+    marginTop: 'auto',
+    marginBottom: 'auto',
   },
   sponsorModalHeader: {
     flexDirection: 'row',
