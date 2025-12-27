@@ -3500,6 +3500,60 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
     }
   };
 
+  const pickGalleryPhoto = async () => {
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+        allowsEditing: true,
+        aspect: [4, 3],
+        quality: 0.8,
+      });
+
+      if (!result.canceled && result.assets[0]) {
+        setGalleryPhotoUri(result.assets[0].uri);
+        setShowGalleryUploadModal(true);
+      }
+    } catch (error) {
+      console.error('Error picking gallery photo:', error);
+      Alert.alert('Error', 'Failed to pick image');
+    }
+  };
+
+  const uploadGalleryPhoto = async () => {
+    if (!galleryPhotoUri) {
+      Alert.alert('Error', 'Please select a photo first');
+      return;
+    }
+
+    try {
+      setGalleryUploading(true);
+      const formData = new FormData();
+      formData.append('photo', {
+        uri: galleryPhotoUri,
+        type: 'image/jpeg',
+        name: 'gallery-photo.jpg',
+      } as any);
+      formData.append('caption', galleryCaption);
+
+      const res = await apiClient.post('/api/user/gallery', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+
+      if (res.data) {
+        setGallery([...gallery, res.data]);
+        setShowGalleryUploadModal(false);
+        setGalleryPhotoUri(null);
+        setGalleryCaption('');
+        Alert.alert('Success', 'Photo uploaded to gallery!');
+      }
+    } catch (error) {
+      console.error('Error uploading gallery photo:', error);
+      Alert.alert('Error', 'Failed to upload photo');
+    } finally {
+      setGalleryUploading(false);
+    }
+  };
+
   const getCompetitionStatus = (comp: any) => {
     const now = new Date();
     const start = new Date(comp.date);
