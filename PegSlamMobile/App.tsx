@@ -35,7 +35,19 @@ const apiClient = axios.create({
   baseURL: API_URL,
   timeout: 15000,
   withCredentials: true,
+  headers: {
+    'Accept': 'application/json',
+    'Content-Type': 'application/json',
+  }
 });
+
+// For web platform, we need to ensure credentials are sent with every request
+if (isWeb) {
+  apiClient.interceptors.request.use((config) => {
+    config.withCredentials = true;
+    return config;
+  });
+}
 
 // Utility to strip HTML tags
 const stripHtml = (html: string) => {
@@ -3356,127 +3368,78 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchUserProfile = async () => {
     try {
       setLoadingUser(true);
-      // Try multiple profile endpoints
-      const profileEndpoints = ['/api/user', '/api/auth/user', '/api/profile'];
-      let profileData = null;
+      console.log('Fetching live profile data...');
+      
+      const response = await apiClient.get('/api/user/me');
+      if (response.data && response.data.username) {
+        // Only update if we have a valid username and it matches the expected one
+        // or if it's the first load
+        setUser(response.data);
+        await AsyncStorage.setItem('userToken', JSON.stringify(response.data));
+        console.log('Successfully fetched user profile from /api/user/me:', response.data.username);
+        
+        fetchStats();
+        fetchGallery();
+        fetchParticipations();
+        return;
+      }
+    } catch (error: any) {
+      console.log('Failed to fetch user profile from /api/user/me:', error.message);
+    }
 
-      for (const endpoint of profileEndpoints) {
-        try {
-          const response = await apiClient.get(endpoint);
-          if (response.data && response.data.username) {
-            profileData = response.data;
-            console.log(`Successfully fetched user profile from ${endpoint}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Failed to fetch user profile from ${endpoint}`);
-        }
+    try {
+      const savedUserStr = await AsyncStorage.getItem('userToken');
+      let savedUser = null;
+      if (savedUserStr) {
+        savedUser = JSON.parse(savedUserStr);
       }
 
-      if (profileData) {
-        setUser(profileData);
-        await AsyncStorage.setItem('userToken', JSON.stringify(profileData));
-      } else if (initialUser && initialUser.username) {
-        // Fallback to fetching by username if the current session endpoint fails
-        try {
-          const fallbackResponse = await apiClient.get(`/api/anglers/${initialUser.username}`);
-          if (fallbackResponse.data) {
-            setUser(fallbackResponse.data);
-            console.log(`Successfully fetched user profile fallback from /api/anglers/${initialUser.username}`);
-          }
-        } catch (fallbackError) {
-          console.error('All profile fetch attempts failed');
+      const usernameToFetch = savedUser?.username || initialUser?.username;
+
+      if (usernameToFetch) {
+        console.log('Falling back to angler profile for:', usernameToFetch);
+        const fallbackResponse = await apiClient.get(`/api/anglers/${usernameToFetch}`);
+        if (fallbackResponse.data && fallbackResponse.data.username === usernameToFetch) {
+          setUser(fallbackResponse.data);
+          console.log(`Successfully fetched user profile fallback from /api/anglers/${usernameToFetch}`);
+          return;
         }
       }
-    } catch (error) {
-      console.error('Error in profile fetching logic:', error);
+      
+      if (savedUser) {
+        setUser(savedUser);
+        console.log('Successfully loaded profile from AsyncStorage');
+      }
+    } catch (e) {
+      console.error('Error in profile fetching fallback:', e);
     } finally {
       setLoadingUser(false);
-    }
-  };
-
-  const pickGalleryPhoto = async () => {
-    try {
-      const result = await ImagePicker.launchImageLibraryAsync({
-        mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
-        quality: 0.8,
-      });
-      if (!result.canceled && result.assets[0]) {
-        setGalleryPhotoUri(result.assets[0].uri);
-        setShowGalleryUploadModal(true);
-      }
-    } catch (error) {
-      console.error('Image picker error:', error);
-    }
-  };
-
-  const uploadGalleryPhoto = async () => {
-    if (!galleryPhotoUri) return;
-    
-    try {
-      setGalleryUploading(true);
-      const formData = new FormData();
-      formData.append('image', {
-        uri: galleryPhotoUri,
-        type: 'image/jpeg',
-        name: 'gallery.jpg',
-      } as any);
-      formData.append('type', 'gallery');
-      
-      const uploadResponse = await apiClient.post('/api/upload', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-      
-      await apiClient.post('/api/user/gallery', {
-        url: uploadResponse.data.url,
-        caption: galleryCaption,
-      });
-      
-      Alert.alert('Success', 'Photo added to gallery!');
-      setShowGalleryUploadModal(false);
-      setGalleryPhotoUri(null);
-      setGalleryCaption('');
-      fetchGallery();
-    } catch (error) {
-      console.error('Gallery upload error:', error);
-      Alert.alert('Error', 'Failed to upload photo');
-    } finally {
-      setGalleryUploading(false);
     }
   };
 
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      // Try multiple possible endpoints to find where stats are stored
-      const endpoints = [
-        '/api/user/stats',
-        `/api/users/${user.username}/stats`,
-        `/api/anglers/${user.username}/stats`,
-        '/api/stats'
-      ];
-      
-      let data = null;
-      for (const endpoint of endpoints) {
-        try {
-          const res = await apiClient.get(endpoint);
-          if (res.data) {
-            data = res.data;
-            console.log(`Successfully fetched stats from ${endpoint}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Failed to fetch stats from ${endpoint}`);
-        }
+      const res = await apiClient.get('/api/user/stats');
+      if (res.data) {
+        setStats(res.data);
+        console.log('Successfully fetched stats from /api/user/stats');
+        return;
       }
-      
-      // If we still have no data, set a default object to satisfy UI
-      setStats(data || { totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
     } catch (error) {
-      console.error('Error fetching stats:', error);
-      // Ensure UI doesn't break even on error
+      console.log('Failed to fetch stats from /api/user/stats');
+    }
+
+    try {
+      const res = await apiClient.get(`/api/users/${user.username}/stats`);
+      if (res.data) {
+        setStats(res.data);
+        console.log(`Successfully fetched stats from /api/users/${user.username}/stats`);
+      } else {
+        setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
+      }
+    } catch (error) {
+      console.error('Error fetching stats fallback:', error);
       setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
     } finally {
       setStatsLoading(false);
@@ -3486,29 +3449,24 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchGallery = async () => {
     try {
       setGalleryLoading(true);
-      const endpoints = [
-        '/api/user/gallery',
-        `/api/users/${user.username}/gallery`,
-        `/api/anglers/${user.username}/gallery`,
-        '/api/gallery/user'
-      ];
-      
-      let data = [];
-      for (const endpoint of endpoints) {
-        try {
-          const res = await apiClient.get(endpoint);
-          if (res.data) {
-            data = res.data;
-            console.log(`Successfully fetched gallery from ${endpoint}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Failed to fetch gallery from ${endpoint}`);
-        }
+      const res = await apiClient.get('/api/user/gallery');
+      if (res.data) {
+        setGallery(res.data);
+        console.log('Successfully fetched gallery from /api/user/gallery');
+        return;
       }
-      setGallery(data || []);
     } catch (error) {
-      console.error('Error fetching gallery:', error);
+      console.log('Failed to fetch gallery from /api/user/gallery');
+    }
+
+    try {
+      const res = await apiClient.get(`/api/users/${user.username}/gallery`);
+      if (res.data) {
+        setGallery(res.data);
+        console.log(`Successfully fetched gallery from /api/users/${user.username}/gallery`);
+      }
+    } catch (error) {
+      console.error('Error fetching gallery fallback:', error);
       setGallery([]);
     } finally {
       setGalleryLoading(false);
@@ -3518,29 +3476,24 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const fetchParticipations = async () => {
     try {
       setParticipationsLoading(true);
-      const endpoints = [
-        '/api/user/participations',
-        `/api/users/${user.username}/participations`,
-        `/api/anglers/${user.username}/participations`,
-        '/api/participations/user'
-      ];
-      
-      let data = [];
-      for (const endpoint of endpoints) {
-        try {
-          const res = await apiClient.get(endpoint);
-          if (res.data) {
-            data = res.data;
-            console.log(`Successfully fetched participations from ${endpoint}`);
-            break;
-          }
-        } catch (e) {
-          console.log(`Failed to fetch participations from ${endpoint}`);
-        }
+      const res = await apiClient.get('/api/user/participations');
+      if (res.data) {
+        setParticipations(res.data);
+        console.log('Successfully fetched participations from /api/user/participations');
+        return;
       }
-      setParticipations(data || []);
     } catch (error) {
-      console.error('Error fetching participations:', error);
+      console.log('Failed to fetch participations from /api/user/participations');
+    }
+
+    try {
+      const res = await apiClient.get(`/api/users/${user.username}/participations`);
+      if (res.data) {
+        setParticipations(res.data);
+        console.log(`Successfully fetched participations from /api/users/${user.username}/participations`);
+      }
+    } catch (error) {
+      console.error('Error fetching participations fallback:', error);
       setParticipations([]);
     } finally {
       setParticipationsLoading(false);

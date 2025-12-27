@@ -38,7 +38,7 @@ outputType = "webview"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && node start-web.js"
+args = "cd PegSlamMobile && node server-port5000.js"
 waitForPort = 5000
 
 [agent]
