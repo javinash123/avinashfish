@@ -446,7 +446,7 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
 }
 
 // Drawer Navigation
-function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: any) {
+function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout, activeMenu }: any) {
   return (
     <Modal visible={visible} animationType="none" transparent={true}>
       <View style={styles.drawerOverlay}>
@@ -473,27 +473,27 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
             <ScrollView style={styles.drawerMenu}>
               {isLoggedIn && (
                 <TouchableOpacity
-                  style={styles.drawerMenuItem}
+                  style={[styles.drawerMenuItem, activeMenu === 'profile' && styles.drawerMenuItemActive]}
                   onPress={() => {
                     onMenuSelect('profile');
                     onClose();
                   }}
                 >
-                  <Text style={[styles.drawerMenuIcon, { color: '#fff' }]}>◉</Text>
-                  <Text style={styles.drawerMenuLabel}>My Profile</Text>
+                  <Text style={[styles.drawerMenuIcon, { color: activeMenu === 'profile' ? '#1B7342' : '#fff' }]}>◉</Text>
+                  <Text style={[styles.drawerMenuLabel, activeMenu === 'profile' && styles.drawerMenuLabelActive]}>My Profile</Text>
                 </TouchableOpacity>
               )}
               {MENU_ITEMS.map((item) => (
                 <TouchableOpacity
                   key={item.id}
-                  style={styles.drawerMenuItem}
+                  style={[styles.drawerMenuItem, activeMenu === item.id && styles.drawerMenuItemActive]}
                   onPress={() => {
                     onMenuSelect(item.id);
                     onClose();
                   }}
                 >
-                  <Text style={[styles.drawerMenuIcon, { color: item.color || '#fff' }]}>{item.icon}</Text>
-                  <Text style={styles.drawerMenuLabel}>{item.label}</Text>
+                  <Text style={[styles.drawerMenuIcon, { color: activeMenu === item.id ? '#1B7342' : item.color || '#fff' }]}>{item.icon}</Text>
+                  <Text style={[styles.drawerMenuLabel, activeMenu === item.id && styles.drawerMenuLabelActive]}>{item.label}</Text>
                 </TouchableOpacity>
               ))}
             </ScrollView>
@@ -3583,7 +3583,9 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   const getImageUrl = (url: string) => {
     if (!url) return null;
     if (url.startsWith('http')) return url;
-    return `${API_URL}${url}`;
+    // Handle relative URLs
+    if (url.startsWith('/')) return `${API_URL}${url}`;
+    return `${API_URL}/${url}`;
   };
 
   const extractYouTubeVideoId = (url: string): string | null => {
@@ -4062,6 +4064,7 @@ export default function App() {
   const [showDrawer, setShowDrawer] = useState(false);
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
+  const [activeMenu, setActiveMenu] = useState('home');
   const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
   const [selectedAngler, setSelectedAngler] = useState<any>(null);
   const [selectedNews, setSelectedNews] = useState<any>(null);
@@ -4187,10 +4190,13 @@ export default function App() {
       console.log('YouTube videos:', ytRes.data?.[0]);
       
       const withStatus = (compRes.data || []).map((comp: any) => {
-        const compDate = new Date(comp.date);
         const now = new Date();
+        const start = new Date(comp.date);
+        const end = new Date(comp.endDate || comp.date);
+        
         let status = 'upcoming';
-        if (compDate < now) status = 'completed';
+        if (now >= start && now <= end) status = 'live';
+        else if (now > end) status = 'completed';
         return { ...comp, status };
       });
       setCompetitions(withStatus);
@@ -4387,6 +4393,7 @@ export default function App() {
       setShowLoginModal(true);
     } else {
       setCurrentPage(menuId);
+      setActiveMenu(menuId);
     }
   };
 
@@ -5073,6 +5080,7 @@ export default function App() {
         onMenuSelect={handleMenuSelect}
         isLoggedIn={isLoggedIn}
         onLogout={handleLogout}
+        activeMenu={activeMenu}
       />
 
       {/* Login Modal */}
@@ -5682,6 +5690,16 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '500',
+  },
+  drawerMenuItemActive: {
+    backgroundColor: '#1a2a1a',
+    borderLeftWidth: 4,
+    borderLeftColor: '#1B7342',
+    paddingLeft: 16,
+  },
+  drawerMenuLabelActive: {
+    color: '#1B7342',
+    fontWeight: '600',
   },
   drawerFooter: {
     padding: 20,
