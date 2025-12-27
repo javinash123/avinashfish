@@ -24,7 +24,7 @@ import { StatusBar } from 'expo-status-bar';
 import * as ImagePicker from 'expo-image-picker';
 
 // Import the Peg Slam logo
-const pegSlamLogo = require('./assets/peg-slam-logo.png');
+const pegSlamLogo = require('./assets/peg-slam-logo-new.png');
 
 const API_URL = 'https://pegslam.com';
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51OkNT9CWRF6gYXTMFu18Bqv7h8lPJPHW8n4bQN5m1E8lDnOBm1y4l2QGmvKfB4Yp9WvFmPCnEJ5vP5X4SYnCjE9e00ZVF4zZqS';
@@ -3341,7 +3341,7 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
 function MyProfilePage({ user: initialUser, onLogout }: any) {
   const [user, setUser] = useState(initialUser);
   const [loadingUser, setLoadingUser] = useState(false);
-  const initials = `${user.firstName?.[0] || 'U'}${user.lastName?.[0] || 'S'}`;
+  const initials = `${(user?.firstName || 'U')?.[0]}${(user?.lastName || 'S')?.[0]}`;
   const [stats, setStats] = useState<any>(null);
   const [gallery, setGallery] = useState<any[]>([]);
   const [participations, setParticipations] = useState<any[]>([]);
@@ -4374,7 +4374,7 @@ export default function App() {
       <View style={styles.header}>
         <Image
           source={pegSlamLogo}
-          style={{ width: 45, height: 45, resizeMode: 'contain' }}
+          style={{ width: Math.min(width * 0.12, 60), height: Math.min(width * 0.12, 60), resizeMode: 'contain' }}
         />
         <View style={styles.headerRightSection}>
           <TouchableOpacity
@@ -5250,14 +5250,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 12,
-    paddingVertical: 8,
-    paddingTop: 6,
+    paddingVertical: 12,
+    paddingTop: Math.max(12, (Platform.OS === 'web' ? 10 : 0)),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
-    minHeight: 50,
+    minHeight: 60,
   },
   hamburger: {
     fontSize: 28,
