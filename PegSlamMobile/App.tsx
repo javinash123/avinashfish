@@ -531,7 +531,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout }: an
 // Competition Card - Redesigned for better mobile UX
 function CompetitionCard({ item, onViewDetails }: any) {
   const getImageUrl = () => {
-    const url = item.thumbnailUrl || item.thumbnailUrlMd || item.imageUrl;
+    const url = item.imageUrl;
     if (!url) return null;
     return url.startsWith('http') ? url : `${API_URL}${url}`;
   };
@@ -5241,7 +5241,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'home' && styles.navItemActive]}
           onPress={() => handleMenuSelect('home')}
         >
-          <Text style={styles.navIcon}>◆</Text>
+          <Text style={[styles.navIcon, currentPage === 'home' && styles.navIconActive]}>◆</Text>
           <Text style={[styles.navLabel, currentPage === 'home' && styles.navLabelActive]}>Home</Text>
         </TouchableOpacity>
 
@@ -5249,7 +5249,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'competitions' && styles.navItemActive]}
           onPress={() => handleMenuSelect('competitions')}
         >
-          <Text style={styles.navIcon}>※</Text>
+          <Text style={[styles.navIcon, currentPage === 'competitions' && styles.navIconActive]}>※</Text>
           <Text style={[styles.navLabel, currentPage === 'competitions' && styles.navLabelActive]}>Competitions</Text>
         </TouchableOpacity>
 
@@ -5257,7 +5257,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'leaderboard' && styles.navItemActive]}
           onPress={() => handleMenuSelect('leaderboard')}
         >
-          <Text style={styles.navIcon}>▲</Text>
+          <Text style={[styles.navIcon, currentPage === 'leaderboard' && styles.navIconActive]}>▲</Text>
           <Text style={[styles.navLabel, currentPage === 'leaderboard' && styles.navLabelActive]}>Leaderboard</Text>
         </TouchableOpacity>
 
@@ -5265,7 +5265,7 @@ export default function App() {
           style={[styles.navItem, currentPage === 'news' && styles.navItemActive]}
           onPress={() => handleMenuSelect('news')}
         >
-          <Text style={styles.navIcon}>≡</Text>
+          <Text style={[styles.navIcon, currentPage === 'news' && styles.navIconActive]}>≡</Text>
           <Text style={[styles.navLabel, currentPage === 'news' && styles.navLabelActive]}>News</Text>
         </TouchableOpacity>
 
@@ -5273,7 +5273,7 @@ export default function App() {
           style={[styles.navItem, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navItemActive]}
           onPress={() => setShowDrawer(true)}
         >
-          <Text style={styles.navIcon}>⋯</Text>
+          <Text style={[styles.navIcon, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navIconActive]}>⋯</Text>
           <Text style={[styles.navLabel, (currentPage === 'gallery' || currentPage === 'sponsors' || currentPage === 'about' || currentPage === 'contact' || currentPage === 'profile') && styles.navLabelActive]}>More</Text>
         </TouchableOpacity>
       </View>
@@ -5288,14 +5288,15 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1a1a1a',
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    paddingTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    paddingTop: 6,
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
+    minHeight: 50,
   },
   hamburger: {
     fontSize: 28,
@@ -5419,13 +5420,15 @@ const styles = StyleSheet.create({
   },
   competitionImage: {
     width: '100%',
-    height: 180,
+    height: 200,
     backgroundColor: '#0a0a0a',
+    resizeMode: 'cover',
   },
   competitionImageMobile: {
-    width: 120,
+    width: 140,
     height: '100%',
     backgroundColor: '#0a0a0a',
+    resizeMode: 'cover',
   },
   cardContent: {
     padding: 16,
@@ -7937,15 +7940,20 @@ const styles = StyleSheet.create({
   navIcon: {
     fontSize: 24,
     marginBottom: 2,
-    color: '#fff',
+    color: '#999',
+  },
+  navIconActive: {
+    color: '#1B7342',
+    fontWeight: 'bold',
   },
   navLabel: {
     fontSize: 11,
-    color: '#fff',
+    color: '#999',
     fontWeight: '600',
   },
   navLabelActive: {
-    color: '#fff',
+    color: '#1B7342',
+    fontWeight: 'bold',
   },
 });
 

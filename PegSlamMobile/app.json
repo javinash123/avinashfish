@@ -19,7 +19,7 @@
       "package": "com.pegslamfishing.mobile",
       "permissions": ["INTERNET"],
       "adaptiveIcon": {
-        "foregroundImage": "./assets/icon.png",
+        "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#0a0a0a"
       },
       "splash": {
