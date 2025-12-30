@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>PegSlam Expo Go QR Code</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: linear-gradient(135deg, #1B7342 0%, #0a0a0a 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+        .container { 
+            background: white;
+            border-radius: 16px;
+            padding: 40px;
+            max-width: 500px;
+            width: 100%;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            text-align: center;
+        }
+        .logo { 
+            font-size: 32px;
+            font-weight: bold;
+            color: #1B7342;
+            margin-bottom: 10px;
+        }
+        h1 { 
+            color: #1B7342;
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        .sdk-badge {
+            display: inline-block;
+            background: #1B7342;
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        #qrcode {
+            display: inline-block;
+            padding: 20px;
+            background: white;
+            border-radius: 8px;
+            margin: 30px 0;
+            border: 2px solid #eee;
+        }
+        .instructions {
+            background: #f5f5f5;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+            text-align: left;
+        }
+        .instructions h3 {
+            color: #1B7342;
+            margin-bottom: 12px;
+            font-size: 16px;
+        }
+        .instructions ol {
+            margin-left: 20px;
+            line-height: 1.8;
+            color: #333;
+        }
+        .url-box {
+            background: #1B7342;
+            color: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            word-break: break-all;
+            line-height: 1.4;
+        }
+        .copy-btn {
+            background: #1B7342;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: background 0.3s;
+        }
+        .copy-btn:hover {
+            background: #155632;
+        }
+        .footer {
+            color: #999;
+            font-size: 12px;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">PEG SLAM</div>
+        <h1>Expo Go Testing</h1>
+        <div class="sdk-badge">SDK 54.0.0</div>
+        
+        <div id="qrcode"></div>
+        
+        <div class="url-box" id="urlBox">
+            Loading your Replit URL...
+        </div>
+        <button class="copy-btn" onclick="copyUrl()">Copy URL</button>
+        
+        <div class="instructions">
+            <h3>📱 How to Test:</h3>
+            <ol>
+                <li>Open <strong>Expo Go</strong> app on your mobile device</li>
+                <li>Tap the <strong>QR code scanner</strong> button (bottom of screen)</li>
+                <li><strong>Scan this QR code</strong></li>
+                <li>Your PegSlam app loads instantly!</li>
+            </ol>
+            <p style="margin-top: 15px; color: #666;">
+                <strong>Or:</strong> Copy the URL above and paste it in Expo Go's search bar
+            </p>
+        </div>
+        
+        <div class="footer">
+            ✨ App is running and ready for testing
+        </div>
+    </div>
+    
+    <script>
+        function getRepiltUrl() {
+            const protocol = window.location.protocol;
+            const host = window.location.host;
+            return protocol + '//' + host;
+        }
+        
+        function initQR() {
+            const url = getRepiltUrl();
+            document.getElementById('urlBox').textContent = url;
+            
+            const qrContainer = document.getElementById('qrcode');
+            qrContainer.innerHTML = '';
+            new QRCode(qrContainer, {
+                text: url,
+                width: 250,
+                height: 250,
+                colorDark: '#1B7342',
+                colorLight: '#ffffff',
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+        
+        function copyUrl() {
+            const url = document.getElementById('urlBox').textContent;
+            navigator.clipboard.writeText(url).then(() => {
+                alert('✅ URL copied to clipboard!');
+            });
+        }
+        
+        window.addEventListener('load', initQR);
+    </script>
+</body>
+</html>

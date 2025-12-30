@@ -3479,6 +3479,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       const res = await apiClient.get('/api/user/participations');
       if (res.data) {
         setParticipations(res.data);
+        setParticipationsLoading(false);
         console.log('Successfully fetched participations from /api/user/participations');
         return;
       }
@@ -3491,6 +3492,8 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       if (res.data) {
         setParticipations(res.data);
         console.log(`Successfully fetched participations from /api/users/${user.username}/participations`);
+      } else {
+        setParticipations([]);
       }
     } catch (error) {
       console.error('Error fetching participations fallback:', error);
@@ -5303,15 +5306,15 @@ const styles = StyleSheet.create({
   },
   header: {
     backgroundColor: '#1a1a1a',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    paddingTop: Math.max(12, (Platform.OS === 'web' ? 10 : 0)),
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    paddingTop: Math.max(20, (Platform.OS === 'web' ? 10 : 16)),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
-    minHeight: 60,
+    minHeight: 70,
   },
   hamburger: {
     fontSize: 28,
