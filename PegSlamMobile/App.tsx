@@ -3726,16 +3726,12 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={[styles.statValue, { color: '#1B7342' }]}>{stats.wins || 0}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Best Catch</Text>
+              <Text style={styles.statLabel}>Best</Text>
               <Text style={styles.statValue}>{stats.bestCatch || '-'}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Avg Weight</Text>
+              <Text style={styles.statLabel}>Avg</Text>
               <Text style={styles.statValue}>{stats.averageWeight || '-'}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Total Weight</Text>
-              <Text style={styles.statValue}>{stats.totalWeight || '-'}</Text>
             </View>
           </View>
         ) : null}
@@ -3787,14 +3783,15 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.detailRowLabel}>Favourite Method</Text>
               <Text style={styles.detailRowValue}>{user.favouriteMethod}</Text>
             </View>
-          ) : null}
+          ) : (
+            <Text style={styles.emptyFieldText}>Not added yet</Text>
+          )}
           {user.favouriteSpecies ? (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Favourite Species</Text>
               <Text style={styles.detailRowValue}>{user.favouriteSpecies}</Text>
             </View>
-          ) : null}
-          {!user.favouriteMethod && !user.favouriteSpecies && (
+          ) : (
             <Text style={styles.emptyFieldText}>Not added yet</Text>
           )}
         </View>
