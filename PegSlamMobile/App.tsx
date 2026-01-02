@@ -2257,8 +2257,10 @@ function AnglerProfilePage({ angler, onClose }: any) {
       setStatsLoading(true);
       const response = await apiClient.get(`/api/users/${angler.username}/stats`);
       setStats(response.data);
+      setStatsLoading(false);
     } catch (error) {
       console.error('Error fetching stats:', error);
+      setStatsLoading(false);
     } finally {
       setStatsLoading(false);
     }
@@ -2281,8 +2283,11 @@ function AnglerProfilePage({ angler, onClose }: any) {
       setParticipationsLoading(true);
       const response = await apiClient.get(`/api/users/${angler.username}/participations`);
       setParticipations(response.data || []);
+      // Ensure loading state is cleared on success
+      setParticipationsLoading(false);
     } catch (error) {
       console.error('Error fetching participations:', error);
+      setParticipationsLoading(false);
     } finally {
       setParticipationsLoading(false);
     }
@@ -2484,7 +2489,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
         ) : null}
 
         {/* Action Buttons */}
-        {angler.username && (
+        {isLoggedIn && currentUser && angler.username === currentUser.username && (
           <View style={{ flexDirection: 'row', gap: 12, marginVertical: 16 }}>
             <TouchableOpacity style={[styles.bookButton, { flex: 1, backgroundColor: '#1B7342' }]} onPress={() => setEditOpen(true)}>
               <Text style={styles.bookButtonText}>Edit Profile</Text>
@@ -2520,7 +2525,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
               )}
               {angler.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
-                  <Text style={styles.socialIconButtonText}>📷</Text>
+                  <Text style={styles.socialIconButtonText}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -2534,28 +2539,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
           </View>
         )}
 
-        {/* Share Profile */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>Share This Profile</Text>
-          <View style={styles.shareIconsRow}>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('whatsapp')}>
-              <Text style={styles.shareIconButtonText}>💬</Text>
-              <Text style={styles.shareIconLabel}>WhatsApp</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('facebook')}>
-              <Text style={styles.shareIconButtonText}>f</Text>
-              <Text style={styles.shareIconLabel}>Facebook</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('x')}>
-              <Text style={styles.shareIconButtonText}>𝕏</Text>
-              <Text style={styles.shareIconLabel}>Twitter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('copy')}>
-              <Text style={styles.shareIconButtonText}>🔗</Text>
-              <Text style={styles.shareIconLabel}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
@@ -3424,6 +3408,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       if (res.data) {
         setStats(res.data);
         console.log('Successfully fetched stats from /api/user/stats');
+        setStatsLoading(false);
         return;
       }
     } catch (error) {
@@ -3439,8 +3424,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
         setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
       }
     } catch (error) {
-      console.error('Error fetching stats fallback:', error);
-      setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
+      console.log('Failed to fetch stats from /api/users/stats');
     } finally {
       setStatsLoading(false);
     }
@@ -3496,8 +3480,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
         setParticipations([]);
       }
     } catch (error) {
-      console.error('Error fetching participations fallback:', error);
-      setParticipations([]);
+      console.log('Failed to fetch participations from /api/users/participations');
     } finally {
       setParticipationsLoading(false);
     }
@@ -3866,28 +3849,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
           </View>
         )}
 
-        {/* Share Profile */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>Share This Profile</Text>
-          <View style={styles.shareIconsRow}>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('whatsapp')}>
-              <Text style={styles.shareIconButtonText}>💬</Text>
-              <Text style={styles.shareIconLabel}>WhatsApp</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('facebook')}>
-              <Text style={styles.shareIconButtonText}>f</Text>
-              <Text style={styles.shareIconLabel}>Facebook</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('x')}>
-              <Text style={styles.shareIconButtonText}>𝕏</Text>
-              <Text style={styles.shareIconLabel}>Twitter</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.shareIconButton} onPress={() => shareProfile('copy')}>
-              <Text style={styles.shareIconButtonText}>🔗</Text>
-              <Text style={styles.shareIconLabel}>Copy</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+
 
         {/* Tabs */}
         <View style={styles.tabsContainer}>
@@ -5307,14 +5269,14 @@ const styles = StyleSheet.create({
   header: {
     backgroundColor: '#1a1a1a',
     paddingHorizontal: 16,
-    paddingVertical: 16,
-    paddingTop: Math.max(20, (Platform.OS === 'web' ? 10 : 16)),
+    paddingVertical: 12,
+    paddingTop: Platform.OS === 'ios' ? 44 : (Platform.OS === 'web' ? 10 : 32),
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
     borderBottomColor: '#2a2a2a',
-    minHeight: 70,
+    minHeight: 100,
   },
   hamburger: {
     fontSize: 28,
@@ -6185,7 +6147,7 @@ const styles = StyleSheet.create({
   },
   searchInput: {
     backgroundColor: '#1a1a1a',
-    color: '#fff',
+    color: '#ffffff',
     padding: 12,
     borderRadius: 8,
     fontSize: 14,
