@@ -2101,10 +2101,20 @@ function AnglerCard({ angler, onPress }: any) {
 
   const imageUrl = angler.avatar ? getImageUrl(angler.avatar) : null;
 
+  const handlePress = () => {
+    if (typeof onPress === 'function') {
+      try {
+        onPress(angler);
+      } catch (error) {
+        console.error('Error in AnglerCard onPress:', error);
+      }
+    }
+  };
+
   return (
     <TouchableOpacity 
       style={styles.anglerCard} 
-      onPress={() => onPress(angler)}
+      onPress={handlePress}
     >
       <View style={styles.anglerAvatar}>
         {imageUrl && imageLoaded ? (
@@ -2207,7 +2217,7 @@ function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSor
 }
 
 // Angler Profile Page
-function AnglerProfilePage({ angler, onClose }: any) {
+function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
   
   const getImageUrl = (url: string) => {
@@ -2297,6 +2307,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
   };
 
   const getCompetitionStatus = (comp: any) => {
+    if (!comp || !comp.date) return 'completed';
     const now = new Date();
     const start = new Date(comp.date);
     const end = new Date(comp.endDate || comp.date);
@@ -2412,7 +2423,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
           {angler.memberSince && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Member Since</Text>
-              <Text style={styles.detailRowValue}>{new Date(angler.memberSince).getFullYear()}</Text>
+              <Text style={styles.detailRowValue}>{new Date(angler.memberSince || 0).getFullYear() || 'N/A'}</Text>
             </View>
           )}
         </View>
@@ -2573,14 +2584,14 @@ function AnglerProfilePage({ angler, onClose }: any) {
               <Text style={styles.tabTitle}>Competition History</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
+              ) : participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
                 <Text style={styles.emptyTabText}>No competition history</Text>
               ) : (
-                participations.filter((p: any) => getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
+                participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
                   <View key={p.id} style={styles.competitionRow}>
-                    <Text style={styles.competitionName}>{p.competition.name}</Text>
-                    <Text style={styles.competitionDetail}>{new Date(p.competition.date).toLocaleDateString('en-GB')}</Text>
-                    <Text style={styles.competitionDetail}>{p.competition.venue} • Peg {p.pegNumber}</Text>
+                    <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
                   </View>
                 ))
               )}
@@ -2592,19 +2603,19 @@ function AnglerProfilePage({ angler, onClose }: any) {
               <Text style={styles.tabTitle}>Upcoming Competitions</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).length === 0 ? (
+              ) : participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).length === 0 ? (
                 <Text style={styles.emptyTabText}>No upcoming competitions</Text>
               ) : (
-                participations.filter((p: any) => ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
+                participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
                   <View key={p.id} style={styles.competitionRow}>
                     <View style={styles.competitionRowTop}>
-                      <Text style={styles.competitionName}>{p.competition.name}</Text>
+                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
                       <Text style={[styles.competitionBadge, getCompetitionStatus(p.competition) === 'live' && styles.competitionBadgeLive]}>
-                        {getCompetitionStatus(p.competition).toUpperCase()}
+                        {(getCompetitionStatus(p.competition) || '').toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={styles.competitionDetail}>{new Date(p.competition.date).toLocaleDateString('en-GB')}</Text>
-                    <Text style={styles.competitionDetail}>{p.competition.venue} • Peg {p.pegNumber}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
                   </View>
                 ))
               )}
@@ -3544,6 +3555,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
   };
 
   const getCompetitionStatus = (comp: any) => {
+    if (!comp || !comp.date) return 'completed';
     const now = new Date();
     const start = new Date(comp.date);
     const end = new Date(comp.endDate || comp.date);
@@ -3889,14 +3901,14 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.tabTitle}>Competition History</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
+              ) : participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
                 <Text style={styles.emptyTabText}>No competition history</Text>
               ) : (
-                participations.filter((p: any) => getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
+                participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
                   <View key={p.id} style={styles.competitionRow}>
-                    <Text style={styles.competitionName}>{p.competition.name}</Text>
-                    <Text style={styles.competitionDetail}>{new Date(p.competition.date).toLocaleDateString('en-GB')}</Text>
-                    <Text style={styles.competitionDetail}>{p.competition.venue} • Peg {p.pegNumber}</Text>
+                    <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
                   </View>
                 ))
               )}
@@ -3908,19 +3920,19 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.tabTitle}>Upcoming Competitions</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).length === 0 ? (
+              ) : participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).length === 0 ? (
                 <Text style={styles.emptyTabText}>No upcoming competitions</Text>
               ) : (
-                participations.filter((p: any) => ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
+                participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
                   <View key={p.id} style={styles.competitionRow}>
                     <View style={styles.competitionRowTop}>
-                      <Text style={styles.competitionName}>{p.competition.name}</Text>
+                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
                       <Text style={[styles.competitionBadge, getCompetitionStatus(p.competition) === 'live' && styles.competitionBadgeLive]}>
-                        {getCompetitionStatus(p.competition).toUpperCase()}
+                        {(getCompetitionStatus(p.competition) || '').toUpperCase()}
                       </Text>
                     </View>
-                    <Text style={styles.competitionDetail}>{new Date(p.competition.date).toLocaleDateString('en-GB')}</Text>
-                    <Text style={styles.competitionDetail}>{p.competition.venue} • Peg {p.pegNumber}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
+                    <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
                   </View>
                 ))
               )}
@@ -4433,6 +4445,7 @@ export default function App() {
         <AnglerProfilePage 
           angler={selectedAngler} 
           onClose={() => setSelectedAngler(null)} 
+          currentUser={currentUser}
         />
       )}
 

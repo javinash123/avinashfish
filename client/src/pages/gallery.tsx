@@ -155,11 +155,12 @@ export default function Gallery() {
                     className="w-full h-full object-contain"
                   />
                   {selectedImage.urls.length > 1 && (
-                    <>
+                    <div className="absolute inset-0 flex items-center justify-between px-2 md:px-4 pointer-events-none">
                       <button
                         type="button"
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-md z-10 h-10 w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer"
-                        onClick={() => {
+                        className="bg-black/80 hover:bg-black text-white rounded-md h-8 w-8 md:h-10 md:w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setCurrentImageIndex((prev) => 
                             prev === 0 ? selectedImage.urls.length - 1 : prev - 1
                           );
@@ -167,12 +168,13 @@ export default function Gallery() {
                         data-testid="button-prev-image"
                         aria-label="Previous image"
                       >
-                        <ChevronLeft className="h-6 w-6" />
+                        <ChevronLeft className="h-5 w-5 md:h-6 md:w-6" />
                       </button>
                       <button
                         type="button"
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-black/80 hover:bg-black text-white rounded-md z-10 h-10 w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer"
-                        onClick={() => {
+                        className="bg-black/80 hover:bg-black text-white rounded-md h-8 w-8 md:h-10 md:w-10 shadow-lg flex items-center justify-center transition-colors cursor-pointer pointer-events-auto"
+                        onClick={(e) => {
+                          e.stopPropagation();
                           setCurrentImageIndex((prev) => 
                             prev === selectedImage.urls.length - 1 ? 0 : prev + 1
                           );
@@ -180,8 +182,12 @@ export default function Gallery() {
                         data-testid="button-next-image"
                         aria-label="Next image"
                       >
-                        <ChevronRight className="h-6 w-6" />
+                        <ChevronRight className="h-5 w-5 md:h-6 md:w-6" />
                       </button>
+                    </div>
+                  )}
+                  {selectedImage.urls.length > 1 && (
+                    <>
                       <div className="absolute bottom-4 right-4 bg-black/80 text-white px-3 py-1.5 rounded-full text-sm font-medium shadow-lg">
                         {currentImageIndex + 1} / {selectedImage.urls.length}
                       </div>
