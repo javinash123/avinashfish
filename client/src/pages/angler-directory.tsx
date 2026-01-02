@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Link } from "wouter";
+import { useLocation } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -41,6 +41,7 @@ export default function AnglerDirectory() {
   const [sortBy, setSortBy] = useState<"name" | "memberSince" | "club">("name");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
   const [page, setPage] = useState(1);
+  const [, setLocation] = useLocation();
   const pageSize = 20;
 
   // Build query string for API request
@@ -136,9 +137,10 @@ export default function AnglerDirectory() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
               {data.data.map((angler) => (
-                <Link
+                <div
                   key={angler.id}
-                  href={`/profile/${angler.username}`}
+                  onClick={() => setLocation(`/profile/${angler.username}`)}
+                  className="cursor-pointer"
                   data-testid={`card-angler-${angler.username}`}
                 >
                   <Card className="hover-elevate h-full">
@@ -181,7 +183,7 @@ export default function AnglerDirectory() {
                       </div>
                     </CardContent>
                   </Card>
-                </Link>
+                </div>
               ))}
             </div>
 

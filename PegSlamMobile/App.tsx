@@ -1988,10 +1988,10 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
             {image.urls && image.urls.length > 1 && (
               <>
                 <TouchableOpacity style={[styles.imageNavButton, { left: 10 }]} onPress={onPrevImage}>
-                  <Text style={styles.imageNavText}>← Prev</Text>
+                  <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>‹</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={[styles.imageNavButton, { right: 10 }]} onPress={onNextImage}>
-                  <Text style={styles.imageNavText}>Next →</Text>
+                  <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>›</Text>
                 </TouchableOpacity>
                 <Text style={{ textAlign: 'center', color: '#999', fontSize: 12, marginTop: 8 }}>
                   {currentImageIndex + 1} of {image.urls.length}
@@ -2102,7 +2102,10 @@ function AnglerCard({ angler, onPress }: any) {
   const imageUrl = angler.avatar ? getImageUrl(angler.avatar) : null;
 
   return (
-    <TouchableOpacity style={styles.anglerCard} onPress={onPress}>
+    <TouchableOpacity 
+      style={styles.anglerCard} 
+      onPress={() => onPress(angler)}
+    >
       <View style={styles.anglerAvatar}>
         {imageUrl && imageLoaded ? (
           <Image 
@@ -2489,7 +2492,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
         ) : null}
 
         {/* Action Buttons */}
-        {isLoggedIn && currentUser && angler.username === currentUser.username && (
+        {currentUser && angler.username === currentUser.username && (
           <View style={{ flexDirection: 'row', gap: 12, marginVertical: 16 }}>
             <TouchableOpacity style={[styles.bookButton, { flex: 1, backgroundColor: '#1B7342' }]} onPress={() => setEditOpen(true)}>
               <Text style={styles.bookButtonText}>Edit Profile</Text>
@@ -4692,9 +4695,9 @@ export default function App() {
             <Text style={styles.sectionSubtitle}>Stay up to date with match reports, announcements, and the latest from the UK fishing competition scene</Text>
             
             {/* Search Input */}
-            <View style={styles.newsSearchContainer}>
+            <View style={styles.searchContainer}>
               <TextInput
-                style={styles.newsSearchInput}
+                style={styles.searchInput}
                 placeholder="Search articles..."
                 placeholderTextColor="#666"
                 value={newsSearch}

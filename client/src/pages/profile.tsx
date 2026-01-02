@@ -499,6 +499,7 @@ export default function Profile() {
                           size="icon"
                           onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
                           data-testid="button-instagram"
+                          className="text-primary border-primary/20 hover:border-primary"
                         >
                           <SiInstagram className="h-4 w-4" />
                         </Button>
