@@ -2525,7 +2525,7 @@ function AnglerProfilePage({ angler, onClose }: any) {
               )}
               {angler.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
-                  <Text style={styles.socialIconButtonText}></Text>
+                  <Text style={[styles.socialIconButtonText, { color: '#E4405F' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -3835,7 +3835,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               )}
               {user.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.instagramUrl)}>
-                  <Text style={styles.socialIconButtonText}>📷</Text>
+                  <Text style={[styles.socialIconButtonText, { color: '#E4405F' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -4238,8 +4238,8 @@ export default function App() {
         aVal = `${a.firstName} ${a.lastName}`;
         bVal = `${b.firstName} ${b.lastName}`;
       } else if (sortField === 'memberSince') {
-        aVal = new Date(a.memberSince).getTime();
-        bVal = new Date(b.memberSince).getTime();
+        aVal = new Date(a.memberSince || a.date || 0).getTime();
+        bVal = new Date(b.memberSince || b.date || 0).getTime();
       } else {
         aVal = a[sortField as keyof typeof a];
         bVal = b[sortField as keyof typeof b];
