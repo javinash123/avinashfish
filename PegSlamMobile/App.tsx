@@ -648,9 +648,9 @@ function CompetitionCard({ item, onViewDetails }: any) {
         </View>
       )}
 
-      {/* View Details Button */}
+      {/* View Details Button is removed as per requirements */}
       <TouchableOpacity style={[styles.cardButton, { backgroundColor: '#1B7342', paddingVertical: 12 }]} onPress={() => onViewDetails(item)}>
-        <Text style={[styles.cardButtonText, { fontSize: 14, fontWeight: '600' }]}>View Details →</Text>
+        <Text style={[styles.cardButtonText, { fontSize: 14, fontWeight: '600' }]}>Participants →</Text>
       </TouchableOpacity>
     </TouchableOpacity>
   );
@@ -929,7 +929,7 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
 function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLogin }: any) {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
-  const [activeTab, setActiveTab] = useState('details');
+  const [activeTab, setActiveTab] = useState('participants');
   const [showDropdown, setShowDropdown] = useState(false);
   const [loadingLeaderboard, setLoadingLeaderboard] = useState(false);
   const [loadingParticipants, setLoadingParticipants] = useState(false);
@@ -947,6 +947,7 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
   const [joiningTeam, setJoiningTeam] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
+  const [loadingTeams, setLoadingTeams] = useState(false);
   const isTeamCompetition = competition.competitionMode === 'team';
   const entryFee = parseFloat(competition.entryFee) || 0;
   const isPaidCompetition = entryFee > 0;
@@ -1005,11 +1006,14 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
   };
 
   const fetchAllTeams = async () => {
+    setLoadingTeams(true);
     try {
       const response = await apiClient.get(`/api/competitions/${competition.id}/teams`);
       setAllTeams(response.data || []);
     } catch (error) {
       console.error('Error fetching teams:', error);
+    } finally {
+      setLoadingTeams(false);
     }
   };
 
@@ -1423,12 +1427,6 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
             <View style={styles.dropdownMenu}>
               <TouchableOpacity 
                 style={styles.dropdownItem} 
-                onPress={() => { setActiveTab('details'); setShowDropdown(false); }}
-              >
-                <Text style={[styles.dropdownItemText, activeTab === 'details' && styles.dropdownItemTextActive]}>Details</Text>
-              </TouchableOpacity>
-              <TouchableOpacity 
-                style={styles.dropdownItem} 
                 onPress={() => { setActiveTab('participants'); setShowDropdown(false); }}
               >
                 <Text style={[styles.dropdownItemText, activeTab === 'participants' && styles.dropdownItemTextActive]}>Participants</Text>
@@ -1476,6 +1474,50 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
           </View>
         )}
 
+        {/* Teams Tab */}
+        {activeTab === 'teams' && (
+          <View style={styles.tabContent}>
+            {loadingTeams ? (
+              <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 40 }} />
+            ) : allTeams.length > 0 ? (
+              <View style={styles.participantsList}>
+                {allTeams.map((team: any, idx: number) => (
+                  <TouchableOpacity 
+                    key={idx} 
+                    style={styles.participantCard}
+                    onPress={() => {
+                      // Logic to show team details if needed
+                      Alert.alert(team.name, `Members: ${team.members?.map((m: any) => m.name).join(', ') || 'None'}`);
+                    }}
+                  >
+                    <View style={styles.participantAvatarContainer}>
+                      <View style={[styles.participantAvatarPlaceholder, { backgroundColor: '#1B7342' }]}>
+                        <Text style={styles.participantAvatarText}>
+                          {team.name?.charAt(0) || 'T'}
+                        </Text>
+                      </View>
+                    </View>
+                    <View style={styles.participantInfo}>
+                      <Text style={styles.participantName} numberOfLines={1}>{team.name || 'Unknown Team'}</Text>
+                      <Text style={styles.participantClub} numberOfLines={1}>
+                        {team.members?.length || 0} Members • Captain: {team.captainName || 'Unknown'}
+                      </Text>
+                    </View>
+                    {team.paymentStatus === 'succeeded' && (
+                      <View style={[styles.pegBadge, { backgroundColor: '#1B7342' }]}>
+                        <Text style={styles.pegBadgeText}>Paid</Text>
+                      </View>
+                    )}
+                  </TouchableOpacity>
+                ))}
+              </View>
+            ) : (
+              <View style={styles.emptyContainer}>
+                <Text style={styles.emptyText}>No teams registered yet.</Text>
+              </View>
+            )}
+          </View>
+        )}
         {/* Participants Tab */}
         {activeTab === 'participants' && (
           <View style={styles.tabContent}>
@@ -1496,10 +1538,20 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
                         </View>
                       )}
                     </View>
-                    <View style={styles.participantInfo}>
+                    <TouchableOpacity 
+                      style={styles.participantInfo}
+                      onPress={() => {
+                        const angler = anglers.find(a => a.id === participant.id);
+                        if (angler) {
+                          setActiveMenu('anglers');
+                          setSelectedAngler(angler);
+                          setCompetitionDetails(null);
+                        }
+                      }}
+                    >
                       <Text style={styles.participantName} numberOfLines={1}>{participant.name || 'Unknown'}</Text>
                       {participant.club && <Text style={styles.participantClub} numberOfLines={1}>{participant.club}</Text>}
-                    </View>
+                    </TouchableOpacity>
                     {participant.pegNumber && (
                       <View style={styles.pegBadge}>
                         <Text style={styles.pegBadgeText}>Peg {participant.pegNumber}</Text>
@@ -1544,9 +1596,22 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
                         <Text style={styles.teamIcon}> [Team]</Text>
                       </TouchableOpacity>
                     ) : (
-                      <Text style={[styles.leaderboardCell, styles.leaderboardCellWide]} numberOfLines={1}>
-                        {entry.anglerName || entry.name || 'Unknown'}
-                      </Text>
+                      <TouchableOpacity 
+                        style={[styles.leaderboardCell, styles.leaderboardCellWide]}
+                        onPress={() => {
+                          const anglerId = entry.anglerId || entry.id;
+                          const angler = anglers.find(a => a.id === anglerId);
+                          if (angler) {
+                            setActiveMenu('anglers');
+                            setSelectedAngler(angler);
+                            setCompetitionDetails(null);
+                          }
+                        }}
+                      >
+                        <Text style={{ color: '#fff' }} numberOfLines={1}>
+                          {entry.anglerName || entry.name || 'Unknown'}
+                        </Text>
+                      </TouchableOpacity>
                     )}
                     <Text style={styles.leaderboardCell}>{entry.pegNumber || '-'}</Text>
                     <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
