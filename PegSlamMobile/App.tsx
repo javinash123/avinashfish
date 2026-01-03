@@ -99,7 +99,10 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
   const [errorMessage, setErrorMessage] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
-  const [logoUrl, setLogoUrl] = useState('');
+  const [selectedRadio, setSelectedRadio] = useState<string | null>(null);
+  const toggleRadio = (id: string) => {
+    setSelectedRadio(selectedRadio === id ? null : id);
+  };
 
   const handleLogin = async () => {
     setErrorMessage('');
@@ -760,7 +763,7 @@ function HeroCarousel() {
 }
 
 // Leaderboard Page Component
-function LeaderboardPage({ competitions, onTeamClick }: any) {
+function LeaderboardPage({ competitions, onTeamClick, onAnglerClick }: any) {
   const filteredComps = competitions.filter((c: any) => {
     const compDate = new Date(c.date);
     const now = new Date();
@@ -904,9 +907,14 @@ function LeaderboardPage({ competitions, onTeamClick }: any) {
                   <Text style={styles.teamIcon}>[T]</Text>
                 </TouchableOpacity>
               ) : (
-                <Text style={[styles.leaderboardCell, { flex: 1.2 }]} numberOfLines={1}>
-                  {entry.anglerName || 'Unknown'}
-                </Text>
+                <TouchableOpacity 
+                  style={[styles.leaderboardCell, { flex: 1.2 }]}
+                  onPress={() => onAnglerClick && onAnglerClick(entry.id)}
+                >
+                  <Text style={{ color: '#1B7342', fontWeight: '600' }} numberOfLines={1}>
+                    {entry.anglerName || 'Unknown'}
+                  </Text>
+                </TouchableOpacity>
               )}
               <Text style={[styles.leaderboardCell, { flex: 0.6 }]} numberOfLines={1}>{entry.username || '-'}</Text>
               <Text style={[styles.leaderboardCell, { flex: 0.6 }]} numberOfLines={1}>{entry.club ? entry.club.substring(0, 3) : '-'}</Text>
@@ -4560,7 +4568,14 @@ export default function App() {
               )}
             </View>
 
-            <LeaderboardPage competitions={competitions} onTeamClick={(teamId: string) => setSelectedTeamId(teamId)} />
+            <LeaderboardPage 
+              competitions={competitions} 
+              onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
+              onAnglerClick={(anglerId: string) => {
+                const angler = (anglers || []).find((a: any) => a.id === anglerId);
+                if (angler) setSelectedAngler(angler);
+              }}
+            />
 
             {gallery.length > 0 && (
               <View style={styles.section}>
@@ -4748,7 +4763,14 @@ export default function App() {
 
         {/* LEADERBOARD PAGE */}
         {currentPage === 'leaderboard' && (
-          <LeaderboardPage competitions={competitions} onTeamClick={(teamId: string) => setSelectedTeamId(teamId)} />
+          <LeaderboardPage 
+            competitions={competitions} 
+            onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
+            onAnglerClick={(anglerId: string) => {
+              const angler = (anglers || []).find((a: any) => a.id === anglerId);
+              if (angler) setSelectedAngler(angler);
+            }}
+          />
         )}
 
         {/* ANGLER DIRECTORY PAGE */}
