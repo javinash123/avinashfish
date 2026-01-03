@@ -1898,6 +1898,29 @@ function BookingPaymentForm({ competition, userTeam, user, onSuccess, onCancel }
 
 // News Detail Page
 function NewsDetailPage({ article, onClose }: any) {
+  const [fullArticle, setFullArticle] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchFullArticle = async () => {
+      try {
+        setLoading(true);
+        const response = await apiClient.get(`/api/news/${article.id}`);
+        if (response.data) {
+          setFullArticle(response.data);
+        }
+      } catch (error) {
+        console.error('Error fetching full article:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    if (article?.id) {
+      fetchFullArticle();
+    }
+  }, [article?.id]);
+
   const shareNews = (platform: string) => {
     const newsUrl = `https://pegslam.com/news?article=${article.id}`;
     const text = `Check out: ${article.title}`;
@@ -1953,7 +1976,8 @@ function NewsDetailPage({ article, onClose }: any) {
     }
   };
 
-  const imageUrl = article.imageUrl || article.featuredImage || article.image;
+  const currentArticle = fullArticle || article;
+  const imageUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
   const fullImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`) : null;
 
   return (
@@ -1962,7 +1986,7 @@ function NewsDetailPage({ article, onClose }: any) {
         <TouchableOpacity onPress={onClose} style={styles.detailsBackButton}>
           <Text style={styles.detailsBackText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.detailsTitle, { maxWidth: '70%' }]} numberOfLines={1}>{article.title}</Text>
+        <Text style={[styles.detailsTitle, { maxWidth: '70%' }]} numberOfLines={1}>{currentArticle.title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -1980,13 +2004,42 @@ function NewsDetailPage({ article, onClose }: any) {
         )}
 
         <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>{article.title}</Text>
-          <Text style={{ color: '#999', fontSize: 12, marginBottom: 12 }}>
-            {article.category || 'News'} • {article.date || 'Today'}
-          </Text>
-          <Text style={styles.detailsDescription}>
-            {stripHtml(article.content || article.description || article.excerpt || '')}
-          </Text>
+          <Text style={styles.detailsSectionTitle}>{currentArticle.title}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
+            <View style={{ backgroundColor: '#1B7342', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginRight: 8 }}>
+              <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
+                {(currentArticle.category || 'News').toUpperCase()}
+              </Text>
+            </View>
+            <Text style={{ color: '#999', fontSize: 12 }}>
+              {currentArticle.date || 'Today'} • {currentArticle.readTime || '3 min read'}
+            </Text>
+          </View>
+
+          {loading ? (
+            <ActivityIndicator size="small" color="#1B7342" style={{ marginVertical: 20 }} />
+          ) : (
+            <>
+              {currentArticle.excerpt ? (
+                <Text style={[styles.detailsDescription, { fontWeight: 'bold', marginBottom: 16 }]}>
+                  {stripHtml(currentArticle.excerpt)}
+                </Text>
+              ) : null}
+              
+              <Text style={styles.detailsDescription}>
+                {stripHtml(currentArticle.content || currentArticle.description || '')}
+              </Text>
+
+              {currentArticle.author && (
+                <View style={{ marginTop: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#333' }}>
+                  <Text style={{ color: '#999', fontSize: 12 }}>Written by: <Text style={{ color: '#fff' }}>{currentArticle.author}</Text></Text>
+                  {currentArticle.competition && (
+                    <Text style={{ color: '#999', fontSize: 12, marginTop: 4 }}>Related to: <Text style={{ color: '#1B7342', fontWeight: 'bold' }}>{currentArticle.competition}</Text></Text>
+                  )}
+                </View>
+              )}
+            </>
+          )}
         </View>
 
         <View style={styles.shareButtonsContainer}>
