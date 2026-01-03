@@ -2021,14 +2021,30 @@ function NewsDetailPage({ article, onClose }: any) {
           ) : (
             <>
               {currentArticle.excerpt ? (
-                <Text style={[styles.detailsDescription, { fontWeight: 'bold', marginBottom: 16 }]}>
-                  {stripHtml(currentArticle.excerpt)}
-                </Text>
+                <View style={{ marginBottom: 16 }}>
+                  <Text style={[styles.detailsDescription, { fontWeight: 'bold' }]}>
+                    {stripHtml(currentArticle.excerpt)}
+                  </Text>
+                </View>
               ) : null}
               
-              <Text style={styles.detailsDescription}>
-                {stripHtml(currentArticle.content || currentArticle.description || '')}
-              </Text>
+              <View style={{ marginBottom: 20 }}>
+                {currentArticle.content ? (
+                  currentArticle.content.split(/<\/p>|<br\s*\/?>/).map((paragraph: string, index: number) => {
+                    const text = stripHtml(paragraph);
+                    if (!text) return null;
+                    return (
+                      <Text key={index} style={[styles.detailsDescription, { marginBottom: 12 }]}>
+                        {text}
+                      </Text>
+                    );
+                  })
+                ) : (
+                  <Text style={styles.detailsDescription}>
+                    {stripHtml(currentArticle.description || '')}
+                  </Text>
+                )}
+              </View>
 
               {currentArticle.author && (
                 <View style={{ marginTop: 20, paddingTop: 12, borderTopWidth: 1, borderTopColor: '#333' }}>
@@ -2546,27 +2562,22 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.detailRowValue}>{angler.location}</Text>
             </View>
           )}
-          {angler.memberSince && (
-            <View style={styles.detailRow}>
-              <Text style={styles.detailRowLabel}>Member Since</Text>
-              <Text style={styles.detailRowValue}>{new Date(angler.memberSince || 0).getFullYear() || 'N/A'}</Text>
-            </View>
-          )}
-        </View>
-
-        {/* Fishing Preferences */}
-        <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>Fishing Preferences</Text>
           {angler.favouriteMethod && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailRowLabel}>Favourite Method</Text>
+              <Text style={styles.detailRowLabel}>Fishing Method</Text>
               <Text style={styles.detailRowValue}>{angler.favouriteMethod}</Text>
             </View>
           )}
           {angler.favouriteSpecies && (
             <View style={styles.detailRow}>
-              <Text style={styles.detailRowLabel}>Favourite Species</Text>
+              <Text style={styles.detailRowLabel}>Favorite Species</Text>
               <Text style={styles.detailRowValue}>{angler.favouriteSpecies}</Text>
+            </View>
+          )}
+          {angler.memberSince && (
+            <View style={styles.detailRow}>
+              <Text style={styles.detailRowLabel}>Member Since</Text>
+              <Text style={styles.detailRowValue}>{new Date(angler.memberSince || 0).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</Text>
             </View>
           )}
         </View>
@@ -2618,8 +2629,8 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.statValue}>{stats.bestCatch || '-'}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Avg Weight</Text>
-              <Text style={styles.statValue}>{stats.averageWeight || '-'}</Text>
+              <Text style={styles.statLabel}>Avg Rank</Text>
+              <Text style={styles.statValue}>{stats.averageRank || '-'}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Total Weight</Text>
@@ -2710,15 +2721,27 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.tabTitle}>Competition History</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
+              ) : (participations || []).filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
                 <Text style={styles.emptyTabText}>No competition history</Text>
               ) : (
-                participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
-                  <View key={p.id} style={styles.competitionRow}>
-                    <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                (participations || []).filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
+                  <TouchableOpacity 
+                    key={p.id} 
+                    style={styles.competitionRow}
+                    onPress={() => setSelectedCompetition(p.competition)}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View →</Text>
+                    </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                  </View>
+                    {p.totalWeight && (
+                      <Text style={[styles.competitionDetail, { color: '#1B7342', fontWeight: 'bold', marginTop: 4 }]}>
+                        Result: {p.totalWeight} {p.position ? `(${p.position}${p.position === 1 ? 'st' : p.position === 2 ? 'nd' : p.position === 3 ? 'rd' : 'th'} Place)` : ''}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -2752,74 +2775,76 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
             <View>
               <Text style={styles.tabTitle}>{angler.firstName}'s Gallery</Text>
               
-              {/* Upload Photo Form */}
-              <View style={styles.galleryUploadSection}>
-                <TouchableOpacity style={styles.galleryUploadButton} onPress={async () => {
-                  try {
-                    const result = await ImagePicker.launchImageLibraryAsync({
-                      mediaTypes: ImagePicker.MediaTypeOptions.Images,
-                      quality: 0.8,
-                    });
-                    if (!result.canceled && result.assets[0]) {
-                      setGalleryForm({ photoUri: result.assets[0].uri, caption: '' });
+              {/* Upload Photo Form - Restricted to profile owner */}
+              {currentUser && currentUser.username === angler.username && (
+                <View style={styles.galleryUploadSection}>
+                  <TouchableOpacity style={styles.galleryUploadButton} onPress={async () => {
+                    try {
+                      const result = await ImagePicker.launchImageLibraryAsync({
+                        mediaTypes: ImagePicker.MediaTypeOptions.Images,
+                        quality: 0.8,
+                      });
+                      if (!result.canceled && result.assets[0]) {
+                        setGalleryForm({ photoUri: result.assets[0].uri, caption: '' });
+                      }
+                    } catch (error) {
+                      Alert.alert('Error', 'Failed to pick image');
                     }
-                  } catch (error) {
-                    Alert.alert('Error', 'Failed to pick image');
-                  }
-                }}>
-                  <Text style={styles.galleryUploadButtonText}>+ Add Photo</Text>
-                </TouchableOpacity>
+                  }}>
+                    <Text style={styles.galleryUploadButtonText}>+ Add Photo</Text>
+                  </TouchableOpacity>
 
-                {galleryForm.photoUri && (
-                  <View style={styles.galleryUploadPreview}>
-                    <Image source={{ uri: galleryForm.photoUri }} style={styles.galleryUploadPreviewImage} />
-                    <Text style={[styles.socialLabel, {marginTop: 12}]}>Caption (Optional)</Text>
-                    <TextInput
-                      style={styles.editInput}
-                      placeholder="Add a caption..."
-                      value={galleryForm.caption}
-                      onChangeText={(text) => setGalleryForm({...galleryForm, caption: text})}
-                      placeholderTextColor="#666"
-                    />
-                    <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
-                      <TouchableOpacity style={[styles.settingsButton, { flex: 1 }]} onPress={() => setGalleryForm({ photoUri: '', caption: '' })}>
-                        <Text style={styles.settingsButtonText}>Cancel</Text>
-                      </TouchableOpacity>
-                      <TouchableOpacity style={[styles.settingsButton, { flex: 1, backgroundColor: '#1B7342' }]} onPress={async () => {
-                        try {
-                          setGalleryLoading(true);
-                          const formData = new FormData();
-                          formData.append('image', { uri: galleryForm.photoUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
-                          formData.append('type', 'gallery');
-                          
-                          const uploadResponse = await fetch('https://pegslam.com/api/upload', {
-                            method: 'POST',
-                            body: formData,
-                            headers: { 'Accept': 'application/json' },
-                          });
+                  {galleryForm.photoUri && (
+                    <View style={styles.galleryUploadPreview}>
+                      <Image source={{ uri: galleryForm.photoUri }} style={styles.galleryUploadPreviewImage} />
+                      <Text style={[styles.socialLabel, {marginTop: 12}]}>Caption (Optional)</Text>
+                      <TextInput
+                        style={styles.editInput}
+                        placeholder="Add a caption..."
+                        value={galleryForm.caption}
+                        onChangeText={(text) => setGalleryForm({...galleryForm, caption: text})}
+                        placeholderTextColor="#666"
+                      />
+                      <View style={{ flexDirection: 'row', gap: 12, marginTop: 12 }}>
+                        <TouchableOpacity style={[styles.settingsButton, { flex: 1 }]} onPress={() => setGalleryForm({ photoUri: '', caption: '' })}>
+                          <Text style={styles.settingsButtonText}>Cancel</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity style={[styles.settingsButton, { flex: 1, backgroundColor: '#1B7342' }]} onPress={async () => {
+                          try {
+                            setGalleryLoading(true);
+                            const formData = new FormData();
+                            formData.append('image', { uri: galleryForm.photoUri, type: 'image/jpeg', name: 'photo.jpg' } as any);
+                            formData.append('type', 'gallery');
+                            
+                            const uploadResponse = await fetch('https://pegslam.com/api/upload', {
+                              method: 'POST',
+                              body: formData,
+                              headers: { 'Accept': 'application/json' },
+                            });
 
-                          const uploadData = await uploadResponse.json();
-                          
-                          await apiClient.post('/api/user/gallery', {
-                            url: uploadData.url,
-                            caption: galleryForm.caption || undefined,
-                          });
+                            const uploadData = await uploadResponse.json();
+                            
+                            await apiClient.post('/api/user/gallery', {
+                              url: uploadData.url,
+                              caption: galleryForm.caption || undefined,
+                            });
 
-                          Alert.alert('Success', 'Photo added to gallery!');
-                          setGalleryForm({ photoUri: '', caption: '' });
-                          fetchGallery();
-                        } catch (error: any) {
-                          Alert.alert('Error', error.message || 'Failed to upload photo');
-                        } finally {
-                          setGalleryLoading(false);
-                        }
-                      }}>
-                        <Text style={styles.settingsButtonText}>Upload</Text>
-                      </TouchableOpacity>
+                            Alert.alert('Success', 'Photo added to gallery!');
+                            setGalleryForm({ photoUri: '', caption: '' });
+                            fetchGallery();
+                          } catch (error: any) {
+                            Alert.alert('Error', error.message || 'Failed to upload photo');
+                          } finally {
+                            setGalleryLoading(false);
+                          }
+                        }}>
+                          <Text style={styles.settingsButtonText}>Upload</Text>
+                        </TouchableOpacity>
+                      </View>
                     </View>
-                  </View>
-                )}
-              </View>
+                  )}
+                </View>
+              )}
 
               {galleryLoading && !galleryForm.photoUri ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
@@ -4027,15 +4052,27 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.tabTitle}>Competition History</Text>
               {participationsLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
-              ) : participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
+              ) : (participations || []).filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').length === 0 ? (
                 <Text style={styles.emptyTabText}>No competition history</Text>
               ) : (
-                participations.filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
-                  <View key={p.id} style={styles.competitionRow}>
-                    <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                (participations || []).filter((p: any) => p && p.competition && getCompetitionStatus(p.competition) === 'completed').map((p: any) => (
+                  <TouchableOpacity 
+                    key={p.id} 
+                    style={styles.competitionRow}
+                    onPress={() => setSelectedCompetition(p.competition)}
+                  >
+                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View →</Text>
+                    </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                  </View>
+                    {p.totalWeight && (
+                      <Text style={[styles.competitionDetail, { color: '#1B7342', fontWeight: 'bold', marginTop: 4 }]}>
+                        Result: {p.totalWeight} {p.position ? `(${p.position}${p.position === 1 ? 'st' : p.position === 2 ? 'nd' : p.position === 3 ? 'rd' : 'th'} Place)` : ''}
+                      </Text>
+                    )}
+                  </TouchableOpacity>
                 ))
               )}
             </View>

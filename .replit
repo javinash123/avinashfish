@@ -34,13 +34,13 @@ args = "Mobile App Preview"
 name = "Mobile App Preview"
 author = "agent"
 
+[workflows.workflow.metadata]
+outputType = "webview"
+
 [[workflows.workflow.tasks]]
 task = "shell.exec"
 args = "cd PegSlamMobile && node server-port5000.js"
 waitForPort = 5000
-
-[workflows.workflow.metadata]
-outputType = "webview"
 
 [agent]
 integrations = ["javascript_log_in_with_replit:1.0.0", "javascript_database:1.0.0", "javascript_websocket:1.0.0", "javascript_stripe:1.0.0", "resend:1.0.0", "stripe:1.0.0"]
