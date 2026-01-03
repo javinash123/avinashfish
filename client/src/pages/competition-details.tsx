@@ -71,6 +71,7 @@ export default function CompetitionDetails() {
     enabled: competition?.competitionMode === "team",
   });
 
+  const [activeTab, setActiveTab] = useState("participants");
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
@@ -697,7 +698,7 @@ export default function CompetitionDetails() {
           </div>
         </div>
 
-        <Tabs defaultValue={competition.competitionMode === "team" ? "teams" : "participants"} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className={`grid w-full ${competition.competitionMode === "team" ? "grid-cols-3" : "grid-cols-2"} h-auto`} data-testid="tabs-competition">
             {competition.competitionMode === "team" && (
               <TabsTrigger value="teams" className="text-xs sm:text-sm px-2 sm:px-4">Teams</TabsTrigger>
@@ -830,23 +831,25 @@ export default function CompetitionDetails() {
                           {team.members && team.members.length > 0 && (
                             <div className="space-y-2">
                               <div className="text-xs text-muted-foreground">Team Members:</div>
-                              {team.members.slice(0, 3).map((member: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={member.avatar} />
-                                    <AvatarFallback className="text-xs">
-                                      {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate">{member.name || member.username}</span>
-                                  {member.role === "captain" && (
-                                    <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
-                                  )}
-                                </div>
+                              {team.members.slice(0, 4).map((member: any, idx: number) => (
+                                <Link key={idx} href={`/profile/${member.username}`}>
+                                  <div className="flex items-center gap-2 text-sm hover:bg-muted p-1 rounded transition-colors cursor-pointer">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={member.avatar} />
+                                      <AvatarFallback className="text-xs">
+                                        {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate">{member.name || member.username}</span>
+                                    {member.role === "captain" && (
+                                      <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
+                                    )}
+                                  </div>
+                                </Link>
                               ))}
-                              {team.members.length > 3 && (
+                              {team.members.length > 4 && (
                                 <div className="text-xs text-muted-foreground">
-                                  +{team.members.length - 3} more
+                                  +{team.members.length - 4} more
                                 </div>
                               )}
                             </div>

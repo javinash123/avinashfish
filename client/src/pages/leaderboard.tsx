@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
@@ -41,7 +41,7 @@ export default function Leaderboard() {
     }
   }, [competitions, selectedCompetition]);
 
-  const { data: rawLeaderboardData = [] } = useQuery<Array<{
+  const { data: rawLeaderboardData = [], isLoading: isLoadingLeaderboard } = useQuery<Array<{
     position: number | null;
     anglerName: string;
     username: string;
@@ -67,6 +67,14 @@ export default function Leaderboard() {
     teamId: entry.teamId,
     fishCount: entry.fishCount,
   }));
+
+  if (isLoadingLeaderboard) {
+    return (
+      <div className="min-h-screen py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const selectedComp = competitions.find(c => c.id === selectedCompetition);
   const isLive = selectedComp?.status === "live";

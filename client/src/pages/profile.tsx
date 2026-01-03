@@ -80,6 +80,17 @@ export default function Profile() {
     enabled: isOwnProfile ? isAuthenticated : !!viewingUsername,
   });
 
+  const competitionHistory = participations.map(p => ({
+    id: p.competition.id,
+    name: p.competition.name,
+    date: p.competition.date,
+    venue: p.competition.venue,
+    pegNumber: p.pegNumber,
+    weight: p.totalWeight,
+    position: p.position,
+    status: getCompetitionStatus(p.competition)
+  }));
+
   const { data: stats } = useQuery<{
     wins: number;
     podiumFinishes: number;
@@ -252,6 +263,15 @@ export default function Profile() {
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isOwnProfile) {
+      toast({
+        title: "Error",
+        description: "You can only upload photos to your own gallery",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedFile) {
       toast({
         title: "Error",
