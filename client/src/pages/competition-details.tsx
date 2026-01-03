@@ -770,6 +770,12 @@ export default function CompetitionDetails() {
           {competition.competitionMode === "team" && (
             <TabsContent value="teams" className="mt-6">
               <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Participating Teams
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-6">
                   {user && !userTeam ? (
                     <div className="mb-6 flex gap-3 flex-wrap">
@@ -806,12 +812,12 @@ export default function CompetitionDetails() {
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <h3 className="font-semibold text-lg">{team.name}</h3>
+                              <h3 className="font-semibold text-lg">{team.name || team.teamName}</h3>
                               <Badge 
                                 variant="outline"
                                 className="mt-1 text-xs"
                               >
-                                {team.memberCount || 0} / {competition.maxTeamMembers || 'N/A'} members
+                                {team.members?.length || team.memberCount || 0} / {competition.maxTeamMembers || 4} members
                               </Badge>
                             </div>
                             {team.pegNumber && (
@@ -832,7 +838,7 @@ export default function CompetitionDetails() {
                                       {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
                                     </AvatarFallback>
                                   </Avatar>
-                                  <span className="truncate">{member.name}</span>
+                                  <span className="truncate">{member.name || member.username}</span>
                                   {member.role === "captain" && (
                                     <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
                                   )}

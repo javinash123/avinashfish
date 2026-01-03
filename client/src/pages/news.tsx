@@ -368,7 +368,7 @@ export default function NewsPage() {
                   </div>
                   <div className="space-y-3">
                     <p className="text-muted-foreground font-medium">{fullArticle.excerpt}</p>
-                    <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: fullArticle.content }} />
+                    <div className="prose prose-sm max-w-none dark:prose-invert text-foreground" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: fullArticle.content }} />
                     <div className="flex items-center gap-4 text-sm pt-4 border-t">
                       <span className="text-muted-foreground">By {fullArticle.author}</span>
                       {fullArticle.competition && (

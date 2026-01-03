@@ -229,7 +229,7 @@ export default function Home() {
                       </h3>
                     </CardHeader>
                     <CardContent className="flex-1">
-                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
+                      <p className="text-muted-foreground">{news.excerpt}</p>
                     </CardContent>
                     <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">

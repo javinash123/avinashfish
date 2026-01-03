@@ -10,13 +10,14 @@ import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import sharp from "sharp";
 import "./types"; // Import session types
 
 // Stripe integration for payment processing
 // Requires STRIPE_SECRET_KEY environment variable
 // Valid keys start with sk_test_ (test mode) or sk_live_ (production mode)
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" }) : null;
+const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" as any }) : null;
 
 // Validate Stripe key format to catch invalid/placeholder keys early
 if (stripe && stripeKey && !stripeKey.startsWith('sk_')) {
@@ -248,7 +249,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Stripe payment intent route for competition bookings
   app.post("/api/create-payment-intent", async (req, res) => {
     var stripeKey = process.env.STRIPE_SECRET_KEY;
-    var stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" }) : null;
+    var stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" as any }) : null;
 
     if (!stripe) {
       return res.status(503).json({ 

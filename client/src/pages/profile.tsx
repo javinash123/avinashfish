@@ -27,6 +27,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Competition, CompetitionParticipant, UserGalleryPhoto } from "@shared/schema";
 import { EditProfileDialog } from "@/components/edit-profile-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
 
@@ -766,72 +767,48 @@ export default function Profile() {
           <TabsContent value="history" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Competition History</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  Competition History
+                </CardTitle>
                 <CardDescription>
-                  Completed competitions
+                  Past and upcoming competitions
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {participationsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
                   </div>
-                ) : participations.filter(p => getCompetitionStatus(p.competition) === "completed").length === 0 ? (
-                  <div className="text-center py-8">
-                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      No competition history yet
-                    </p>
-                    {isOwnProfile && (
-                      <Link href="/competitions">
-                        <Button data-testid="button-browse-competitions">
-                          Browse Competitions
-                        </Button>
+                ) : participations.length > 0 ? (
+                  <div className="space-y-4">
+                    {participations.map((p) => (
+                      <Link key={p.id} href={`/competition/${p.competitionId}`}>
+                        <div className="flex items-center justify-between p-4 border rounded-lg hover-elevate cursor-pointer">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+                              {p.competition.name[0]}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold">{p.competition.name}</h4>
+                              <p className="text-sm text-muted-foreground">{p.competition.date}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">Peg {p.pegNumber}</Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {getCompetitionStatus(p.competition)}
+                            </p>
+                          </div>
+                        </div>
                       </Link>
-                    )}
+                    ))}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {participations.filter(p => getCompetitionStatus(p.competition) === "completed").map((participation) => (
-                      <Card key={participation.id} className="hover-elevate" data-testid={`card-participation-${participation.id}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold">{participation.competition.name}</h3>
-                                <Badge variant="secondary">
-                                  {getCompetitionStatus(participation.competition)}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    timeZone: 'Europe/London'
-                                  })}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{participation.competition.venue}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Target className="h-3 w-3" />
-                                  <span>Peg {participation.pegNumber}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <Link href={`/competition/${participation.competition.id}`}>
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </Link>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="text-center py-8 text-muted-foreground">
+                    No competitions joined yet.
                   </div>
                 )}
               </CardContent>

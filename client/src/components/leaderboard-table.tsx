@@ -60,9 +60,9 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
   
   // Get all unique team IDs from entries
-  const teamIds = [...new Set(entries
+  const teamIds = Array.from(new Set(entries
     .filter(e => e.isTeam && e.teamId)
-    .map(e => e.teamId as string))];
+    .map(e => e.teamId as string)));
   
   // Fetch all team details for displaying member avatars
   const { data: allTeamsData } = useQuery<TeamDetailsType[]>({
@@ -174,9 +174,9 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                           if (team && team.members) {
                             return team.members.slice(0, 4).map((member, idx) => (
                               <Avatar key={member.userId} className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-background" style={{ zIndex: 4 - idx }}>
-                                <AvatarImage src={member.avatar} className="object-cover" />
+                                <AvatarImage src={member.avatar || undefined} className="object-cover" />
                                 <AvatarFallback className="text-[10px] sm:text-xs">
-                                  {member.name.split(" ").map((n) => n[0]).join("")}
+                                  {member.name ? member.name.split(" ").map((n) => n[0]).join("") : "?"}
                                 </AvatarFallback>
                               </Avatar>
                             ));
