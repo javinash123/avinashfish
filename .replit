@@ -28,7 +28,23 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
+args = "Mobile App Preview"
+
+[[workflows.workflow.tasks]]
+task = "workflow.run"
 args = "Mobile App Preview Build"
+
+[[workflows.workflow]]
+name = "Mobile App Preview"
+author = "agent"
+
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "node PegSlamMobile/start-web.js"
+waitForPort = 5000
+
+[workflows.workflow.metadata]
+outputType = "webview"
 
 [[workflows.workflow]]
 name = "Mobile App Preview Build"
@@ -36,7 +52,7 @@ author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && npm run web:export && npm run web:server"
+args = "cd PegSlamMobile && npm run web:export && npx http-server dist -p 5000 -c-1 -g"
 waitForPort = 5000
 
 [workflows.workflow.metadata]

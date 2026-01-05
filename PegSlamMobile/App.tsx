@@ -615,8 +615,13 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout, acti
 // Competition Card - Redesigned for better mobile UX
 function CompetitionCard({ item, onViewDetails }: any) {
   const getImageUrl = () => {
-    const url = item.imageUrl;
-    if (!url) return null;
+    // Original images are preferred over thumbnails for detail view
+    const rawUrl = item.imageUrl || item.image || item.thumbnailUrl;
+    if (!rawUrl) return null;
+    
+    // Strip optimization suffixes to get original high-res image
+    const url = rawUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+    
     return url.startsWith('http') ? url : `${API_URL}${url}`;
   };
 
@@ -1002,8 +1007,75 @@ function LeaderboardPage({ competitions, onTeamClick, onAnglerClick }: any) {
   );
 }
 
-// Competition Details Page
-function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLogin }: any) {
+// News Card Component
+function NewsCard({ item, onPress }: any) {
+  const getImageUrl = () => {
+    // Current news data uses 'image' or 'imageUrl'
+    let url = item.image || item.imageUrl;
+    if (!url) return null;
+    
+    // Strip optimization suffixes to get original high-res image
+    const cleanUrl = url.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+    
+    return cleanUrl.startsWith('http') ? cleanUrl : `${API_URL}${cleanUrl}`;
+  };
+
+  const imageUrl = getImageUrl();
+  
+  return (
+    <TouchableOpacity 
+      style={styles.newsCard} 
+      onPress={() => onPress(item)}
+      activeOpacity={0.7}
+    >
+      {imageUrl ? (
+        <Image 
+          source={{ uri: imageUrl }} 
+          style={styles.newsImage} 
+          resizeMode="cover"
+          onError={(e) => console.log('News image load error:', e.nativeEvent.error)}
+        />
+      ) : (
+        <View style={[styles.newsImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
+          <Text style={{ color: '#444' }}>No Image</Text>
+        </View>
+      )}
+      <View style={styles.newsContent}>
+        <View style={styles.newsCategoryBadge}>
+          <Text style={styles.newsCategoryText}>{(item.category || 'News').toUpperCase()}</Text>
+        </View>
+        <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+        <Text style={styles.newsExcerpt} numberOfLines={2}>{stripHtml(item.excerpt || '')}</Text>
+        <View style={styles.newsFooter}>
+          <Text style={styles.newsDate}>{item.date || 'Today'}</Text>
+          <Text style={styles.newsReadMore}>Read More →</Text>
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
+}
+
+// Gallery Item Component for Featured Home Section
+function GalleryItem({ item, onPress }: any) {
+  // Gallery items have urls array, use first URL
+  const firstUrl = item.urls && item.urls.length > 0 ? item.urls[0] : null;
+  if (!firstUrl) return null;
+  
+  // Strip optimization suffixes to get original high-res image
+  const cleanUrl = firstUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+  const imgUrl = cleanUrl.startsWith('http') ? cleanUrl : `${API_URL}${cleanUrl}`;
+
+  return (
+    <TouchableOpacity style={styles.galleryItem} onPress={() => onPress(item)}>
+      <Image
+        source={{ uri: imgUrl }}
+        style={styles.galleryImage}
+        resizeMode="cover"
+        onError={(e) => console.log('Gallery image error:', imgUrl, e.nativeEvent.error)}
+      />
+    </TouchableOpacity>
+  );
+}
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('participants');
@@ -1030,8 +1102,12 @@ function CompetitionDetailsPage({ competition, onClose, onTeamClick, user, onLog
   const isPaidCompetition = entryFee > 0;
 
   const getImageUrl = () => {
-    const url = competition.imageUrl;
-    if (!url) return null;
+    const rawUrl = competition.imageUrl;
+    if (!rawUrl) return null;
+    
+    // Strip optimization suffixes to get original high-res image
+    const url = rawUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+    
     return url.startsWith('http') ? url : `${API_URL}${url}`;
   };
 
@@ -2046,7 +2122,11 @@ function NewsDetailPage({ article, onClose }: any) {
   };
 
   const currentArticle = fullArticle || article;
-  const imageUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
+  const rawImageUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
+  
+  // Strip optimization suffixes to get original high-res image
+  const imageUrl = rawImageUrl ? rawImageUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
+  
   const fullImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`) : null;
 
   return (
@@ -2203,6 +2283,10 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
   };
 
   const currentUrl = image.urls[currentImageIndex] ? (image.urls[currentImageIndex].startsWith('http') ? image.urls[currentImageIndex] : `${API_URL}${image.urls[currentImageIndex]}`) : null;
+  
+  // If the URL contains thumbnail or optimization markers, we try to recover the original path
+  const originalUrl = currentUrl ? currentUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
+  const displayUrl = originalUrl || currentUrl;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2215,10 +2299,10 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
       </View>
 
       <ScrollView style={styles.detailsContent} showsVerticalScrollIndicator={false}>
-        {currentUrl ? (
+        {displayUrl ? (
           <View style={{ position: 'relative' }}>
             <Image
-              source={{ uri: currentUrl }}
+              source={{ uri: displayUrl }}
               style={styles.detailsImage}
               resizeMode="contain"
             />
@@ -2284,16 +2368,20 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
 function NewsCard({ item, onPress }: any) {
   const getImageUrl = () => {
     // Try to extract image URL from content HTML or use imageUrl field
-    const url = item.imageUrl || item.featuredImage || item.image;
+    const url = item.imageUrl || item.featuredImage || item.image || item.thumbnailUrl;
     if (!url) {
       // Try to extract first image from content if no featured image
       const contentImages = extractImagesFromHtml(item.content || item.description || '');
-      if (contentImages.length > 0) return contentImages[0];
+      if (contentImages.length > 0) {
+        const firstContentUrl = contentImages[0];
+        return firstContentUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+      }
       
       console.log('News item missing image:', { title: item.title, fields: Object.keys(item).slice(0, 10) });
       return null;
     }
-    return url.startsWith('http') ? url : `${API_URL}${url}`;
+    const absoluteUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+    return absoluteUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
   };
 
   const imageUrl = getImageUrl();
@@ -4858,24 +4946,12 @@ export default function App() {
                 <Text style={styles.sectionTitle}>Featured Gallery</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
                   <View style={{ paddingHorizontal: 16, flexDirection: 'row' }}>
-                    {gallery.slice(0, 4).map((img: any, idx: number) => {
-                      // Gallery items have urls array, use first URL
-                      const firstUrl = img.urls && img.urls.length > 0 ? img.urls[0] : null;
-                      const imgUrl = firstUrl ? (firstUrl.startsWith('http') ? firstUrl : `${API_URL}${firstUrl}`) : null;
-                      
-                      console.log(`Gallery ${idx}:`, { title: img.title, firstUrl, imgUrl });
-                      
-                      return imgUrl ? (
-                        <View key={idx} style={styles.galleryItem}>
-                          <Image
-                            source={{ uri: imgUrl }}
-                            style={styles.galleryImage}
-                            resizeMode="cover"
-                            onError={(e) => console.log('Gallery image error:', imgUrl, e.nativeEvent.error)}
-                          />
-                        </View>
-                      ) : null;
-                    })}
+                    {gallery.slice(0, 4).map((img: any, idx: number) => (
+                      <GalleryItem key={idx} item={img} onPress={(item: any) => {
+                        setSelectedGalleryImage(item);
+                        setCurrentGalleryImageIndex(0);
+                      }} />
+                    ))}
                   </View>
                 </ScrollView>
               </View>
@@ -5166,7 +5242,13 @@ export default function App() {
                   >
                     <View style={styles.galleryCardImageContainer}>
                       <Image 
-                        source={{ uri: item.urls && item.urls[0] ? (item.urls[0].startsWith('http') ? item.urls[0] : `${API_URL}${item.urls[0]}`) : 'https://via.placeholder.com/300x225' }} 
+                        source={{ 
+                          uri: item.urls && item.urls[0] 
+                            ? (item.urls[0].replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '').startsWith('http') 
+                                ? item.urls[0].replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') 
+                                : `${API_URL}${item.urls[0].replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '')}`) 
+                            : 'https://via.placeholder.com/300x225' 
+                        }} 
                         style={styles.galleryCardImage} 
                         resizeMode="cover" 
                       />
