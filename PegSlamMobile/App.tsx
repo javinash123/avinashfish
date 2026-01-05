@@ -2617,7 +2617,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
           <View style={styles.statsContainer}>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Total Matches</Text>
-              <Text style={styles.statValue}>{participations.length}</Text>
+              <Text style={styles.statValue}>{stats.totalCompetitions || participations.length}</Text>
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Wins</Text>
@@ -2630,11 +2630,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Avg Rank</Text>
-              <Text style={styles.statValue}>{stats.averageRank || '-'}</Text>
-            </View>
-            <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Total Weight</Text>
-              <Text style={styles.statValue}>{stats.totalWeight || '-'}</Text>
+              <Text style={styles.statValue}>{stats.averageRank || stats.avgRank || '-'}</Text>
             </View>
           </View>
         ) : null}
@@ -2728,19 +2724,25 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                   <TouchableOpacity 
                     key={p.id} 
                     style={styles.competitionRow}
-                    onPress={() => setSelectedCompetition(p.competition)}
+                    onPress={() => {
+                      if (p.competition) {
+                        setSelectedCompetition(p.competition);
+                      }
+                    }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
-                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View →</Text>
+                      <Text style={[styles.competitionName, { color: '#1B7342', textDecorationLine: 'underline' }]}>
+                        {p.competition?.name || 'Unknown Competition'}
+                      </Text>
+                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View Details →</Text>
                     </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                    {p.totalWeight && (
+                    {(p.totalWeight || p.weight) ? (
                       <Text style={[styles.competitionDetail, { color: '#1B7342', fontWeight: 'bold', marginTop: 4 }]}>
-                        Result: {p.totalWeight} {p.position ? `(${p.position}${p.position === 1 ? 'st' : p.position === 2 ? 'nd' : p.position === 3 ? 'rd' : 'th'} Place)` : ''}
+                        Result: {p.totalWeight || p.weight} { (p.position || p.rank) ? `(${p.position || p.rank}${(p.position || p.rank) === 1 ? 'st' : (p.position || p.rank) === 2 ? 'nd' : (p.position || p.rank) === 3 ? 'rd' : 'th'} Place)` : ''}
                       </Text>
-                    )}
+                    ) : null}
                   </TouchableOpacity>
                 ))
               )}
@@ -2776,7 +2778,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.tabTitle}>{angler.firstName}'s Gallery</Text>
               
               {/* Upload Photo Form - Restricted to profile owner */}
-              {currentUser && currentUser.username === angler.username && (
+              {currentUser && currentUser.username === angler.username ? (
                 <View style={styles.galleryUploadSection}>
                   <TouchableOpacity style={styles.galleryUploadButton} onPress={async () => {
                     try {
@@ -2844,7 +2846,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                     </View>
                   )}
                 </View>
-              )}
+              ) : null}
 
               {galleryLoading && !galleryForm.photoUri ? (
                 <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 20 }} />
@@ -4059,19 +4061,25 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                   <TouchableOpacity 
                     key={p.id} 
                     style={styles.competitionRow}
-                    onPress={() => setSelectedCompetition(p.competition)}
+                    onPress={() => {
+                      if (p.competition) {
+                        setSelectedCompetition(p.competition);
+                      }
+                    }}
                   >
                     <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
-                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
-                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View →</Text>
+                      <Text style={[styles.competitionName, { color: '#1B7342', textDecorationLine: 'underline' }]}>
+                        {p.competition?.name || 'Unknown Competition'}
+                      </Text>
+                      <Text style={{ color: '#1B7342', fontSize: 12 }}>View Details →</Text>
                     </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                    {p.totalWeight && (
+                    {(p.totalWeight || p.weight) ? (
                       <Text style={[styles.competitionDetail, { color: '#1B7342', fontWeight: 'bold', marginTop: 4 }]}>
-                        Result: {p.totalWeight} {p.position ? `(${p.position}${p.position === 1 ? 'st' : p.position === 2 ? 'nd' : p.position === 3 ? 'rd' : 'th'} Place)` : ''}
+                        Result: {p.totalWeight || p.weight} { (p.position || p.rank) ? `(${p.position || p.rank}${(p.position || p.rank) === 1 ? 'st' : (p.position || p.rank) === 2 ? 'nd' : (p.position || p.rank) === 3 ? 'rd' : 'th'} Place)` : ''}
                       </Text>
-                    )}
+                    ) : null}
                   </TouchableOpacity>
                 ))
               )}
