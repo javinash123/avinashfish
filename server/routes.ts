@@ -1,3 +1,4 @@
+import { formatWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
@@ -1351,23 +1352,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight)
+      // Calculate best catch (highest weight in ounces)
       const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
+        .map(entry => {
+          const w = parseFloat(entry.weight);
+          return isNaN(w) ? 0 : w;
+        })
+        .filter(weight => weight > 0);
       
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
+      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
+      const averageWeightOz = weights.length > 0 
         ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
         : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
 
       res.json({
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
+        averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
+        totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
         totalCompetitions: leaderboardEntries.length,
       });
     } catch (error: any) {
@@ -1464,23 +1471,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight)
+      // Calculate best catch (highest weight in ounces)
       const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
+        .map(entry => {
+          const w = parseFloat(entry.weight);
+          return isNaN(w) ? 0 : w;
+        })
+        .filter(weight => weight > 0);
       
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
+      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
+      const averageWeightOz = weights.length > 0 
         ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
         : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
 
       res.json({
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
+        averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
+        totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
         totalCompetitions: leaderboardEntries.length,
       });
     } catch (error: any) {
@@ -1734,24 +1747,31 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight)
+      // Calculate best catch (highest weight in ounces)
       const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
+        .map(entry => {
+          const w = parseFloat(entry.weight);
+          return isNaN(w) ? 0 : w;
+        })
+        .filter(weight => weight > 0);
       
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
+      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
+      const averageWeightOz = weights.length > 0 
         ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
         : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
 
       res.json({
         totalMatches: participations.length,
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        avgWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
+        avgWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
+        averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
+        totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
       });
     } catch (error: any) {
       console.error("Error fetching angler stats:", error);

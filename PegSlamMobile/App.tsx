@@ -2423,16 +2423,19 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
       console.log('Fetched stats for', angler.username, ':', data);
       
       // Calculate formatted values from raw data
-      // Use potential field names from API: bestCatchWeight, bestCatch, averageWeight, avgWeight
-      const bestCatchOz = data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
-                         (data.bestCatch !== undefined ? data.bestCatch : 0);
-      const avgWeightOz = data.averageWeight !== undefined ? data.averageWeight : 
-                         (data.avgWeight !== undefined ? data.avgWeight : 0);
+      // Use potential field names from API: bestCatchOz, bestCatch, averageWeightOz, averageWeight, avgWeight
+      const bestCatchOz = data.bestCatchOz !== undefined ? data.bestCatchOz : 
+                         (data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
+                         (data.bestCatch !== undefined && typeof data.bestCatch === 'number' ? data.bestCatch : 0));
+      
+      const avgWeightOz = data.averageWeightOz !== undefined ? data.averageWeightOz :
+                         (data.averageWeight !== undefined && typeof data.averageWeight === 'number' ? data.averageWeight :
+                         (data.avgWeight !== undefined && typeof data.avgWeight === 'number' ? data.avgWeight : 0));
       
       setStats({
         ...data,
-        bestCatchFormatted: formatWeight(Number(bestCatchOz)),
-        averageWeightFormatted: formatWeight(Number(avgWeightOz))
+        bestCatch: data.bestCatch || '-',
+        averageWeight: data.averageWeight || data.avgWeight || '-'
       });
       setStatsLoading(false);
     } catch (error) {
@@ -2652,7 +2655,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Avg Weight</Text>
-              <Text style={styles.statValue}>{stats.averageWeightFormatted || stats.averageWeight || '-'}</Text>
+              <Text style={styles.statValue}>{stats.averageWeightFormatted || stats.averageWeight || stats.avgWeight || '-'}</Text>
             </View>
           </View>
         ) : null}
