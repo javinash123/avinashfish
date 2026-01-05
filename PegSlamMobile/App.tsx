@@ -51,10 +51,51 @@ if (isWeb) {
 
 // Utility to format weight in UK system (lb oz)
 const formatWeight = (totalOunces: number) => {
-  if (!totalOunces || isNaN(totalOunces)) return '0 lb 0 oz';
+  if (totalOunces <= 0 || isNaN(totalOunces)) return '0 lb 0 oz';
   const lbs = Math.floor(totalOunces / 16);
   const oz = Math.round(totalOunces % 16);
   return `${lbs} lb ${oz} oz`;
+};
+
+// Utility to parse weight string or number into ounces
+const parseWeight = (weight: any): number => {
+  if (typeof weight === 'number') return weight;
+  if (!weight) return 0;
+  
+  const weightStr = String(weight).toLowerCase();
+  
+  // Handle "X lb Y oz" format
+  const lbOzMatch = weightStr.match(/(\d+)\s*lb\s*(\d+)\s*oz/i);
+  if (lbOzMatch) {
+    const pounds = parseInt(lbOzMatch[1], 10);
+    const ounces = parseInt(lbOzMatch[2], 10);
+    return (pounds * 16) + ounces;
+  }
+  
+  // Handle decimal pounds format like "15.1875 lbs"
+  if (weightStr.includes('.') && (weightStr.includes('lb'))) {
+    const numericValue = parseFloat(weightStr.replace(/[^\d.-]/g, ''));
+    if (!isNaN(numericValue)) {
+      // If the value is large (like 243.00), it's total ounces
+      // If it's small (like 15.18), it's decimal pounds
+      if (numericValue > 50) {
+        return Math.round(numericValue);
+      } else {
+        return Math.round(numericValue * 16);
+      }
+    }
+  }
+
+  // Extract number from "X.XX lbs" or similar
+  const numbers = weightStr.match(/[\d.]+/g);
+  if (numbers && numbers.length > 0) {
+    const val = parseFloat(numbers[0]);
+    if (!isNaN(val)) {
+      return Math.round(val);
+    }
+  }
+  
+  return 0;
 };
 
 // Utility to strip HTML tags
@@ -2432,10 +2473,24 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                          (data.averageWeight !== undefined && typeof data.averageWeight === 'number' ? data.averageWeight :
                          (data.avgWeight !== undefined && typeof data.avgWeight === 'number' ? data.avgWeight : 0));
       
+      console.log('Mobile Stats Parsing:', { bestCatchOz, avgWeightOz, rawBest: data.bestCatch, rawAvg: data.averageWeight });
+
+      // FORCE PARSING OF STRINGS LIKE "243.00 lbs"
+      const bestCatchParsed = parseWeight(data.bestCatch);
+      const avgWeightParsed = parseWeight(data.averageWeight || data.avgWeight);
+
+      const finalBestCatch = bestCatchOz > 0 ? formatWeight(bestCatchOz) : 
+                            (bestCatchParsed > 0 ? formatWeight(bestCatchParsed) : 
+                            (typeof data.bestCatch === 'string' && data.bestCatch.includes('lb') ? data.bestCatch : '-'));
+      
+      const finalAverageWeight = avgWeightOz > 0 ? formatWeight(avgWeightOz) : 
+                                (avgWeightParsed > 0 ? formatWeight(avgWeightParsed) : 
+                                (typeof data.averageWeight === 'string' && data.averageWeight.includes('lb') ? data.averageWeight : '-'));
+
       setStats({
         ...data,
-        bestCatch: data.bestCatch || '-',
-        averageWeight: data.averageWeight || data.avgWeight || '-'
+        bestCatch: finalBestCatch,
+        averageWeight: finalAverageWeight
       });
       setStatsLoading(false);
     } catch (error) {
@@ -3598,7 +3653,31 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       setStatsLoading(true);
       const res = await apiClient.get('/api/user/stats');
       if (res.data) {
-        setStats(res.data);
+        const data = res.data;
+        const bestCatchOz = data.bestCatchOz !== undefined ? data.bestCatchOz : 
+                           (data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
+                           (data.bestCatch !== undefined && typeof data.bestCatch === 'number' ? data.bestCatch : 0));
+        
+        const avgWeightOz = data.averageWeightOz !== undefined ? data.averageWeightOz :
+                           (data.averageWeight !== undefined && typeof data.averageWeight === 'number' ? data.averageWeight :
+                           (data.avgWeight !== undefined && typeof data.avgWeight === 'number' ? data.avgWeight : 0));
+
+        const bestCatchParsed = parseWeight(data.bestCatch);
+        const avgWeightParsed = parseWeight(data.averageWeight);
+
+        const finalBestCatch = bestCatchOz > 0 ? formatWeight(bestCatchOz) : 
+                              (bestCatchParsed > 0 ? formatWeight(bestCatchParsed) : 
+                              (typeof data.bestCatch === 'string' && data.bestCatch.includes('lb') ? data.bestCatch : '-'));
+        
+        const finalAverageWeight = avgWeightOz > 0 ? formatWeight(avgWeightOz) : 
+                                  (avgWeightParsed > 0 ? formatWeight(avgWeightParsed) : 
+                                  (typeof data.averageWeight === 'string' && data.averageWeight.includes('lb') ? data.averageWeight : '-'));
+
+        setStats({
+          ...data,
+          bestCatch: finalBestCatch,
+          averageWeight: finalAverageWeight
+        });
         console.log('Successfully fetched stats from /api/user/stats');
         setStatsLoading(false);
         return;
@@ -3610,7 +3689,31 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
     try {
       const res = await apiClient.get(`/api/users/${user.username}/stats`);
       if (res.data) {
-        setStats(res.data);
+        const data = res.data;
+        const bestCatchOz = data.bestCatchOz !== undefined ? data.bestCatchOz : 
+                           (data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
+                           (data.bestCatch !== undefined && typeof data.bestCatch === 'number' ? data.bestCatch : 0));
+        
+        const avgWeightOz = data.averageWeightOz !== undefined ? data.averageWeightOz :
+                           (data.averageWeight !== undefined && typeof data.averageWeight === 'number' ? data.averageWeight :
+                           (data.avgWeight !== undefined && typeof data.avgWeight === 'number' ? data.avgWeight : 0));
+
+        const bestCatchParsed = parseWeight(data.bestCatch);
+        const avgWeightParsed = parseWeight(data.averageWeight);
+
+        const finalBestCatch = bestCatchOz > 0 ? formatWeight(bestCatchOz) : 
+                              (bestCatchParsed > 0 ? formatWeight(bestCatchParsed) : 
+                              (typeof data.bestCatch === 'string' && data.bestCatch.includes('lb') ? data.bestCatch : '-'));
+        
+        const finalAverageWeight = avgWeightOz > 0 ? formatWeight(avgWeightOz) : 
+                                  (avgWeightParsed > 0 ? formatWeight(avgWeightParsed) : 
+                                  (typeof data.averageWeight === 'string' && data.averageWeight.includes('lb') ? data.averageWeight : '-'));
+
+        setStats({
+          ...data,
+          bestCatch: finalBestCatch,
+          averageWeight: finalAverageWeight
+        });
         console.log(`Successfully fetched stats from /api/users/${user.username}/stats`);
       } else {
         setStats({ totalMatches: 0, wins: 0, bestCatch: '-', averageWeight: '-' });
