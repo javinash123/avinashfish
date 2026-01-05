@@ -49,6 +49,14 @@ if (isWeb) {
   });
 }
 
+// Utility to format weight in UK system (lb oz)
+const formatWeight = (totalOunces: number) => {
+  if (!totalOunces || isNaN(totalOunces)) return '0 lb 0 oz';
+  const lbs = Math.floor(totalOunces / 16);
+  const oz = Math.round(totalOunces % 16);
+  return `${lbs} lb ${oz} oz`;
+};
+
 // Utility to strip HTML tags
 const stripHtml = (html: string) => {
   if (!html) return '';
@@ -2411,7 +2419,21 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
     try {
       setStatsLoading(true);
       const response = await apiClient.get(`/api/users/${angler.username}/stats`);
-      setStats(response.data);
+      const data = response.data;
+      console.log('Fetched stats for', angler.username, ':', data);
+      
+      // Calculate formatted values from raw data
+      // Use potential field names from API: bestCatchWeight, bestCatch, averageWeight, avgWeight
+      const bestCatchOz = data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
+                         (data.bestCatch !== undefined ? data.bestCatch : 0);
+      const avgWeightOz = data.averageWeight !== undefined ? data.averageWeight : 
+                         (data.avgWeight !== undefined ? data.avgWeight : 0);
+      
+      setStats({
+        ...data,
+        bestCatchFormatted: formatWeight(Number(bestCatchOz)),
+        averageWeightFormatted: formatWeight(Number(avgWeightOz))
+      });
       setStatsLoading(false);
     } catch (error) {
       console.error('Error fetching stats:', error);
@@ -2626,11 +2648,11 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
             </View>
             <View style={styles.statCard}>
               <Text style={styles.statLabel}>Best Catch</Text>
-              <Text style={styles.statValue}>{stats.bestCatch || '-'}</Text>
+              <Text style={styles.statValue}>{stats.bestCatchFormatted || stats.bestCatch || '-'}</Text>
             </View>
             <View style={styles.statCard}>
-              <Text style={styles.statLabel}>Avg Rank</Text>
-              <Text style={styles.statValue}>{stats.averageRank || stats.avgRank || '-'}</Text>
+              <Text style={styles.statLabel}>Avg Weight</Text>
+              <Text style={styles.statValue}>{stats.averageWeightFormatted || stats.averageWeight || '-'}</Text>
             </View>
           </View>
         ) : null}
