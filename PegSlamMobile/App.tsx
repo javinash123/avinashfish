@@ -101,7 +101,27 @@ const parseWeight = (weight: any): number => {
 // Utility to strip HTML tags
 const stripHtml = (html: string) => {
   if (!html) return '';
-  return html.replace(/<[^>]*>/g, '').trim();
+  return html.replace(/<[^>]*>/g, '').replace(/&nbsp;/g, ' ').replace(/&amp;/g, '&').replace(/&quot;/g, '"').replace(/&apos;/g, "'").replace(/&lt;/g, '<').replace(/&gt;/g, '>').trim();
+};
+
+/**
+ * Extracts image URLs from an HTML string
+ * @param html The HTML content to parse
+ * @returns Array of absolute image URLs
+ */
+const extractImagesFromHtml = (html: string) => {
+  if (!html) return [];
+  const imgRegex = /<img[^>]+src="([^">]+)"/g;
+  const urls: string[] = [];
+  let match;
+  while ((match = imgRegex.exec(html)) !== null) {
+    let url = match[1];
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    if (url) urls.push(url);
+  }
+  return urls;
 };
 
 // Sponsor tier display helper
@@ -2080,18 +2100,44 @@ function NewsDetailPage({ article, onClose }: any) {
               <View style={{ marginBottom: 20 }}>
                 {currentArticle.content ? (
                   currentArticle.content.split(/<\/p>|<br\s*\/?>/).map((paragraph: string, index: number) => {
+                    // Extract images from this specific paragraph block
+                    const paragraphImages = extractImagesFromHtml(paragraph);
                     const text = stripHtml(paragraph);
-                    if (!text) return null;
+                    
+                    if (!text && paragraphImages.length === 0) return null;
+                    
                     return (
-                      <Text key={index} style={[styles.detailsDescription, { marginBottom: 12 }]}>
-                        {text}
-                      </Text>
+                      <View key={index} style={{ marginBottom: 12 }}>
+                        {text ? (
+                          <Text style={[styles.detailsDescription, { marginBottom: paragraphImages.length > 0 ? 12 : 0 }]}>
+                            {text}
+                          </Text>
+                        ) : null}
+                        {paragraphImages.map((imgUrl, imgIdx) => (
+                          <Image 
+                            key={`${index}-img-${imgIdx}`}
+                            source={{ uri: imgUrl }}
+                            style={[styles.detailsImage, { height: 200, marginBottom: 12 }]}
+                            resizeMode="contain"
+                          />
+                        ))}
+                      </View>
                     );
                   })
                 ) : (
-                  <Text style={styles.detailsDescription}>
-                    {stripHtml(currentArticle.description || '')}
-                  </Text>
+                  <View>
+                    <Text style={styles.detailsDescription}>
+                      {stripHtml(currentArticle.description || '')}
+                    </Text>
+                    {extractImagesFromHtml(currentArticle.description || '').map((imgUrl, imgIdx) => (
+                      <Image 
+                        key={`desc-img-${imgIdx}`}
+                        source={{ uri: imgUrl }}
+                        style={[styles.detailsImage, { height: 200, marginTop: 12 }]}
+                        resizeMode="contain"
+                      />
+                    ))}
+                  </View>
                 )}
               </View>
 
@@ -2240,6 +2286,10 @@ function NewsCard({ item, onPress }: any) {
     // Try to extract image URL from content HTML or use imageUrl field
     const url = item.imageUrl || item.featuredImage || item.image;
     if (!url) {
+      // Try to extract first image from content if no featured image
+      const contentImages = extractImagesFromHtml(item.content || item.description || '');
+      if (contentImages.length > 0) return contentImages[0];
+      
       console.log('News item missing image:', { title: item.title, fields: Object.keys(item).slice(0, 10) });
       return null;
     }
