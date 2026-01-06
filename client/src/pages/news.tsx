@@ -27,6 +27,14 @@ interface NewsSummary {
   featured?: boolean;
 }
 
+const getNewsImageUrl = (imagePath: string) => {
+  if (!imagePath) return "/attached-assets/placeholder-news.jpg";
+  if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
+    return imagePath;
+  }
+  return `/attached-assets/uploads/news/${imagePath}`;
+};
+
 interface PaginatedNewsResponse {
   news: NewsSummary[];
   pagination: {
@@ -223,7 +231,7 @@ export default function NewsPage() {
                   <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
                     <div className="relative w-full h-48 overflow-hidden bg-muted">
                       <img
-                        src={article.image}
+                        src={getNewsImageUrl(article.image)}
                         alt={article.title}
                         className="w-full h-full object-cover"
                         loading="eager"
@@ -338,7 +346,7 @@ export default function NewsPage() {
                 <div className="space-y-4">
                   <div className="relative w-full h-64 overflow-hidden rounded-md bg-muted">
                     <img
-                      src={fullArticle.image}
+                      src={getNewsImageUrl(fullArticle.image)}
                       alt={fullArticle.title}
                       className="w-full h-full object-cover"
                       loading="eager"

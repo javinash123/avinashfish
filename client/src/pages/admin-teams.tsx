@@ -238,6 +238,7 @@ export default function AdminTeams() {
 
   const updateTeamMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      console.log('Updating team:', id, data);
       const response = await apiRequest("PATCH", `/api/admin/teams/${id}`, data);
       return response.json();
     },
@@ -352,7 +353,7 @@ export default function AdminTeams() {
         competitionId: selectedCompetitionId,
         name: newTeamName.trim(),
         captainUserId: selectedCaptainId || undefined,
-        image: imageUrl || null,
+        image: imageUrl || undefined,
       });
     } catch (error: any) {
       toast({
@@ -492,10 +493,12 @@ export default function AdminTeams() {
                     <CardHeader className="pb-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                          <Avatar className="h-10 w-10">
-                            {team.image ? (
-                              <AvatarImage src={team.image} alt={team.name} />
-                            ) : null}
+                          <Avatar className="h-10 w-10 shrink-0">
+                            <AvatarImage 
+                              src={team.image || undefined} 
+                              alt={team.name} 
+                              className="object-cover"
+                            />
                             <AvatarFallback>
                               <Users className="h-5 w-5 text-muted-foreground" />
                             </AvatarFallback>
@@ -603,7 +606,7 @@ export default function AdminTeams() {
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <Avatar className="h-8 w-8">
-                                      <AvatarImage src={member.avatar || undefined} />
+                                      <AvatarImage src={member.avatar || undefined} className="object-cover" />
                                       <AvatarFallback>
                                         {member.name.split(" ").map(n => n[0]).join("")}
                                       </AvatarFallback>
@@ -765,7 +768,10 @@ export default function AdminTeams() {
           <div className="space-y-4 py-4">
             <div className="flex flex-col items-center gap-4">
               <Avatar className="h-20 w-20">
-                <AvatarImage src={editTeamImage ? URL.createObjectURL(editTeamImage) : (selectedTeam?.image || undefined)} />
+                <AvatarImage 
+                  src={editTeamImage ? URL.createObjectURL(editTeamImage) : (selectedTeam?.image || undefined)} 
+                  className="object-cover"
+                />
                 <AvatarFallback>
                   <Users className="h-10 w-10 text-muted-foreground" />
                 </AvatarFallback>

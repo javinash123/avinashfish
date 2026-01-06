@@ -22,6 +22,14 @@ import { formatWeight } from "@shared/weight-utils";
 import { updateMetaTags } from "@/lib/meta-tags";
 
 export default function Home() {
+  const getNewsImageUrl = (imagePath: string) => {
+    if (!imagePath) return "/attached-assets/placeholder-news.jpg";
+    if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
+      return imagePath;
+    }
+    return `/attached-assets/uploads/news/${imagePath}`;
+  };
+
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
   });
@@ -212,7 +220,7 @@ export default function Home() {
                   <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
                     <div className="relative w-full h-48 overflow-hidden bg-muted">
                       <img
-                        src={news.image}
+                        src={getNewsImageUrl(news.image)}
                         alt={news.title}
                         className="w-full h-full object-cover"
                       />
@@ -251,7 +259,7 @@ export default function Home() {
                           updateMetaTags({
                             title: news.title,
                             description: news.excerpt,
-                            image: news.image,
+                            image: getNewsImageUrl(news.image),
                             url: articleUrl,
                             type: 'article',
                           });

@@ -63,7 +63,7 @@ export function SponsorLogoSlider() {
               <button
                 key={sponsor.id}
                 onClick={() => handleSponsorClick(sponsor)}
-                className="flex-shrink-0 transition-all duration-300 opacity-100 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md p-2"
+                className="flex-shrink-0 cursor-pointer focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded-md p-2"
                 data-testid={`button-sponsor-logo-${sponsor.id}`}
                 title={`Click to learn more about ${sponsor.name}`}
               >

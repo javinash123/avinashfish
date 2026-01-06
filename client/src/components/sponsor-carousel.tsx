@@ -47,13 +47,17 @@ export function SponsorCarousel({ sponsors }: SponsorCarouselProps) {
         {visibleSponsors.map((sponsor, idx) => (
           <Card
             key={`${sponsor.id}-${idx}`}
-            className="p-6 flex items-center justify-center hover-elevate transition-all"
+            className="p-6 flex items-center justify-center hover-elevate transition-all bg-white"
             data-testid={`card-sponsor-${sponsor.id}`}
           >
             <div className="text-center">
-              <div className="text-2xl font-bold text-muted-foreground">
-                {sponsor.name}
-              </div>
+              {sponsor.logo ? (
+                <img src={sponsor.logo} alt={sponsor.name} className="h-12 w-auto object-contain" />
+              ) : (
+                <div className="text-2xl font-bold text-primary">
+                  {sponsor.name}
+                </div>
+              )}
             </div>
           </Card>
         ))}
