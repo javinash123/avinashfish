@@ -143,7 +143,7 @@ export default function AdminTeams() {
   const selectedCompetition = teamCompetitions.find(c => c.id === selectedCompetitionId);
 
   const createTeamMutation = useMutation({
-    mutationFn: async (data: { competitionId: string; name: string; captainUserId?: string }) => {
+    mutationFn: async (data: { competitionId: string; name: string; captainUserId?: string; image?: string }) => {
       const response = await apiRequest("POST", "/api/admin/teams", data);
       return response.json();
     },
@@ -152,6 +152,7 @@ export default function AdminTeams() {
       setIsCreateTeamOpen(false);
       setNewTeamName("");
       setSelectedCaptainId("");
+      setEditTeamImage(null);
       toast({
         title: "Team created",
         description: "The team has been created successfully.",
@@ -293,8 +294,36 @@ export default function AdminTeams() {
         id: selectedTeam.id,
         data: {
           name: editTeamName.trim(),
-          image: imageUrl,
+          image: imageUrl || null,
         },
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  const handleCreateTeam = async () => {
+    if (!newTeamName.trim() || !selectedCompetitionId) return;
+    
+    try {
+      setUploadingImage(true);
+      let imageUrl = null;
+      
+      if (editTeamImage) {
+        imageUrl = await uploadFile(editTeamImage);
+      }
+
+      createTeamMutation.mutate({
+        competitionId: selectedCompetitionId,
+        name: newTeamName.trim(),
+        captainUserId: selectedCaptainId || undefined,
+        image: imageUrl || null,
       });
     } catch (error: any) {
       toast({
@@ -314,16 +343,6 @@ export default function AdminTeams() {
     toast({
       title: "Invite code copied",
       description: "The invite code has been copied to your clipboard.",
-    });
-  };
-
-  const handleCreateTeam = () => {
-    if (!newTeamName.trim() || !selectedCompetitionId) return;
-    
-    createTeamMutation.mutate({
-      competitionId: selectedCompetitionId,
-      name: newTeamName.trim(),
-      captainUserId: selectedCaptainId || undefined,
     });
   };
 
@@ -444,9 +463,14 @@ export default function AdminTeams() {
                     <CardHeader className="pb-2">
                       <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
                         <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-md bg-primary/10">
-                            <Users className="h-5 w-5 text-primary" />
-                          </div>
+                          <Avatar className="h-10 w-10">
+                            {team.image ? (
+                              <AvatarImage src={team.image} alt={team.name} />
+                            ) : null}
+                            <AvatarFallback>
+                              <Users className="h-5 w-5 text-muted-foreground" />
+                            </AvatarFallback>
+                          </Avatar>
                           <div>
                             <CardTitle className="text-lg" data-testid={`text-team-name-${team.id}`}>
                               {team.name}
@@ -597,6 +621,33 @@ export default function AdminTeams() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={editTeamImage ? URL.createObjectURL(editTeamImage) : undefined} />
+                <AvatarFallback>
+                  <Users className="h-10 w-10 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {uploadingImage ? "Uploading..." : "Upload Team Photo"}
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setEditTeamImage(file);
+                }}
+              />
+            </div>
             <div className="space-y-2">
               <Label htmlFor="teamName">Team Name</Label>
               <Input
@@ -614,25 +665,14 @@ export default function AdminTeams() {
                   <SelectValue placeholder="Select a captain..." />
                 </SelectTrigger>
                 <SelectContent>
-                  <div className="p-2">
-                    <Input
-                      placeholder="Search anglers..."
-                      value={anglerSearch}
-                      onChange={(e) => setAnglerSearch(e.target.value)}
-                      className="mb-2"
-                      data-testid="input-captain-search"
-                    />
-                  </div>
-                  {filteredAnglers.slice(0, 20).map((angler) => (
+                  <SelectItem value="none">No Captain (Manager only)</SelectItem>
+                  {allAnglers.map((angler) => (
                     <SelectItem key={angler.id} value={angler.id}>
                       {angler.firstName} {angler.lastName} (@{angler.username})
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
-              <p className="text-sm text-muted-foreground">
-                If selected, this angler will be added as the team captain
-              </p>
             </div>
           </div>
           <DialogFooter>
@@ -642,20 +682,93 @@ export default function AdminTeams() {
                 setIsCreateTeamOpen(false);
                 setNewTeamName("");
                 setSelectedCaptainId("");
-                setAnglerSearch("");
+                setEditTeamImage(null);
               }}
             >
               Cancel
             </Button>
             <Button
               onClick={handleCreateTeam}
-              disabled={!newTeamName.trim() || createTeamMutation.isPending}
+              disabled={!newTeamName.trim() || createTeamMutation.isPending || uploadingImage}
               data-testid="button-confirm-create-team"
             >
-              {createTeamMutation.isPending && (
+              {(createTeamMutation.isPending || uploadingImage) && (
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
               )}
               Create Team
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEditTeamOpen} onOpenChange={setIsEditTeamOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Edit Team</DialogTitle>
+            <DialogDescription>
+              Update team name and profile image
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="flex flex-col items-center gap-4">
+              <Avatar className="h-20 w-20">
+                <AvatarImage src={editTeamImage ? URL.createObjectURL(editTeamImage) : (selectedTeam?.image || undefined)} />
+                <AvatarFallback>
+                  <Users className="h-10 w-10 text-muted-foreground" />
+                </AvatarFallback>
+              </Avatar>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => fileInputRef.current?.click()}
+                disabled={uploadingImage}
+              >
+                <Upload className="mr-2 h-4 w-4" />
+                {uploadingImage ? "Uploading..." : "Change Team Photo"}
+              </Button>
+              <input
+                type="file"
+                ref={fileInputRef}
+                className="hidden"
+                accept="image/*"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (file) setEditTeamImage(file);
+                }}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="editTeamName">Team Name</Label>
+              <Input
+                id="editTeamName"
+                value={editTeamName}
+                onChange={(e) => setEditTeamName(e.target.value)}
+                placeholder="Enter team name"
+                data-testid="input-edit-team-name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setIsEditTeamOpen(false);
+                setSelectedTeam(null);
+                setEditTeamName("");
+                setEditTeamImage(null);
+              }}
+            >
+              Cancel
+            </Button>
+            <Button
+              onClick={handleUpdateTeam}
+              disabled={!editTeamName.trim() || updateTeamMutation.isPending || uploadingImage}
+              data-testid="button-confirm-edit-team"
+            >
+              {(updateTeamMutation.isPending || uploadingImage) && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Save Changes
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -666,7 +779,7 @@ export default function AdminTeams() {
           <DialogHeader>
             <DialogTitle>Add Member to {selectedTeam?.name}</DialogTitle>
             <DialogDescription>
-              Select an angler to add to this team
+              Search and add an angler to this team
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">

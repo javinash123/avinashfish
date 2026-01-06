@@ -992,11 +992,6 @@ export class MemStorage implements IStorage {
     const sponsor: Sponsor = {
       id,
       ...insertSponsor,
-      social: insertSponsor.social ?? null,
-    };
-    this.sponsors.set(id, sponsor);
-    return sponsor;
-  }
       website: insertSponsor.website ?? null,
       social: insertSponsor.social as { facebook?: string; twitter?: string; instagram?: string; } | null ?? null,
       createdAt: new Date(),
@@ -1359,17 +1354,6 @@ export class MemStorage implements IStorage {
 
     if (existingPegAssignment) {
       throw new Error('Peg is already assigned to another participant');
-    }
-
-    const updatedParticipant: CompetitionParticipant = {
-      ...participant,
-      pegNumber,
-    };
-
-    this.competitionParticipants.set(participantId, updatedParticipant);
-    return updatedParticipant;
-  }
-      throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
     }
 
     const updatedParticipant: CompetitionParticipant = {

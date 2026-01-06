@@ -3526,6 +3526,25 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // Admin: Create a team for a competition
+  app.patch("/api/admin/teams/:id", requireStaffAuth, async (req, res) => {
+    try {
+      const result = updateTeamSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid team update data", errors: result.error.errors });
+      }
+
+      console.log(`[ADMIN] Updating team ${req.params.id}:`, result.data);
+      const updatedTeam = await storage.updateTeam(req.params.id, result.data);
+      if (!updatedTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(updatedTeam);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Failed to update team" });
+    }
+  });
+
   app.post("/api/admin/teams", async (req, res) => {
     try {
       const staffId = req.session?.staffId || req.session?.adminId;
