@@ -2544,6 +2544,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const [videoId, setVideoId] = useState<string | null>(null);
   const [editOpen, setEditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [selectedCompFromProfile, setSelectedCompFromProfile] = useState<any>(null);
   const [editForm, setEditForm] = useState({ firstName: angler.firstName, lastName: angler.lastName, club: angler.club, bio: angler.bio, location: angler.location, favouriteMethod: angler.favouriteMethod, favouriteSpecies: angler.favouriteSpecies, avatar: angler.avatar });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '', showCurrent: false, showNew: false, showConfirm: false });
   const [galleryForm, setGalleryForm] = useState({ photoUri: '', caption: '' });
@@ -2819,6 +2820,27 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
           </View>
         ) : null}
 
+        {/* Selected Competition Modal (within Profile) */}
+        {selectedCompFromProfile && (
+          <CompetitionDetailsPage 
+            competition={selectedCompFromProfile} 
+            onClose={() => setSelectedCompFromProfile(null)}
+            anglers={anglers}
+            onTeamClick={() => {}} // Simple placeholder for profile-nested view
+            user={currentUser}
+            onLogin={() => {}} // Should already be logged in if on profile, but for safety
+            onAnglerClick={(angler: any) => {
+              setSelectedCompFromProfile(null);
+              // Handle navigation to another angler profile if needed
+              if (onClose) {
+                // If we're already in a profile view, we might need a way to push/replace
+                // For now, let's just close current and let parent handle it if possible
+                // Or just show the new angler in-place if we were to lift state
+              }
+            }}
+          />
+        )}
+
         {/* Action Buttons */}
         {currentUser && angler.username === currentUser.username && (
           <View style={{ flexDirection: 'row', gap: 12, marginVertical: 16 }}>
@@ -2856,7 +2878,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               )}
               {angler.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
-                  <Text style={[styles.socialIconButtonText, { color: '#E4405F' }]}></Text>
+                  <Text style={[styles.socialIconButtonText, { color: '#1B7342' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -2910,7 +2932,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                     style={styles.competitionRow}
                     onPress={() => {
                       if (p.competition) {
-                        setSelectedCompetition(p.competition);
+                        setSelectedCompFromProfile(p.competition);
                       }
                     }}
                   >
@@ -4235,7 +4257,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               )}
               {user.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(user.instagramUrl)}>
-                  <Text style={[styles.socialIconButtonText, { color: '#E4405F' }]}></Text>
+                  <Text style={[styles.socialIconButtonText, { color: '#1B7342' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -4295,7 +4317,7 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                     style={styles.competitionRow}
                     onPress={() => {
                       if (p.competition) {
-                        setSelectedCompetition(p.competition);
+                        setSelectedCompFromProfile(p.competition);
                       }
                     }}
                   >
@@ -4841,6 +4863,10 @@ export default function App() {
               onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
               user={currentUser}
               onLogin={() => setShowLoginModal(true)}
+              onAnglerClick={(angler: any) => {
+                setSelectedCompetition(null);
+                setSelectedAngler(angler);
+              }}
             />
       )}
 

@@ -15,6 +15,10 @@ run = ["node", "./dist/index.cjs"]
 localPort = 5000
 externalPort = 80
 
+[[ports]]
+localPort = 8081
+externalPort = 8081
+
 [env]
 PORT = "5000"
 
@@ -32,27 +36,27 @@ args = "Mobile App Preview"
 
 [[workflows.workflow.tasks]]
 task = "workflow.run"
-args = "Mobile App Preview Build"
+args = "Mobile App Preview Server"
 
 [[workflows.workflow]]
 name = "Mobile App Preview"
 author = "agent"
 
-[[workflows.workflow.tasks]]
-task = "shell.exec"
-args = "node PegSlamMobile/start-web.js"
-waitForPort = 5000
-
 [workflows.workflow.metadata]
 outputType = "webview"
 
+[[workflows.workflow.tasks]]
+task = "shell.exec"
+args = "cd PegSlamMobile && npm run web"
+waitForPort = 5000
+
 [[workflows.workflow]]
-name = "Mobile App Preview Build"
+name = "Mobile App Preview Server"
 author = "agent"
 
 [[workflows.workflow.tasks]]
 task = "shell.exec"
-args = "cd PegSlamMobile && npm run web:export && npx http-server dist -p 5000 -c-1 -g"
+args = "cd PegSlamMobile && node start-web.js"
 waitForPort = 5000
 
 [workflows.workflow.metadata]

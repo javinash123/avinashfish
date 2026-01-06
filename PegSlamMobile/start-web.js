@@ -114,7 +114,7 @@ const server = http.createServer((req, res) => {
 });
 
 server.listen(PORT, '0.0.0.0', () => {
-  console.log(`Mobile App Preview running at http://0.0.0.0:${PORT}`);
-  console.log(`Open http://localhost:${PORT} in your browser`);
-  console.log(`\nTo generate web version, run: cd PegSlamMobile && npx expo export --platform web`);
+  console.log('Mobile App Preview running at http://0.0.0.0:' + PORT);
+  console.log('Open http://localhost:' + PORT + ' in your browser');
+  console.log('\nTo generate web version, run: cd PegSlamMobile && npx expo export --platform web');
 });
