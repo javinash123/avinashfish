@@ -240,6 +240,13 @@ export class MemStorage implements IStorage {
         instagramUrl: null,
         tiktokUrl: null,
         status: "active",
+        mobileNumber: null,
+        dateOfBirth: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        emailVerified: true,
         memberSince: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 90 * 24 * 60 * 60 * 1000),
       },
@@ -263,6 +270,13 @@ export class MemStorage implements IStorage {
         instagramUrl: null,
         tiktokUrl: null,
         status: "active",
+        mobileNumber: null,
+        dateOfBirth: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        emailVerified: true,
         memberSince: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 60 * 24 * 60 * 60 * 1000),
       },
@@ -286,6 +300,13 @@ export class MemStorage implements IStorage {
         instagramUrl: null,
         tiktokUrl: null,
         status: "active",
+        mobileNumber: null,
+        dateOfBirth: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        emailVerified: true,
         memberSince: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 30 * 24 * 60 * 60 * 1000),
       },
@@ -309,6 +330,13 @@ export class MemStorage implements IStorage {
         instagramUrl: null,
         tiktokUrl: null,
         status: "active",
+        mobileNumber: null,
+        dateOfBirth: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        emailVerified: true,
         memberSince: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 15 * 24 * 60 * 60 * 1000),
       },
@@ -332,6 +360,13 @@ export class MemStorage implements IStorage {
         instagramUrl: null,
         tiktokUrl: null,
         status: "active",
+        mobileNumber: null,
+        dateOfBirth: null,
+        resetToken: null,
+        resetTokenExpiry: null,
+        verificationToken: null,
+        verificationTokenExpiry: null,
+        emailVerified: true,
         memberSince: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
         createdAt: new Date(Date.now() - 120 * 24 * 60 * 60 * 1000),
       },
@@ -371,6 +406,12 @@ export class MemStorage implements IStorage {
         type: "Championship",
         rules: ["Standard match rules apply", "Barbless hooks only", "Keep nets mandatory"],
         imageUrl: null,
+        thumbnailUrl: null,
+        thumbnailUrlMd: null,
+        thumbnailUrlLg: null,
+        competitionMode: "individual",
+        teamPegAssignmentMode: "team",
+        maxTeamMembers: null,
         createdAt: new Date(Date.now() - 20 * 24 * 60 * 60 * 1000),
       },
       {
@@ -391,6 +432,12 @@ export class MemStorage implements IStorage {
         type: "Open Match",
         rules: ["All methods allowed", "No bloodworm or joker"],
         imageUrl: null,
+        thumbnailUrl: null,
+        thumbnailUrlMd: null,
+        thumbnailUrlLg: null,
+        competitionMode: "individual",
+        teamPegAssignmentMode: "team",
+        maxTeamMembers: null,
         createdAt: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
       },
       {
@@ -411,6 +458,12 @@ export class MemStorage implements IStorage {
         type: "Open Match",
         rules: ["Barbless hooks only", "All pegs fishable"],
         imageUrl: null,
+        thumbnailUrl: null,
+        thumbnailUrlMd: null,
+        thumbnailUrlLg: null,
+        competitionMode: "individual",
+        teamPegAssignmentMode: "team",
+        maxTeamMembers: null,
         createdAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
       },
     ];
@@ -576,6 +629,19 @@ export class MemStorage implements IStorage {
       favouriteSpecies: insertUser.favouriteSpecies ?? null,
       location: insertUser.location ?? null,
       status: "active",
+      mobileNumber: null,
+      dateOfBirth: null,
+      resetToken: null,
+      resetTokenExpiry: null,
+      verificationToken: null,
+      verificationTokenExpiry: null,
+      emailVerified: false,
+      youtubeUrl: null,
+      youtubeVideoUrl: null,
+      facebookUrl: null,
+      twitterUrl: null,
+      instagramUrl: null,
+      tiktokUrl: null,
       memberSince: new Date(),
       createdAt: new Date(),
     };
@@ -908,7 +974,7 @@ export class MemStorage implements IStorage {
       ...this.siteSettings,
       ...updates,
       updatedAt: new Date(),
-    };
+    } as SiteSettings;
 
     return this.siteSettings;
   }
@@ -926,6 +992,11 @@ export class MemStorage implements IStorage {
     const sponsor: Sponsor = {
       id,
       ...insertSponsor,
+      social: insertSponsor.social ?? null,
+    };
+    this.sponsors.set(id, sponsor);
+    return sponsor;
+  }
       website: insertSponsor.website ?? null,
       social: insertSponsor.social as { facebook?: string; twitter?: string; instagram?: string; } | null ?? null,
       createdAt: new Date(),
@@ -967,6 +1038,7 @@ export class MemStorage implements IStorage {
     const news: News = {
       id,
       ...insertNews,
+      featured: insertNews.featured ?? false,
       competition: insertNews.competition ?? null,
       createdAt: new Date(),
     };
@@ -1286,6 +1358,17 @@ export class MemStorage implements IStorage {
     );
 
     if (existingPegAssignment) {
+      throw new Error('Peg is already assigned to another participant');
+    }
+
+    const updatedParticipant: CompetitionParticipant = {
+      ...participant,
+      pegNumber,
+    };
+
+    this.competitionParticipants.set(participantId, updatedParticipant);
+    return updatedParticipant;
+  }
       throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
     }
 
@@ -1421,6 +1504,8 @@ export class MemStorage implements IStorage {
     const entry: LeaderboardEntry = {
       id,
       ...insertEntry,
+      userId: insertEntry.userId ?? null,
+      teamId: insertEntry.teamId ?? null,
       position: insertEntry.position ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -1500,6 +1585,9 @@ export class MemStorage implements IStorage {
     const newTeam: Team = {
       id,
       ...team,
+      image: team.image ?? null,
+      pegNumber: team.pegNumber ?? null,
+      paymentStatus: team.paymentStatus ?? "pending",
       createdAt: new Date(),
     };
     this.teams.set(id, newTeam);
@@ -1517,6 +1605,8 @@ export class MemStorage implements IStorage {
     const updatedTeam: Team = {
       ...team,
       ...updates,
+      name: updates.name ?? team.name,
+      image: updates.image !== undefined ? updates.image : team.image,
     };
 
     this.teams.set(id, updatedTeam);
@@ -1585,6 +1675,7 @@ export class MemStorage implements IStorage {
     const newMember: TeamMember = {
       id,
       ...member,
+      status: member.status ?? "pending",
       joinedAt: new Date(),
     };
     this.teamMembers.set(id, newMember);

@@ -226,7 +226,7 @@ export default function NewsPage() {
                         src={article.image}
                         alt={article.title}
                         className="w-full h-full object-cover"
-                        loading="lazy"
+                        loading="eager"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -341,7 +341,7 @@ export default function NewsPage() {
                       src={fullArticle.image}
                       alt={fullArticle.title}
                       className="w-full h-full object-cover"
-                      loading="lazy"
+                      loading="eager"
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-4">

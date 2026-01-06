@@ -419,6 +419,7 @@ export const teams = pgTable("teams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").notNull(),
   name: text("name").notNull(),
+  image: text("image"),
   inviteCode: text("invite_code").notNull(),
   createdBy: varchar("created_by").notNull(),
   paymentStatus: text("payment_status").notNull().default("pending"),
@@ -434,6 +435,8 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
 export const updateTeamSchema = createInsertSchema(teams).omit({
   id: true,
   createdAt: true,
+}).extend({
+  image: z.string().optional().nullable(),
 }).partial();
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;

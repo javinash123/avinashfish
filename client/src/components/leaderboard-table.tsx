@@ -207,7 +207,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectedTeamId(entry.teamId || null)}
-                          className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none h-auto p-0"
+                          className="font-medium text-xs sm:text-base whitespace-normal text-left h-auto p-0"
                           data-testid={`button-team-${entry.position}`}
                         >
                           <div className="flex items-center gap-1">
@@ -217,12 +217,12 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                         </Button>
                       ) : entry.username ? (
                         <Link href={`/profile/${entry.username}`}>
-                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
+                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base whitespace-normal text-left" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
                           </div>
                         </Link>
                       ) : (
-                        <div className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
+                        <div className="font-medium text-xs sm:text-base whitespace-normal text-left" data-testid={`text-angler-${entry.position}`}>
                           {entry.anglerName}
                         </div>
                       )}

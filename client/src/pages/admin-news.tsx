@@ -427,7 +427,8 @@ export default function AdminNews() {
                           <img
                             src={article.image}
                             alt={article.title}
-                            className="w-full h-full object-contain"
+                            className="w-full h-full object-cover"
+                            loading="eager"
                           />
                         </div>
                         <div className="flex-1 min-w-0">

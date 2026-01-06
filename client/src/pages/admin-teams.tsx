@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
+import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -60,7 +61,9 @@ import {
   Check,
   Loader2,
   Search,
-  Crown
+  Crown,
+  Pencil,
+  Upload
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -82,6 +85,7 @@ interface TeamMember {
 interface Team {
   id: string;
   name: string;
+  image: string | null;
   competitionId: string;
   inviteCode: string;
   createdBy: string;
@@ -114,6 +118,11 @@ export default function AdminTeams() {
   const [selectedAnglerForAdd, setSelectedAnglerForAdd] = useState<string>("");
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [anglerSearch, setAnglerSearch] = useState("");
+  const [isEditTeamOpen, setIsEditTeamOpen] = useState(false);
+  const [editTeamName, setEditTeamName] = useState("");
+  const [editTeamImage, setEditTeamImage] = useState<File | null>(null);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { data: competitions = [], isLoading: isLoadingCompetitions } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
@@ -225,6 +234,78 @@ export default function AdminTeams() {
       });
     },
   });
+
+  const updateTeamMutation = useMutation({
+    mutationFn: async ({ id, data }: { id: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/admin/teams/${id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/competitions", selectedCompetitionId, "teams"] });
+      setIsEditTeamOpen(false);
+      setSelectedTeam(null);
+      setEditTeamName("");
+      setEditTeamImage(null);
+      toast({
+        title: "Team updated",
+        description: "The team has been updated successfully.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update team",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const uploadFile = async (file: File): Promise<string> => {
+    const formData = new FormData();
+    formData.append('image', file);
+    formData.append('type', 'gallery');
+
+    const response = await fetch('/api/upload', {
+      method: 'POST',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      throw new Error('File upload failed');
+    }
+
+    const data = await response.json();
+    return data.url;
+  };
+
+  const handleUpdateTeam = async () => {
+    if (!selectedTeam || !editTeamName.trim()) return;
+
+    try {
+      setUploadingImage(true);
+      let imageUrl = selectedTeam.image;
+
+      if (editTeamImage) {
+        imageUrl = await uploadFile(editTeamImage);
+      }
+
+      updateTeamMutation.mutate({
+        id: selectedTeam.id,
+        data: {
+          name: editTeamName.trim(),
+          image: imageUrl,
+        },
+      });
+    } catch (error: any) {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to upload image",
+        variant: "destructive",
+      });
+    } finally {
+      setUploadingImage(false);
+    }
+  };
 
   const handleCopyInviteCode = (code: string) => {
     navigator.clipboard.writeText(code);
@@ -416,6 +497,17 @@ export default function AdminTeams() {
                               </Button>
                             </DropdownMenuTrigger>
                             <DropdownMenuContent align="end">
+                              <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  setEditTeamName(team.name);
+                                  setIsEditTeamOpen(true);
+                                }}
+                                data-testid={`menu-edit-team-${team.id}`}
+                              >
+                                <Pencil className="mr-2 h-4 w-4" />
+                                Edit Team
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onClick={() => setTeamToDelete(team)}
                                 className="text-destructive"
