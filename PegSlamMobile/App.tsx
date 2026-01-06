@@ -837,7 +837,7 @@ function HeroCarousel() {
 }
 
 // Leaderboard Page Component
-function LeaderboardPage({ competitions, onTeamClick, onAnglerClick }: any) {
+function LeaderboardPage({ competitions, onTeamClick, onAnglerClick, anglers }: any) {
   const filteredComps = competitions.filter((c: any) => {
     const compDate = new Date(c.date);
     const now = new Date();
@@ -983,7 +983,13 @@ function LeaderboardPage({ competitions, onTeamClick, onAnglerClick }: any) {
               ) : (
                 <TouchableOpacity 
                   style={[styles.leaderboardCell, { flex: 1.2 }]}
-                  onPress={() => onAnglerClick && onAnglerClick(entry.id)}
+                  onPress={() => {
+                    if (entry.id) {
+                      onAnglerClick && onAnglerClick(entry.id);
+                    } else if (entry.anglerId) {
+                      onAnglerClick && onAnglerClick(entry.anglerId);
+                    }
+                  }}
                 >
                   <Text style={{ color: '#1B7342', fontWeight: '600' }} numberOfLines={1}>
                     {entry.anglerName || 'Unknown'}
@@ -1010,18 +1016,24 @@ function LeaderboardPage({ competitions, onTeamClick, onAnglerClick }: any) {
 // News Card Component
 function NewsCard({ item, onPress }: any) {
   const getImageUrl = () => {
-    // Current news data uses 'image' or 'imageUrl'
-    let url = item.image || item.imageUrl;
-    if (!url) return null;
-    
-    // Strip optimization suffixes to get original high-res image
-    const cleanUrl = url.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
-    
-    return cleanUrl.startsWith('http') ? cleanUrl : `${API_URL}${cleanUrl}`;
+    // Try to extract image URL from content HTML or use imageUrl field
+    const url = item.imageUrl || item.featuredImage || item.image || item.thumbnailUrl;
+    if (!url) {
+      // Try to extract first image from content if no featured image
+      const contentImages = extractImagesFromHtml(item.content || item.description || '');
+      if (contentImages.length > 0) {
+        const firstContentUrl = contentImages[0];
+        return firstContentUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+      }
+      return null;
+    }
+    const absoluteUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
+    return absoluteUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
   };
 
   const imageUrl = getImageUrl();
-  
+  const cleanDescription = stripHtml(item.description || item.excerpt || item.content || '');
+
   return (
     <TouchableOpacity 
       style={styles.newsCard} 
@@ -1045,7 +1057,7 @@ function NewsCard({ item, onPress }: any) {
           <Text style={styles.newsCategoryText}>{(item.category || 'News').toUpperCase()}</Text>
         </View>
         <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
-        <Text style={styles.newsExcerpt} numberOfLines={2}>{stripHtml(item.excerpt || '')}</Text>
+        <Text style={styles.newsExcerpt} numberOfLines={2}>{cleanDescription}</Text>
         <View style={styles.newsFooter}>
           <Text style={styles.newsDate}>{item.date || 'Today'}</Text>
           <Text style={styles.newsReadMore}>Read More →</Text>
@@ -1076,6 +1088,14 @@ function GalleryItem({ item, onPress }: any) {
     </TouchableOpacity>
   );
 }
+function CompetitionDetailsPage({ 
+  competition, 
+  onClose, 
+  anglers, 
+  onTeamClick, 
+  user, 
+  onLogin 
+}: any) {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
   const [activeTab, setActiveTab] = useState('participants');
@@ -1639,8 +1659,11 @@ function GalleryItem({ item, onPress }: any) {
                     key={idx} 
                     style={styles.participantCard}
                     onPress={() => {
-                      // Logic to show team details if needed
-                      Alert.alert(team.name, `Members: ${team.members?.map((m: any) => m.name).join(', ') || 'None'}`);
+                      if (team.id) {
+                        setSelectedTeamId(team.id);
+                      } else {
+                        Alert.alert(team.name, `Members: ${team.members?.map((m: any) => m.name).join(', ') || 'None'}`);
+                      }
                     }}
                   >
                     <View style={styles.participantAvatarContainer}>
@@ -1696,9 +1719,7 @@ function GalleryItem({ item, onPress }: any) {
                       onPress={() => {
                         const angler = anglers.find(a => a.id === participant.id);
                         if (angler) {
-                          setActiveMenu('anglers');
                           setSelectedAngler(angler);
-                          setCompetitionDetails(null);
                         }
                       }}
                     >
@@ -1741,7 +1762,7 @@ function GalleryItem({ item, onPress }: any) {
                     {entry.isTeam ? (
                       <TouchableOpacity 
                         style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
-                        onPress={() => onTeamClick && onTeamClick(entry.teamId)}
+                        onPress={() => onTeamClick && onTeamClick(entry.teamId || entry.id)}
                       >
                         <Text style={styles.teamNameText} numberOfLines={1}>
                           {entry.anglerName || entry.teamName || 'Team'}
@@ -1755,9 +1776,7 @@ function GalleryItem({ item, onPress }: any) {
                           const anglerId = entry.anglerId || entry.id;
                           const angler = anglers.find(a => a.id === anglerId);
                           if (angler) {
-                            setActiveMenu('anglers');
                             setSelectedAngler(angler);
-                            setCompetitionDetails(null);
                           }
                         }}
                       >
@@ -2361,59 +2380,6 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
         <View style={{ height: 20 }} />
       </ScrollView>
     </View>
-  );
-}
-
-// News Card
-function NewsCard({ item, onPress }: any) {
-  const getImageUrl = () => {
-    // Try to extract image URL from content HTML or use imageUrl field
-    const url = item.imageUrl || item.featuredImage || item.image || item.thumbnailUrl;
-    if (!url) {
-      // Try to extract first image from content if no featured image
-      const contentImages = extractImagesFromHtml(item.content || item.description || '');
-      if (contentImages.length > 0) {
-        const firstContentUrl = contentImages[0];
-        return firstContentUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
-      }
-      
-      console.log('News item missing image:', { title: item.title, fields: Object.keys(item).slice(0, 10) });
-      return null;
-    }
-    const absoluteUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
-    return absoluteUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
-  };
-
-  const imageUrl = getImageUrl();
-  const cleanDescription = stripHtml(item.description || item.excerpt || item.content || '');
-
-  return (
-    <TouchableOpacity style={styles.newsCard} onPress={() => onPress(item)}>
-      {imageUrl ? (
-        <Image
-          source={{ uri: imageUrl }}
-          style={styles.newsImage}
-          resizeMode="cover"
-        />
-      ) : (
-        <View style={[styles.newsImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
-          <Text style={{ color: '#666', fontSize: 12, textAlign: 'center' }}>No Image</Text>
-        </View>
-      )}
-      <View style={styles.newsContent}>
-        <View style={styles.newsHeader}>
-          <Text style={styles.newsCategory}>{item.category || 'News'}</Text>
-          <Text style={styles.newsDate}>{item.date || 'Today'}</Text>
-        </View>
-        <Text style={styles.newsTitle} numberOfLines={2}>
-          {item.title}
-        </Text>
-        <Text style={styles.newsDescription} numberOfLines={3}>
-          {cleanDescription}
-        </Text>
-        <Text style={styles.readMore}>Read More →</Text>
-      </View>
-    </TouchableOpacity>
   );
 }
 
@@ -4868,13 +4834,14 @@ export default function App() {
 
       {/* Competition Details View */}
       {selectedCompetition && (
-        <CompetitionDetailsPage 
-          competition={selectedCompetition} 
-          onClose={() => setSelectedCompetition(null)}
-          onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
-          user={currentUser}
-          onLogin={() => setShowLoginModal(true)}
-        />
+            <CompetitionDetailsPage 
+              competition={selectedCompetition} 
+              onClose={() => setSelectedCompetition(null)}
+              anglers={anglers}
+              onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
+              user={currentUser}
+              onLogin={() => setShowLoginModal(true)}
+            />
       )}
 
       {/* Angler Profile View */}
@@ -4934,6 +4901,7 @@ export default function App() {
 
             <LeaderboardPage 
               competitions={competitions} 
+              anglers={anglers}
               onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
               onAnglerClick={(anglerId: string) => {
                 const angler = (anglers || []).find((a: any) => a.id === anglerId);
