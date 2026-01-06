@@ -36,6 +36,7 @@ export default defineConfig({
     target: 'es2020',
   },
   server: {
+    allowedHosts: true,
     fs: {
       strict: true,
       deny: ["**/.*"],

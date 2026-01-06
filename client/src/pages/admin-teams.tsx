@@ -261,6 +261,35 @@ export default function AdminTeams() {
     },
   });
 
+  const updateMemberMutation = useMutation({
+    mutationFn: async ({ teamId, memberId, data }: { teamId: string; memberId: string; data: any }) => {
+      const response = await apiRequest("PATCH", `/api/admin/teams/${teamId}/members/${memberId}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/competitions", selectedCompetitionId, "teams"] });
+      toast({
+        title: "Member updated",
+        description: "The member's role has been updated.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to update member",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleMakeCaptain = (teamId: string, memberId: string) => {
+    updateMemberMutation.mutate({
+      teamId,
+      memberId,
+      data: { role: "captain" },
+    });
+  };
+
   const uploadFile = async (file: File): Promise<string> => {
     const formData = new FormData();
     formData.append('image', file);
@@ -533,6 +562,16 @@ export default function AdminTeams() {
                                 Edit Team
                               </DropdownMenuItem>
                               <DropdownMenuItem
+                                onClick={() => {
+                                  setSelectedTeam(team);
+                                  setIsAddMemberOpen(true);
+                                }}
+                                data-testid={`menu-add-member-${team.id}`}
+                              >
+                                <UserPlus className="mr-2 h-4 w-4" />
+                                Add Member
+                              </DropdownMenuItem>
+                              <DropdownMenuItem
                                 onClick={() => setTeamToDelete(team)}
                                 className="text-destructive"
                                 data-testid={`menu-delete-team-${team.id}`}
@@ -589,14 +628,28 @@ export default function AdminTeams() {
                                   </Badge>
                                 </TableCell>
                                 <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => setMemberToRemove({ team, member })}
-                                    data-testid={`button-remove-member-${member.id}`}
-                                  >
-                                    <UserMinus className="h-4 w-4 text-destructive" />
-                                  </Button>
+                                  <div className="flex items-center gap-2">
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => setMemberToRemove({ team, member })}
+                                      data-testid={`button-remove-member-${member.id}`}
+                                      title="Remove Member"
+                                    >
+                                      <UserMinus className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                    {!member.isCaptain && (
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => handleMakeCaptain(team.id, member.id)}
+                                        data-testid={`button-make-captain-${member.id}`}
+                                        title="Make Captain"
+                                      >
+                                        <Crown className="h-4 w-4 text-yellow-500" />
+                                      </Button>
+                                    )}
+                                  </div>
                                 </TableCell>
                               </TableRow>
                             ))}

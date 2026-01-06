@@ -1570,9 +1570,36 @@ export class MongoDBStorage implements IStorage {
     return result || undefined;
   }
 
+  async updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined> {
+    const result = await this.teamMembers.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
   async removeTeamMember(id: string): Promise<boolean> {
     const result = await this.teamMembers.deleteOne({ id });
     return result.deletedCount > 0;
+  }
+
+  async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
+    const result = await this.teams.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result ? (result as any) as Team : undefined;
+  }
+
+  async updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined> {
+    const result = await this.teamMembers.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result ? (result as any) as TeamMember : undefined;
   }
 
   async isUserInTeam(teamId: string, userId: string): Promise<boolean> {

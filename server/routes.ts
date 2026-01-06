@@ -2,7 +2,7 @@ import { formatWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
 import { generateCompetitionThumbnails } from "./thumbnail-generator";
 import { regenerateAllThumbnails, regenerateSingleThumbnail } from "./thumbnail-regenerator";
@@ -578,6 +578,47 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // Staff/Admin authentication routes
+  app.patch("/api/admin/teams/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const teamId = req.params.id;
+      const updates = updateTeamSchema.safeParse(req.body);
+      if (!updates.success) {
+        return res.status(400).json({ message: "Invalid updates", errors: updates.error.errors });
+      }
+      const updatedTeam = await storage.updateTeam(teamId, updates.data);
+      if (!updatedTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(updatedTeam);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/teams/:teamId/members/:memberId", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { teamId, memberId } = req.params;
+      const updates = req.body;
+      if (updates.role === 'captain') {
+        const members = await storage.getTeamMembers(teamId);
+        for (const member of members) {
+          if (member.role === 'captain' && member.id !== memberId) {
+            await storage.updateTeamMember(member.id, { role: 'member' });
+          }
+        }
+      }
+      const updatedMember = await storage.updateTeamMember(memberId, updates);
+      if (!updatedMember) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+      res.json(updatedMember);
+    } catch (error: any) {
+      console.error("Error updating team member:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/admin/login", async (req, res) => {
     try {
       const result = staffLoginSchema.safeParse(req.body);
