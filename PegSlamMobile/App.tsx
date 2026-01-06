@@ -619,10 +619,24 @@ function CompetitionCard({ item, onViewDetails }: any) {
     const rawUrl = item.imageUrl || item.image || item.thumbnailUrl;
     if (!rawUrl) return null;
     
-    // Strip optimization suffixes to get original high-res image
-    const url = rawUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+    let url = rawUrl;
     
-    return url.startsWith('http') ? url : `${API_URL}${url}`;
+    // Replace attached-assets with assets
+    if (url && url.includes('/attached-assets/')) {
+      url = url.replace('/attached-assets/', '/assets/');
+    }
+    
+    // Ensure absolute URL
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    
+    // Add extension if missing
+    if (url && (url.includes('/uploads/news/') || url.includes('/uploads/competitions/')) && !url.includes('.')) {
+      url += '.webp';
+    }
+
+    return url ? url.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
   };
 
   const imageUrl = getImageUrl();
@@ -1017,8 +1031,8 @@ function LeaderboardPage({ competitions, onTeamClick, onAnglerClick, anglers }: 
 function NewsCard({ item, onPress }: any) {
   const getImageUrl = () => {
     // Try to extract image URL from content HTML or use imageUrl field
-    const url = item.imageUrl || item.featuredImage || item.image || item.thumbnailUrl;
-    if (!url) {
+    const rawUrl = item.imageUrl || item.featuredImage || item.image || item.thumbnailUrl;
+    if (!rawUrl) {
       // Try to extract first image from content if no featured image
       const contentImages = extractImagesFromHtml(item.content || item.description || '');
       if (contentImages.length > 0) {
@@ -1027,8 +1041,26 @@ function NewsCard({ item, onPress }: any) {
       }
       return null;
     }
-    const absoluteUrl = url.startsWith('http') ? url : `${API_URL}${url}`;
-    return absoluteUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '');
+    
+    // Some news images use /attached-assets/ path which is often broken or requires absolute URL
+    let url = rawUrl;
+    
+    // Replace attached-assets with assets
+    if (url && url.includes('/attached-assets/')) {
+      url = url.replace('/attached-assets/', '/assets/');
+    }
+    
+    // Ensure absolute URL
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    
+    // Add extension if missing and it's a known news/competition image pattern
+    if (url && (url.includes('/uploads/news/') || url.includes('/uploads/competitions/')) && !url.includes('.')) {
+      url += '.webp';
+    }
+
+    return url ? url.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
   };
 
   const imageUrl = getImageUrl();
@@ -2140,13 +2172,29 @@ function NewsDetailPage({ article, onClose }: any) {
     }
   };
 
-  const currentArticle = fullArticle || article;
-  const rawImageUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
-  
-  // Strip optimization suffixes to get original high-res image
-  const imageUrl = rawImageUrl ? rawImageUrl.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
-  
-  const fullImageUrl = imageUrl ? (imageUrl.startsWith('http') ? imageUrl : `${API_URL}${imageUrl}`) : null;
+  const getFullImageUrl = () => {
+    const currentArticle = fullArticle || article;
+    const rawUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
+    if (!rawUrl) return null;
+    
+    let url = rawUrl;
+    
+    if (url && url.includes('/attached-assets/')) {
+      url = url.replace('/attached-assets/', '/assets/');
+    }
+    
+    if (url && !url.startsWith('http') && !url.startsWith('data:')) {
+      url = `${API_URL}${url.startsWith('/') ? '' : '/'}${url}`;
+    }
+    
+    if (url && (url.includes('/uploads/news/') || url.includes('/uploads/competitions/')) && !url.includes('.')) {
+      url += '.webp';
+    }
+
+    return url ? url.replace(/-sm\.webp|-md\.webp|-lg\.webp|-optimized\.webp/g, '') : null;
+  };
+
+  const fullImageUrl = getFullImageUrl();
 
   return (
     <View style={styles.detailsContainer}>
@@ -2326,17 +2374,17 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
               resizeMode="contain"
             />
             {image.urls && image.urls.length > 1 && (
-              <>
-                <TouchableOpacity style={[styles.imageNavButton, { left: 10 }]} onPress={onPrevImage}>
-                  <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>‹</Text>
+              <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', marginTop: 12 }}>
+                <TouchableOpacity style={{ padding: 10 }} onPress={onPrevImage}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>‹</Text>
                 </TouchableOpacity>
-                <TouchableOpacity style={[styles.imageNavButton, { right: 10 }]} onPress={onNextImage}>
-                  <Text style={{ color: '#fff', fontSize: 32, fontWeight: 'bold' }}>›</Text>
-                </TouchableOpacity>
-                <Text style={{ textAlign: 'center', color: '#999', fontSize: 12, marginTop: 8 }}>
+                <Text style={{ color: '#999', fontSize: 16, marginHorizontal: 15 }}>
                   {currentImageIndex + 1} of {image.urls.length}
                 </Text>
-              </>
+                <TouchableOpacity style={{ padding: 10 }} onPress={onNextImage}>
+                  <Text style={{ color: '#fff', fontSize: 24, fontWeight: 'bold' }}>›</Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         ) : (
@@ -5855,9 +5903,8 @@ const styles = StyleSheet.create({
   },
   competitionImage: {
     width: '100%',
-    height: 200,
+    aspectRatio: 16 / 9,
     backgroundColor: '#0a0a0a',
-    resizeMode: 'cover',
   },
   competitionImageMobile: {
     width: 140,
@@ -6002,8 +6049,8 @@ const styles = StyleSheet.create({
   },
   newsImage: {
     width: '100%',
-    height: 180,
-    backgroundColor: '#0a0a0a',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#1a1a1a',
   },
   newsContent: {
     padding: 16,
