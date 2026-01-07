@@ -495,9 +495,9 @@ export default function AdminTeams() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 shrink-0">
                             <AvatarImage 
-                              src={team.image || undefined} 
+                              src={team.image ? team.image.replace('-optimized.webp', '') : undefined} 
                               alt={team.name} 
-                              className="object-cover"
+                              className="object-contain"
                             />
                             <AvatarFallback>
                               <Users className="h-5 w-5 text-muted-foreground" />
@@ -606,7 +606,10 @@ export default function AdminTeams() {
                                 <TableCell>
                                   <div className="flex items-center gap-3">
                                     <Avatar className="h-8 w-8">
-                                      <AvatarImage src={member.avatar || undefined} className="object-cover" />
+                                      <AvatarImage 
+                                        src={member.avatar ? (member.avatar.startsWith('/') ? member.avatar.replace('-optimized.webp', '') : `/attached-assets/uploads/gallery/${member.avatar.replace('-optimized.webp', '')}`) : undefined} 
+                                        className="object-contain" 
+                                      />
                                       <AvatarFallback>
                                         {member.name.split(" ").map(n => n[0]).join("")}
                                       </AvatarFallback>

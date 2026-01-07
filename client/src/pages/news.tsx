@@ -29,10 +29,18 @@ interface NewsSummary {
 
 const getNewsImageUrl = (imagePath: string) => {
   if (!imagePath) return "/attached-assets/placeholder-news.jpg";
+  
+  // If it's already a full path, use it as is
   if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
     return imagePath;
   }
-  return `/attached-assets/uploads/news/${imagePath}`;
+  
+  // Clean the path from optimized suffix but keep the original filename which should include the extension
+  // The database usually stores the filename from the upload response
+  const cleanPath = imagePath.replace('-optimized.webp', '');
+  
+  // Return the path within the news upload directory
+  return `/attached-assets/uploads/news/${cleanPath}`;
 };
 
 interface PaginatedNewsResponse {
@@ -233,7 +241,7 @@ export default function NewsPage() {
                       <img
                         src={getNewsImageUrl(article.image)}
                         alt={article.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                         loading="eager"
                       />
                       <div className="absolute top-2 left-2">
@@ -348,7 +356,7 @@ export default function NewsPage() {
                     <img
                       src={getNewsImageUrl(fullArticle.image)}
                       alt={fullArticle.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                       loading="eager"
                     />
                   </div>

@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PegMap } from "@/components/peg-map";
 import { LeaderboardTable } from "@/components/leaderboard-table";
@@ -410,7 +410,7 @@ export default function CompetitionDetails() {
                 <img
                   src={competition.imageUrl}
                   alt={competition.name}
-                  className="w-full h-full object-cover object-center"
+                  className="w-full h-full object-contain object-center"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">

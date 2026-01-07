@@ -27,7 +27,9 @@ export default function Home() {
     if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
       return imagePath;
     }
-    return `/attached-assets/uploads/news/${imagePath}`;
+    // Clean optimized suffix
+    const cleanPath = imagePath.replace('-optimized.webp', '');
+    return `/attached-assets/uploads/news/${cleanPath}`;
   };
 
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -222,7 +224,7 @@ export default function Home() {
                       <img
                         src={getNewsImageUrl(news.image)}
                         alt={news.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -417,9 +419,9 @@ export default function Home() {
                 <Card key={image.id} className="group overflow-hidden hover-elevate active-elevate-2" data-testid={`card-gallery-${image.id}`}>
                   <div className="relative w-full h-48 overflow-hidden">
                     <img
-                      src={image.urls[0]}
+                      src={image.urls[0].replace('-optimized.webp', '')}
                       alt={image.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                     {image.urls.length > 1 && (
                       <div className="absolute bottom-2 left-2">

@@ -58,7 +58,7 @@ export function CompetitionCard({
             <img 
               src={imageUrl || displayImage} 
               alt={name} 
-              className="w-full h-full object-cover object-center" 
+              className="w-full h-full object-contain object-center" 
               loading="lazy"
             />
           ) : (

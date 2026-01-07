@@ -81,9 +81,9 @@ export default function Gallery() {
                 >
                   <div className="relative w-full h-48 overflow-hidden">
                     <img
-                      src={image.urls[0]}
+                      src={image.urls[0].replace('-optimized.webp', '')}
                       alt={image.title}
-                      className="w-full h-full object-cover"
+                      className="w-full h-full object-contain"
                     />
                     {image.urls.length > 1 && (
                       <div className="absolute bottom-2 left-2">
@@ -150,7 +150,7 @@ export default function Gallery() {
               <div className="space-y-4">
                 <div className="relative w-full h-96 overflow-hidden rounded-md bg-muted">
                   <img
-                    src={selectedImage.urls[currentImageIndex]}
+                    src={selectedImage.urls[currentImageIndex].replace('-optimized.webp', '')}
                     alt={`${selectedImage.title} - Image ${currentImageIndex + 1}`}
                     className="w-full h-full object-contain"
                   />
