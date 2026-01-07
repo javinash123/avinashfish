@@ -1073,12 +1073,14 @@ function NewsCard({ item, onPress }: any) {
       activeOpacity={0.7}
     >
       {imageUrl ? (
-        <Image 
-          source={{ uri: imageUrl }} 
-          style={styles.newsImage} 
-          resizeMode="cover"
-          onError={(e) => console.log('News image load error:', e.nativeEvent.error)}
-        />
+        <View style={styles.newsImageContainer}>
+          <Image 
+            source={{ uri: imageUrl }} 
+            style={styles.newsImage} 
+            resizeMode="contain"
+            onError={(e) => console.log('News image load error:', e.nativeEvent.error)}
+          />
+        </View>
       ) : (
         <View style={[styles.newsImage, { backgroundColor: '#1a1a1a', justifyContent: 'center', alignItems: 'center' }]}>
           <Text style={{ color: '#444' }}>No Image</Text>
@@ -2195,6 +2197,7 @@ function NewsDetailPage({ article, onClose }: any) {
   };
 
   const fullImageUrl = getFullImageUrl();
+  const currentArticle = fullArticle || article;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2600,6 +2603,18 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const [galleryCaption, setGalleryCaption] = useState('');
   const [uploadingGallery, setUploadingGallery] = useState(false);
 
+  const parseWeight = (weightStr: any): number => {
+    if (!weightStr || typeof weightStr !== 'string') return 0;
+    const match = weightStr.match(/(\d+(?:\.\d+)?)\s*lb/i);
+    return match ? parseFloat(match[1]) * 16 : 0;
+  };
+
+  const formatWeight = (oz: number): string => {
+    const lbs = Math.floor(oz / 16);
+    const remainderOz = Math.round(oz % 16);
+    return `${lbs}lb ${remainderOz}oz`;
+  };
+
   useEffect(() => {
     fetchStats();
     fetchGallery();
@@ -2926,7 +2941,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               )}
               {angler.instagramUrl && (
                 <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
-                  <Text style={[styles.socialIconButtonText, { color: '#1B7342' }]}></Text>
+                  <Text style={[styles.socialIconButtonText, { color: '#E1306C' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
@@ -6049,8 +6064,14 @@ const styles = StyleSheet.create({
   },
   newsImage: {
     width: '100%',
-    aspectRatio: 16 / 9,
+    height: '100%',
     backgroundColor: '#1a1a1a',
+  },
+  newsImageContainer: {
+    width: '100%',
+    aspectRatio: 16 / 9,
+    backgroundColor: '#000',
+    overflow: 'hidden',
   },
   newsContent: {
     padding: 16,
