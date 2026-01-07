@@ -495,7 +495,7 @@ export default function AdminTeams() {
                         <div className="flex items-center gap-3">
                           <Avatar className="h-10 w-10 shrink-0">
                             <AvatarImage 
-                              src={team.image ? team.image.replace('-optimized.webp', '') : undefined} 
+                              src={team.image ? (team.image.startsWith('/') ? team.image.replace('-optimized.webp', '') : `/attached-assets/uploads/gallery/${team.image.replace('-optimized.webp', '')}`) : undefined} 
                               alt={team.name} 
                               className="object-contain"
                             />
@@ -680,33 +680,6 @@ export default function AdminTeams() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage src={editTeamImage ? URL.createObjectURL(editTeamImage) : undefined} />
-                <AvatarFallback>
-                  <Users className="h-10 w-10 text-muted-foreground" />
-                </AvatarFallback>
-              </Avatar>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploadingImage ? "Uploading..." : "Upload Team Photo"}
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setEditTeamImage(file);
-                }}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="teamName">Team Name</Label>
               <Input
@@ -765,40 +738,10 @@ export default function AdminTeams() {
           <DialogHeader>
             <DialogTitle>Edit Team</DialogTitle>
             <DialogDescription>
-              Update team name and profile image
+              Update team name
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-4">
-            <div className="flex flex-col items-center gap-4">
-              <Avatar className="h-20 w-20">
-                <AvatarImage 
-                  src={editTeamImage ? URL.createObjectURL(editTeamImage) : (selectedTeam?.image || undefined)} 
-                  className="object-cover"
-                />
-                <AvatarFallback>
-                  <Users className="h-10 w-10 text-muted-foreground" />
-                </AvatarFallback>
-              </Avatar>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => fileInputRef.current?.click()}
-                disabled={uploadingImage}
-              >
-                <Upload className="mr-2 h-4 w-4" />
-                {uploadingImage ? "Uploading..." : "Change Team Photo"}
-              </Button>
-              <input
-                type="file"
-                ref={fileInputRef}
-                className="hidden"
-                accept="image/*"
-                onChange={(e) => {
-                  const file = e.target.files?.[0];
-                  if (file) setEditTeamImage(file);
-                }}
-              />
-            </div>
             <div className="space-y-2">
               <Label htmlFor="editTeamName">Team Name</Label>
               <Input

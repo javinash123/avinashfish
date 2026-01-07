@@ -3795,6 +3795,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           let anglerName = "Unknown";
           let username = "";
           let club = "";
+          let anglerAvatar = "";
           let teamId = "";
           let isTeam = false;
           
@@ -3804,11 +3805,14 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             anglerName = team?.name || "Unknown Team";
             teamId = entry.teamId;
             isTeam = true;
+            // Use team profile image if available
+            anglerAvatar = team?.image || "";
           } else if (entry.userId) {
             const user = await storage.getUser(entry.userId);
             anglerName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
             username = user?.username || "";
             club = user?.club || "";
+            anglerAvatar = user?.avatar || "";
           }
           
           return {
@@ -3818,6 +3822,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             pegNumber: entry.pegNumber,
             weight: entry.weight,
             club,
+            anglerAvatar,
             teamId,
             isTeam,
             fishCount: entry.fishCount || 1,

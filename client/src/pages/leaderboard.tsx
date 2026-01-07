@@ -48,6 +48,7 @@ export default function Leaderboard() {
     pegNumber: number;
     weight: string;
     club: string;
+    anglerAvatar?: string;
     isTeam?: boolean;
     teamId?: string;
     fishCount?: number;
@@ -60,6 +61,7 @@ export default function Leaderboard() {
     position: entry.position ?? index + 1,
     anglerName: entry.anglerName,
     username: entry.username,
+    anglerAvatar: entry.anglerAvatar,
     pegNumber: entry.pegNumber,
     weight: entry.weight,
     club: entry.club,
