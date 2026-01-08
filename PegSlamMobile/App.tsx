@@ -1000,10 +1000,16 @@ function LeaderboardPage({ competitions, onTeamClick, onAnglerClick, anglers }: 
                 <TouchableOpacity 
                   style={[styles.leaderboardCell, { flex: 1.2 }]}
                   onPress={() => {
-                    if (entry.id) {
-                      onAnglerClick && onAnglerClick(entry.id);
-                    } else if (entry.anglerId) {
-                      onAnglerClick && onAnglerClick(entry.anglerId);
+                    const anglerId = entry.id || entry.anglerId;
+                    const angler = (anglers || []).find((a: any) => a.id === anglerId);
+                    if (angler) {
+                      onAnglerClick && onAnglerClick(anglerId);
+                    } else if (entry.anglerName) {
+                       // Fallback to name search
+                       const anglerByName = (anglers || []).find((a: any) => 
+                         `${a.firstName} ${a.lastName}`.toLowerCase() === entry.anglerName.toLowerCase()
+                       );
+                       if (anglerByName) onAnglerClick && onAnglerClick(anglerByName.id);
                     }
                   }}
                 >
@@ -1802,39 +1808,45 @@ function CompetitionDetailsPage({
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Fish</Text>
                   <Text style={[styles.leaderboardCell, styles.leaderboardHeader]}>Weight</Text>
                 </View>
-                {leaderboard.slice(0, 25).map((entry: any, idx: number) => (
-                  <View key={idx} style={styles.leaderboardRow}>
-                    <Text style={styles.leaderboardCell}>{entry.position || idx + 1}</Text>
-                    {entry.isTeam ? (
-                      <TouchableOpacity 
-                        style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
-                        onPress={() => onTeamClick && onTeamClick(entry.teamId || entry.id)}
-                      >
-                        <Text style={styles.teamNameText} numberOfLines={1}>
-                          {entry.anglerName || entry.teamName || 'Team'}
-                        </Text>
-                        <Text style={styles.teamIcon}> [Team]</Text>
-                      </TouchableOpacity>
-                    ) : (
-                      <TouchableOpacity 
-                        style={[styles.leaderboardCell, styles.leaderboardCellWide]}
-                        onPress={() => {
-                          const anglerId = entry.anglerId || entry.id;
-                          const angler = anglers.find(a => a.id === anglerId);
-                          if (angler) {
-                            setSelectedAngler(angler);
-                          }
-                        }}
-                      >
-                        <Text style={{ color: '#fff' }} numberOfLines={1}>
-                          {entry.anglerName || entry.name || 'Unknown'}
-                        </Text>
-                      </TouchableOpacity>
-                    )}
-                    <Text style={styles.leaderboardCell}>{entry.pegNumber || '-'}</Text>
-                    <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
-                    <Text style={styles.leaderboardCell}>{entry.weight || '0lb'}</Text>
-                  </View>
+              {leaderboard.slice(0, 25).map((entry: any, idx: number) => (
+                <View key={idx} style={styles.leaderboardRow}>
+                  <Text style={styles.leaderboardCell}>{entry.position || idx + 1}</Text>
+                  {entry.isTeam ? (
+                    <TouchableOpacity 
+                      style={[styles.leaderboardCell, styles.leaderboardCellWide, { flexDirection: 'row', alignItems: 'center' }]}
+                      onPress={() => onTeamClick && onTeamClick(entry.teamId || entry.id)}
+                    >
+                      <Text style={styles.teamNameText} numberOfLines={1}>
+                        {entry.anglerName || entry.teamName || 'Team'}
+                      </Text>
+                      <Text style={styles.teamIcon}> [Team]</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity 
+                      style={[styles.leaderboardCell, styles.leaderboardCellWide]}
+                      onPress={() => {
+                        const anglerId = entry.anglerId || entry.id;
+                        const angler = (anglers || []).find((a: any) => a.id === anglerId);
+                        if (angler) {
+                          setSelectedAngler(angler);
+                        } else if (entry.anglerName) {
+                          // Fallback to searching by name if ID fails
+                          const anglerByName = (anglers || []).find((a: any) => 
+                            `${a.firstName} ${a.lastName}`.toLowerCase() === entry.anglerName.toLowerCase()
+                          );
+                          if (anglerByName) setSelectedAngler(anglerByName);
+                        }
+                      }}
+                    >
+                      <Text style={{ color: '#1B7342', fontWeight: '600' }} numberOfLines={1}>
+                        {entry.anglerName || entry.name || 'Unknown'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                  <Text style={styles.leaderboardCell}>{entry.pegNumber || '-'}</Text>
+                  <Text style={styles.leaderboardCell}>{entry.fishCount || 0}</Text>
+                  <Text style={styles.leaderboardCell}>{entry.weight || '0lb'}</Text>
+                </View>
                 ))}
               </View>
             ) : (
@@ -4949,11 +4961,15 @@ export default function App() {
 
       {/* Angler Profile View */}
       {selectedAngler && (
-        <AnglerProfilePage 
-          angler={selectedAngler} 
-          onClose={() => setSelectedAngler(null)} 
-          currentUser={currentUser}
-        />
+        <Modal visible={!!selectedAngler} animationType="slide" transparent={false}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+            <AnglerProfilePage 
+              angler={selectedAngler} 
+              onClose={() => setSelectedAngler(null)} 
+              currentUser={currentUser}
+            />
+          </SafeAreaView>
+        </Modal>
       )}
 
       {/* News Detail View */}
