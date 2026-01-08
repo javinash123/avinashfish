@@ -51,10 +51,10 @@ if (isWeb) {
 
 // Utility to format weight in UK system (lb oz)
 const formatWeight = (totalOunces: number) => {
-  if (totalOunces <= 0 || isNaN(totalOunces)) return '0 lb 0 oz';
+  if (totalOunces <= 0 || isNaN(totalOunces)) return '0lb 0oz';
   const lbs = Math.floor(totalOunces / 16);
   const oz = Math.round(totalOunces % 16);
-  return `${lbs} lb ${oz} oz`;
+  return `${lbs}lb ${oz}oz`;
 };
 
 // Utility to parse weight string or number into ounces
@@ -128,11 +128,11 @@ const extractImagesFromHtml = (html: string) => {
 const getTierInfo = (tier: string) => {
   switch (tier?.toLowerCase()) {
     case 'platinum':
-      return { label: 'Platinum', color: '#7B8894' };
+      return { label: 'Platinum', color: '#E5E4E2' };
     case 'gold':
       return { label: 'Gold', color: '#FFD700' };
     case 'silver':
-      return { label: 'Silver', color: '#E5E4E2' };
+      return { label: 'Silver', color: '#C0C0C0' };
     case 'bronze':
       return { label: 'Bronze', color: '#CD7F32' };
     default:
@@ -142,15 +142,15 @@ const getTierInfo = (tier: string) => {
 
 // Menu Items matching website navigation
 const MENU_ITEMS = [
-  { id: 'home', label: 'Home', icon: '◆', color: '#fff' },
-  { id: 'competitions', label: 'Competitions', icon: '※', color: '#fff' },
-  { id: 'leaderboard', label: 'Leaderboard', icon: '▲', color: '#fff' },
-  { id: 'anglers', label: 'Angler Directory', icon: '◉', color: '#fff' },
-  { id: 'news', label: 'News', icon: '≡', color: '#fff' },
-  { id: 'gallery', label: 'Gallery', icon: '⊞', color: '#fff' },
-  { id: 'sponsors', label: 'Sponsors', icon: '◈', color: '#fff' },
-  { id: 'about', label: 'About', icon: '◎', color: '#fff' },
-  { id: 'contact', label: 'Contact', icon: '◇', color: '#fff' },
+  { id: 'home', label: 'Home', icon: '🏠', color: '#fff' },
+  { id: 'competitions', label: 'Competitions', icon: '🏆', color: '#fff' },
+  { id: 'leaderboard', label: 'Leaderboard', icon: '📊', color: '#fff' },
+  { id: 'anglers', label: 'Anglers', icon: '👤', color: '#fff' },
+  { id: 'news', label: 'News', icon: '📰', color: '#fff' },
+  { id: 'gallery', label: 'Gallery', icon: '🖼️', color: '#fff' },
+  { id: 'sponsors', label: 'Sponsors', icon: '🤝', color: '#fff' },
+  { id: 'about', label: 'About', icon: 'ℹ️', color: '#fff' },
+  { id: 'contact', label: 'Contact', icon: '📞', color: '#fff' },
 ];
 
 // Login Modal
@@ -613,7 +613,7 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout, acti
 }
 
 // Competition Card - Redesigned for better mobile UX
-function CompetitionCard({ item, onViewDetails }: any) {
+function CompetitionCard({ item, onViewDetails, onParticipantsClick }: any) {
   const getImageUrl = () => {
     // Original images are preferred over thumbnails for detail view
     const rawUrl = item.imageUrl || item.image || item.thumbnailUrl;
@@ -684,9 +684,11 @@ function CompetitionCard({ item, onViewDetails }: any) {
       </View>
 
       {/* Competition Info */}
-      <Text style={[styles.competitionTitle, { marginBottom: 8, fontSize: 16, fontWeight: '600' }]} numberOfLines={2}>
-        {item.name}
-      </Text>
+      <TouchableOpacity onPress={() => onViewDetails(item)}>
+        <Text style={[styles.competitionTitle, { marginBottom: 8, fontSize: 16, fontWeight: '600', color: '#1B7342' }]} numberOfLines={2}>
+          {item.name}
+        </Text>
+      </TouchableOpacity>
 
       {/* Quick Info Row */}
       <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 10, gap: 8 }}>
@@ -740,7 +742,7 @@ function CompetitionCard({ item, onViewDetails }: any) {
       )}
 
       {/* View Details Button is removed as per requirements */}
-      <TouchableOpacity style={[styles.cardButton, { backgroundColor: '#1B7342', paddingVertical: 12 }]} onPress={() => onViewDetails(item)}>
+      <TouchableOpacity style={[styles.cardButton, { backgroundColor: '#1B7342', paddingVertical: 12 }]} onPress={() => onParticipantsClick(item)}>
         <Text style={[styles.cardButtonText, { fontSize: 14, fontWeight: '600' }]}>Participants →</Text>
       </TouchableOpacity>
     </TouchableOpacity>
@@ -1090,11 +1092,15 @@ function NewsCard({ item, onPress }: any) {
         <View style={styles.newsCategoryBadge}>
           <Text style={styles.newsCategoryText}>{(item.category || 'News').toUpperCase()}</Text>
         </View>
-        <Text style={styles.newsTitle} numberOfLines={2}>{item.title}</Text>
+        <TouchableOpacity onPress={() => onPress(item)}>
+          <Text style={[styles.newsTitle, { color: '#1B7342' }]} numberOfLines={2}>{item.title}</Text>
+        </TouchableOpacity>
         <Text style={styles.newsExcerpt} numberOfLines={2}>{cleanDescription}</Text>
         <View style={styles.newsFooter}>
           <Text style={styles.newsDate}>{item.date || 'Today'}</Text>
-          <Text style={styles.newsReadMore}>Read More →</Text>
+          <TouchableOpacity onPress={() => onPress(item)}>
+            <Text style={styles.newsReadMore}>Read More →</Text>
+          </TouchableOpacity>
         </View>
       </View>
     </TouchableOpacity>
@@ -1708,7 +1714,7 @@ function CompetitionDetailsPage({
                       </View>
                     </View>
                     <View style={styles.participantInfo}>
-                      <Text style={styles.participantName} numberOfLines={1}>{team.name || 'Unknown Team'}</Text>
+                      <Text style={[styles.participantName, { color: '#1B7342' }]} numberOfLines={1}>{team.name || 'Unknown Team'}</Text>
                       <Text style={styles.participantClub} numberOfLines={1}>
                         {team.members?.length || 0} Members • Captain: {team.captainName || 'Unknown'}
                       </Text>
@@ -1735,8 +1741,22 @@ function CompetitionDetailsPage({
               <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 40 }} />
             ) : participants.length > 0 ? (
               <View style={styles.participantsList}>
-                {participants.map((participant: any, idx: number) => (
-                  <View key={idx} style={styles.participantCard}>
+                {(participants || []).map((participant: any, idx: number) => (
+                  <TouchableOpacity 
+                    key={idx}
+                    style={styles.participantCard}
+                    onPress={() => {
+                      const anglerId = participant.id || participant.anglerId;
+                      const angler = (anglers || []).find(a => a.id === anglerId || a._id === anglerId);
+                      if (angler) {
+                        setSelectedAngler(angler);
+                      } else {
+                        apiClient.get(`/api/anglers/${participant.username || participant.name}`).then(res => {
+                          if (res.data) setSelectedAngler(res.data);
+                        }).catch(() => {});
+                      }
+                    }}
+                  >
                     <View style={styles.participantAvatarContainer}>
                       {participant.avatar ? (
                         <Image source={{ uri: participant.avatar }} style={styles.participantAvatar} />
@@ -1748,24 +1768,16 @@ function CompetitionDetailsPage({
                         </View>
                       )}
                     </View>
-                    <TouchableOpacity 
-                      style={styles.participantInfo}
-                      onPress={() => {
-                        const angler = anglers.find(a => a.id === participant.id);
-                        if (angler) {
-                          setSelectedAngler(angler);
-                        }
-                      }}
-                    >
-                      <Text style={styles.participantName} numberOfLines={1}>{participant.name || 'Unknown'}</Text>
+                    <View style={styles.participantInfo}>
+                      <Text style={[styles.participantName, { color: '#1B7342' }]} numberOfLines={1}>{participant.name || 'Unknown'}</Text>
                       {participant.club && <Text style={styles.participantClub} numberOfLines={1}>{participant.club}</Text>}
-                    </TouchableOpacity>
+                    </View>
                     {participant.pegNumber && (
                       <View style={styles.pegBadge}>
                         <Text style={styles.pegBadgeText}>Peg {participant.pegNumber}</Text>
                       </View>
                     )}
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             ) : (
@@ -2477,9 +2489,11 @@ function AnglerCard({ angler, onPress }: any) {
           </View>
         )}
       </View>
-      <Text style={styles.anglerName} numberOfLines={1}>{angler.firstName} {angler.lastName}</Text>
-      <Text style={styles.anglerUsername} numberOfLines={1}>@{angler.username}</Text>
-      {angler.club && <Text style={styles.anglerClub} numberOfLines={1}>{angler.club}</Text>}
+      <View style={styles.anglerInfo}>
+        <Text style={[styles.anglerName, { color: '#1B7342' }]} numberOfLines={1}>{angler.firstName} {angler.lastName}</Text>
+        <Text style={styles.anglerUsername} numberOfLines={1}>@{angler.username}</Text>
+        {angler.club && <Text style={styles.anglerClub} numberOfLines={1}>{angler.club}</Text>}
+      </View>
       {angler.location && <Text style={styles.anglerLocation} numberOfLines={1}>{angler.location}</Text>}
       {angler.favouriteSpecies && <Text style={styles.anglerSpecies} numberOfLines={1}>Species: {angler.favouriteSpecies}</Text>}
     </TouchableOpacity>
@@ -4979,7 +4993,17 @@ export default function App() {
               ) : competitions.length > 0 ? (
                 <FlatList
                   data={competitions.slice(0, 3)}
-                  renderItem={({ item }) => <CompetitionCard item={item} onViewDetails={() => setSelectedCompetition(item)} />}
+                  renderItem={({ item }) => (
+                    <CompetitionCard 
+                      item={item} 
+                      onViewDetails={setSelectedCompetition}
+                      onParticipantsClick={(comp: any) => {
+                        setSelectedCompetition(comp);
+                        // We'll set the tab to participants after the state update
+                        setTimeout(() => setActiveTab('participants'), 100);
+                      }}
+                    />
+                  )}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                 />
@@ -5159,7 +5183,17 @@ export default function App() {
               return filtered.length > 0 ? (
                 <FlatList
                   data={filtered}
-                  renderItem={({ item }) => <CompetitionCard item={item} onViewDetails={() => setSelectedCompetition(item)} />}
+                  renderItem={({ item }) => (
+                    <CompetitionCard 
+                      item={item} 
+                      onViewDetails={setSelectedCompetition}
+                      onParticipantsClick={(comp: any) => {
+                        setSelectedCompetition(comp);
+                        // We'll set the tab to participants after the state update
+                        setTimeout(() => setActiveTab('participants'), 100);
+                      }}
+                    />
+                  )}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                 />
