@@ -1163,6 +1163,11 @@ function CompetitionDetailsPage({
   const [joiningTeam, setJoiningTeam] = useState(false);
   const [copiedInvite, setCopiedInvite] = useState(false);
 
+  // Modal states for details
+  const [selectedAnglerDetails, setSelectedAnglerDetails] = useState<any>(null);
+  const [showAnglerModal, setShowAnglerModal] = useState(false);
+  const [loadingAnglerDetails, setLoadingAnglerDetails] = useState(false);
+
   const [loadingTeams, setLoadingTeams] = useState(false);
   const isTeamCompetition = competition.competitionMode === 'team';
   const entryFee = parseFloat(competition.entryFee) || 0;
@@ -1260,6 +1265,50 @@ function CompetitionDetailsPage({
       setParticipants([]);
     } finally {
       setLoadingParticipants(false);
+    }
+  };
+
+  const handleAnglerClick = async (anglerId: string, username?: string) => {
+    setLoadingAnglerDetails(true);
+    setShowAnglerModal(true);
+    try {
+      // Priority 1: Fetch by username if available (most reliable for all angler endpoints)
+      const identifier = username || anglerId;
+      
+      let angler = null;
+      try {
+        // Try fetching full angler object from directory API
+        const res = await apiClient.get(`/api/anglers/${identifier}`);
+        if (res.data) angler = res.data;
+      } catch (e) {
+        console.log(`Failed to fetch full angler by identifier ${identifier}:`, e);
+      }
+
+      // Priority 2: Main directory list fallback
+      if (!angler) {
+        angler = (anglers || []).find((a: any) => 
+          (a.id && (a.id === anglerId || a.id === username)) || 
+          (a._id && (a._id === anglerId || a._id === username)) ||
+          (a.username && (a.username === username || a.username === anglerId))
+        );
+      }
+      
+      if (angler) {
+        // Ensure critical fields are present for profile rendering
+        if (!angler.username && username) angler.username = username;
+        if (!angler.username && angler.id) angler.username = angler.id;
+        
+        setSelectedAnglerDetails(angler);
+      } else {
+        Alert.alert('Error', 'Could not load angler details');
+        setShowAnglerModal(false);
+      }
+    } catch (error) {
+      console.error('Error loading angler:', error);
+      Alert.alert('Error', 'Failed to load angler profile');
+      setShowAnglerModal(false);
+    } finally {
+      setLoadingAnglerDetails(false);
     }
   };
 
@@ -1705,13 +1754,7 @@ function CompetitionDetailsPage({
                   <TouchableOpacity 
                     key={idx} 
                     style={styles.participantCard}
-                    onPress={() => {
-                      if (team.id) {
-                        setSelectedTeamId(team.id);
-                      } else {
-                        Alert.alert(team.name, `Members: ${team.members?.map((m: any) => m.name).join(', ') || 'None'}`);
-                      }
-                    }}
+                    onPress={() => onTeamClick(team.id || team._id)}
                   >
                     <View style={styles.participantAvatarContainer}>
                       <View style={[styles.participantAvatarPlaceholder, { backgroundColor: '#1B7342' }]}>
@@ -1754,18 +1797,7 @@ function CompetitionDetailsPage({
                     style={styles.participantCard}
                     onPress={() => {
                       const anglerId = participant.id || participant.anglerId;
-                      if (onAnglerClick) {
-                        onAnglerClick(anglerId);
-                      } else {
-                        const angler = (anglers || []).find(a => a.id === anglerId || a._id === anglerId);
-                        if (angler) {
-                          setSelectedAngler(angler);
-                        } else {
-                          apiClient.get(`/api/anglers/${participant.username || participant.name}`).then(res => {
-                            if (res.data) setSelectedAngler(res.data);
-                          }).catch(() => {});
-                        }
-                      }
+                      handleAnglerClick(anglerId, participant.username);
                     }}
                   >
                     <View style={styles.participantAvatarContainer}>
@@ -1830,22 +1862,9 @@ function CompetitionDetailsPage({
                     <TouchableOpacity 
                       style={[styles.leaderboardCell, styles.leaderboardCellWide]}
                       onPress={() => {
-                      const anglerId = entry.anglerId || entry.id;
-                      if (onAnglerClick) {
-                        onAnglerClick(anglerId);
-                      } else {
-                        const angler = (anglers || []).find((a: any) => a.id === anglerId);
-                        if (angler) {
-                          setSelectedAngler(angler);
-                        } else if (entry.anglerName) {
-                          // Fallback to searching by name if ID fails
-                          const anglerByName = (anglers || []).find((a: any) => 
-                            `${a.firstName} ${a.lastName}`.toLowerCase() === entry.anglerName.toLowerCase()
-                          );
-                          if (anglerByName) setSelectedAngler(anglerByName);
-                        }
-                      }
-                    }}
+                        const anglerId = entry.anglerId || entry.id;
+                        handleAnglerClick(anglerId, entry.username);
+                      }}
                     >
                       <Text style={{ color: '#1B7342', fontWeight: '600' }} numberOfLines={1}>
                         {entry.anglerName || entry.name || 'Unknown'}
@@ -1895,6 +1914,29 @@ function CompetitionDetailsPage({
 
         <View style={{ height: 20 }} />
       </ScrollView>
+
+      {/* Angler Modal within Competition Details */}
+      {showAnglerModal && (
+        <Modal visible={showAnglerModal} animationType="slide" transparent={false}>
+          <SafeAreaView style={{ flex: 1, backgroundColor: '#000' }}>
+            {loadingAnglerDetails ? (
+              <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+                <ActivityIndicator size="large" color="#1B7342" />
+                <Text style={{ color: '#fff', marginTop: 10 }}>Loading Profile...</Text>
+              </View>
+            ) : selectedAnglerDetails ? (
+              <AnglerProfilePage 
+                angler={selectedAnglerDetails} 
+                onClose={() => {
+                  setShowAnglerModal(false);
+                  setSelectedAnglerDetails(null);
+                }} 
+                currentUser={user}
+              />
+            ) : null}
+          </SafeAreaView>
+        </Modal>
+      )}
 
       {/* Create Team Modal */}
       <Modal visible={showCreateTeamModal} animationType="slide" transparent>
@@ -1989,6 +2031,81 @@ function CompetitionDetailsPage({
         </View>
       </Modal>
     </View>
+  );
+}
+
+// Team Details Modal Component
+function TeamDetailsModal({ visible, teamId, onClose, anglers }: any) {
+  const [team, setTeam] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (visible && teamId) {
+      setLoading(true);
+      apiClient.get(`/api/team/${teamId}`)
+        .then(res => {
+          setTeam(res.data);
+          setLoading(false);
+        })
+        .catch(err => {
+          console.error('Error fetching team details:', err);
+          setLoading(false);
+        });
+    }
+  }, [visible, teamId]);
+
+  if (!visible) return null;
+
+  return (
+    <Modal visible={visible} animationType="slide" transparent>
+      <View style={styles.modalOverlay}>
+        <View style={styles.teamModalContainer}>
+          <View style={styles.editModalHeader}>
+            <TouchableOpacity onPress={onClose}>
+              <Text style={styles.editModalClose}>Close</Text>
+            </TouchableOpacity>
+            <Text style={styles.editModalTitle}>Team Details</Text>
+            <View style={{ width: 50 }} />
+          </View>
+          <ScrollView style={{ padding: 16 }}>
+            {loading ? (
+              <ActivityIndicator size="large" color="#1B7342" style={{ marginVertical: 40 }} />
+            ) : team ? (
+              <>
+                <Text style={[styles.detailsSectionTitle, { color: '#1B7342', fontSize: 24 }]}>{team.name}</Text>
+                <Text style={{ color: '#999', marginBottom: 20 }}>Captain: {team.captainName || 'Unknown'}</Text>
+                
+                <Text style={[styles.modalLabel, { marginBottom: 10 }]}>Team Members</Text>
+                {team.members && team.members.length > 0 ? (
+                  team.members.map((member: any, idx: number) => (
+                    <View key={idx} style={[styles.participantCard, { borderBottomWidth: 1, borderBottomColor: '#333' }]}>
+                      <View style={styles.participantAvatarContainer}>
+                        {member.avatar ? (
+                          <Image source={{ uri: member.avatar.startsWith('http') ? member.avatar : `${API_URL}${member.avatar}` }} style={styles.participantAvatar} />
+                        ) : (
+                          <View style={styles.participantAvatarPlaceholder}>
+                            <Text style={styles.participantAvatarText}>{member.name?.charAt(0) || 'U'}</Text>
+                          </View>
+                        )}
+                      </View>
+                      <View style={styles.participantInfo}>
+                        <Text style={[styles.participantName, { color: '#fff' }]}>{member.name}</Text>
+                        <Text style={styles.participantClub}>{member.username ? `@${member.username}` : ''}</Text>
+                      </View>
+                    </View>
+                  ))
+                ) : (
+                  <Text style={{ color: '#666' }}>No members found</Text>
+                )}
+              </>
+            ) : (
+              <Text style={{ color: '#666', textAlign: 'center' }}>Team details not available</Text>
+            )}
+            <View style={{ height: 40 }} />
+          </ScrollView>
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -4637,6 +4754,7 @@ export default function App() {
   const [galleryFilter, setGalleryFilter] = useState('all');
   const [selectedSponsor, setSelectedSponsor] = useState<any>(null);
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  const [showTeamModal, setShowTeamModal] = useState(false);
   const [teamDetails, setTeamDetails] = useState<any>(null);
   const [teamLoading, setTeamLoading] = useState(false);
   
@@ -4958,13 +5076,42 @@ export default function App() {
               competition={selectedCompetition} 
               onClose={() => setSelectedCompetition(null)}
               anglers={anglers}
-              onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
+              onTeamClick={(teamId: string) => {
+                setSelectedTeamId(teamId);
+                setShowTeamModal(true);
+              }}
               user={currentUser}
               onLogin={() => setShowLoginModal(true)}
               onAnglerClick={(anglerId: string) => {
+                // Find angler in the main anglers list
                 const angler = (anglers || []).find((a: any) => a.id === anglerId);
                 if (angler) {
                   setSelectedAngler(angler);
+                } else {
+                  // Fallback: search by ID or fetch from API if not found
+                  setAnglersLoading(true);
+                  apiClient.get(`/api/anglers/${anglerId}`)
+                    .then(res => {
+                      if (res.data) {
+                        setSelectedAngler(res.data);
+                      } else {
+                        Alert.alert('Error', 'Angler not found');
+                      }
+                    })
+                    .catch(() => {
+                      // Second fallback: try searching by participant name if we can find it
+                      const participant = (selectedCompetition.participants || []).find((p: any) => p.id === anglerId || p.anglerId === anglerId);
+                      if (participant && participant.username) {
+                        apiClient.get(`/api/anglers/${participant.username}`)
+                          .then(res => {
+                            if (res.data) setSelectedAngler(res.data);
+                          })
+                          .catch(() => Alert.alert('Error', 'Could not load angler details'));
+                      } else {
+                        Alert.alert('Error', 'Could not find angler information');
+                      }
+                    })
+                    .finally(() => setAnglersLoading(false));
                 }
               }}
             />
@@ -4982,6 +5129,17 @@ export default function App() {
           </SafeAreaView>
         </Modal>
       )}
+
+      {/* Team Details View */}
+      <TeamDetailsModal
+        visible={showTeamModal}
+        teamId={selectedTeamId}
+        anglers={anglers}
+        onClose={() => {
+          setShowTeamModal(false);
+          setSelectedTeamId(null);
+        }}
+      />
 
       {/* News Detail View */}
       {selectedNews && (
