@@ -1140,7 +1140,8 @@ function CompetitionDetailsPage({
   anglers, 
   onTeamClick, 
   user, 
-  onLogin 
+  onLogin,
+  onAnglerClick
 }: any) {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [participants, setParticipants] = useState<any[]>([]);
@@ -1753,13 +1754,17 @@ function CompetitionDetailsPage({
                     style={styles.participantCard}
                     onPress={() => {
                       const anglerId = participant.id || participant.anglerId;
-                      const angler = (anglers || []).find(a => a.id === anglerId || a._id === anglerId);
-                      if (angler) {
-                        setSelectedAngler(angler);
+                      if (onAnglerClick) {
+                        onAnglerClick(anglerId);
                       } else {
-                        apiClient.get(`/api/anglers/${participant.username || participant.name}`).then(res => {
-                          if (res.data) setSelectedAngler(res.data);
-                        }).catch(() => {});
+                        const angler = (anglers || []).find(a => a.id === anglerId || a._id === anglerId);
+                        if (angler) {
+                          setSelectedAngler(angler);
+                        } else {
+                          apiClient.get(`/api/anglers/${participant.username || participant.name}`).then(res => {
+                            if (res.data) setSelectedAngler(res.data);
+                          }).catch(() => {});
+                        }
                       }
                     }}
                   >
@@ -1825,7 +1830,10 @@ function CompetitionDetailsPage({
                     <TouchableOpacity 
                       style={[styles.leaderboardCell, styles.leaderboardCellWide]}
                       onPress={() => {
-                        const anglerId = entry.anglerId || entry.id;
+                      const anglerId = entry.anglerId || entry.id;
+                      if (onAnglerClick) {
+                        onAnglerClick(anglerId);
+                      } else {
                         const angler = (anglers || []).find((a: any) => a.id === anglerId);
                         if (angler) {
                           setSelectedAngler(angler);
@@ -1836,7 +1844,8 @@ function CompetitionDetailsPage({
                           );
                           if (anglerByName) setSelectedAngler(anglerByName);
                         }
-                      }}
+                      }
+                    }}
                     >
                       <Text style={{ color: '#1B7342', fontWeight: '600' }} numberOfLines={1}>
                         {entry.anglerName || entry.name || 'Unknown'}
@@ -4952,9 +4961,11 @@ export default function App() {
               onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
               user={currentUser}
               onLogin={() => setShowLoginModal(true)}
-              onAnglerClick={(angler: any) => {
-                setSelectedCompetition(null);
-                setSelectedAngler(angler);
+              onAnglerClick={(anglerId: string) => {
+                const angler = (anglers || []).find((a: any) => a.id === anglerId);
+                if (angler) {
+                  setSelectedAngler(angler);
+                }
               }}
             />
       )}
@@ -5224,6 +5235,7 @@ export default function App() {
         {currentPage === 'leaderboard' && (
           <LeaderboardPage 
             competitions={competitions} 
+            anglers={anglers}
             onTeamClick={(teamId: string) => setSelectedTeamId(teamId)}
             onAnglerClick={(anglerId: string) => {
               const angler = (anglers || []).find((a: any) => a.id === anglerId);

@@ -35,7 +35,8 @@
     "web": {
       "favicon": "./assets/favicon.png",
       "bundler": "metro",
-      "output": "single"
+      "output": "single",
+      "host": "0.0.0.0"
     }
   }
 }
