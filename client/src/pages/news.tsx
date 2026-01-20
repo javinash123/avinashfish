@@ -25,6 +25,7 @@ interface NewsSummary {
   readTime: string;
   author: string;
   featured?: boolean;
+  content?: string; // Add content to summary for immediate display
 }
 
 const getNewsImageUrl = (imagePath: string) => {
@@ -35,12 +36,8 @@ const getNewsImageUrl = (imagePath: string) => {
     return imagePath;
   }
   
-  // Clean the path from optimized suffix but keep the original filename which should include the extension
-  // The database usually stores the filename from the upload response
-  const cleanPath = imagePath.replace('-optimized.webp', '');
-  
-  // Return the path within the news upload directory
-  return `/attached-assets/uploads/news/${cleanPath}`;
+  // Return original image instead of optimized webp to match competition images
+  return `/attached-assets/uploads/news/${imagePath}`;
 };
 
 interface PaginatedNewsResponse {
@@ -233,51 +230,50 @@ export default function NewsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredArticles.map((article) => {
                 const categoryInfo = getCategoryBadge(article.category);
-                const CategoryIcon = categoryInfo.icon;
                 
                 return (
-                  <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
-                    <div className="relative w-full h-48 overflow-hidden bg-muted">
+                  <Card key={article.id} className="overflow-hidden hover-elevate transition-all duration-200 cursor-pointer h-full flex flex-col" data-testid={`card-news-${article.id}`} onClick={() => handleArticleOpen(article)}>
+                    <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 overflow-hidden flex items-center justify-center">
                       <img
                         src={getNewsImageUrl(article.image)}
                         alt={article.title}
-                        className="w-full h-full object-contain"
-                        loading="eager"
+                        className="w-full h-full object-contain object-center"
+                        loading="lazy"
                       />
-                      <div className="absolute top-2 left-2">
-                        <Badge variant={categoryInfo.variant}>
-                          <CategoryIcon className="h-3 w-3 mr-1" />
+                      <div className="absolute top-3 right-3">
+                        <Badge variant={categoryInfo.variant} data-testid={`badge-status-${article.category}`}>
                           {categoryInfo.label}
                         </Badge>
                       </div>
                     </div>
-                    <CardHeader>
-                      <h3 className="text-xl font-semibold line-clamp-2" data-testid={`text-news-title-${article.id}`}>
-                        {article.title}
-                      </h3>
+
+                    <CardHeader className="pb-3">
+                      <h3 className="text-xl font-bold line-clamp-1" data-testid="text-news-title">{article.title}</h3>
                     </CardHeader>
-                    <CardContent className="flex-1">
-                      <p className="text-muted-foreground line-clamp-3">{article.excerpt}</p>
-                    </CardContent>
-                    <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
-                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3" />
-                          <span>{article.date}</span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <Clock className="h-3 w-3" />
-                          <span>{article.readTime}</span>
-                        </div>
+
+                    <CardContent className="space-y-3 flex-1">
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Calendar className="h-4 w-4" />
+                        <span data-testid="text-date">{article.date}</span>
                       </div>
-                      <Button 
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => handleArticleOpen(article)}
-                        data-testid={`button-read-more-${article.id}`}
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Clock className="h-4 w-4" />
+                        <span className="line-clamp-1" data-testid="text-read-time">{article.readTime} read</span>
+                      </div>
+                      <p className="text-muted-foreground line-clamp-2 text-sm" data-testid="text-excerpt">{article.excerpt}</p>
+                    </CardContent>
+
+                    <CardFooter className="flex items-center justify-between gap-2 pt-3">
+                      <div className="text-lg font-bold">News</div>
+                      <Button
+                        variant="secondary"
+                        data-testid="button-view-details"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleArticleOpen(article);
+                        }}
                       >
                         Read More
-                        <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </CardFooter>
                   </Card>
@@ -354,10 +350,10 @@ export default function NewsPage() {
                 <div className="space-y-4">
                   <div className="relative w-full h-64 overflow-hidden rounded-md bg-muted">
                     <img
-                      src={getNewsImageUrl(fullArticle.image)}
-                      alt={fullArticle.title}
+                      src={getNewsImageUrl(fullArticle?.image || selectedArticle.image)}
+                      alt={fullArticle?.title || selectedArticle.title}
                       className="w-full h-full object-contain"
-                      loading="eager"
+                      loading="lazy"
                     />
                   </div>
                   <div className="flex flex-wrap items-center gap-4">

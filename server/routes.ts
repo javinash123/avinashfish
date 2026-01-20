@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
               fit: 'inside',
               withoutEnlargement: true
             })
-            .webp({ quality: 80 })
+            .webp({ quality: 75 }) // Reduced quality slightly for better speed
             .toFile(optimizedPath);
           
           // Return the optimized version URL

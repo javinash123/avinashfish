@@ -47,6 +47,26 @@ export default function Competitions() {
     const matchesStatus =
       statusFilter === "all" || comp.status === statusFilter;
     return matchesSearch && matchesStatus;
+  }).sort((a, b) => {
+    const statusOrder: Record<string, number> = {
+      live: 0,
+      upcoming: 1,
+      completed: 2
+    };
+    
+    // Sort by status priority first
+    const orderA = statusOrder[a.status] ?? 3;
+    const orderB = statusOrder[b.status] ?? 3;
+    
+    if (orderA !== orderB) {
+      return orderA - orderB;
+    }
+    
+    // If same status, sort by date (newest first for live/upcoming, newest first for completed too)
+    const dateA = new Date(competitionsData.find(c => c.id === a.id)?.date || 0).getTime();
+    const dateB = new Date(competitionsData.find(c => c.id === b.id)?.date || 0).getTime();
+    
+    return dateB - dateA;
   });
 
   return (

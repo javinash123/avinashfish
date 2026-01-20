@@ -145,6 +145,16 @@ export interface IStorage {
 }
 
 export async function initializeStorage(): Promise<IStorage> {
+  if (process.env.MONGODB_URI) {
+    try {
+      const { MongoDBStorage } = await import("./mongodb-storage");
+      const mongoStorage = new MongoDBStorage(process.env.MONGODB_URI);
+      await mongoStorage.connect();
+      return mongoStorage;
+    } catch (error) {
+      console.error("Failed to connect to MongoDB, falling back to MemStorage:", error);
+    }
+  }
   return storage;
 }
 
