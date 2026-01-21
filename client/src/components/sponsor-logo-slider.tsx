@@ -59,7 +59,7 @@ export function SponsorLogoSlider() {
           </div>
           
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {sponsors.map((sponsor) => (
+            {sponsors.filter(s => s.showOnFooter !== false).map((sponsor) => (
               <button
                 key={sponsor.id}
                 onClick={() => handleSponsorClick(sponsor)}

@@ -147,7 +147,7 @@ export async function sendContactEmail(data: {
 }) {
   try {
     const { client, fromEmail } = await getUncachableResendClient();
-    const contactRecipient = process.env.CONTACT_EMAIL || 'info@pegslam.co.uk';
+    const contactRecipient = process.env.CONTACT_EMAIL || 'ianjusto@outlook.com';
     
     const htmlContent = `
       <!DOCTYPE html>

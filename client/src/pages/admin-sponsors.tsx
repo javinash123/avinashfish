@@ -37,6 +37,7 @@ import {
 } from "@/components/ui/table";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
@@ -69,6 +70,7 @@ export default function AdminSponsors() {
     facebook: "",
     twitter: "",
     instagram: "",
+    showOnFooter: true,
   });
 
   const { data: sponsors = [], isLoading } = useQuery<Sponsor[]>({
@@ -173,6 +175,7 @@ export default function AdminSponsors() {
         website: formData.website || undefined,
         shortDescription: formData.shortDescription,
         description: formData.description,
+        showOnFooter: formData.showOnFooter,
         social: {
           facebook: formData.facebook || undefined,
           twitter: formData.twitter || undefined,
@@ -212,6 +215,7 @@ export default function AdminSponsors() {
         website: formData.website || undefined,
         shortDescription: formData.shortDescription,
         description: formData.description,
+        showOnFooter: formData.showOnFooter,
         social: {
           facebook: formData.facebook || undefined,
           twitter: formData.twitter || undefined,
@@ -249,6 +253,7 @@ export default function AdminSponsors() {
       facebook: sponsor.social?.facebook || "",
       twitter: sponsor.social?.twitter || "",
       instagram: sponsor.social?.instagram || "",
+      showOnFooter: sponsor.showOnFooter ?? true,
     });
     setIsEditOpen(true);
   };
@@ -264,6 +269,7 @@ export default function AdminSponsors() {
       facebook: "",
       twitter: "",
       instagram: "",
+      showOnFooter: true,
     });
   };
 
@@ -295,6 +301,13 @@ export default function AdminSponsors() {
       default:
         return "bg-slate-400";
     }
+  };
+
+  const handleShowOnFooterChange = (id: string, currentStatus: boolean) => {
+    updateMutation.mutate({ 
+      id, 
+      data: { showOnFooter: !currentStatus } 
+    });
   };
 
   if (isLoading) {
@@ -530,6 +543,20 @@ export default function AdminSponsors() {
                 />
               </div>
             </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="show-on-footer">Show on Footer</Label>
+                <div className="text-sm text-muted-foreground">
+                  Display this sponsor's logo in the "Sponsors & Partners" section above the footer
+                </div>
+              </div>
+              <Switch
+                id="show-on-footer"
+                checked={formData.showOnFooter}
+                onCheckedChange={(checked) => setFormData({ ...formData, showOnFooter: checked })}
+                data-testid="switch-show-on-footer"
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsCreateOpen(false)} data-testid="button-cancel">
@@ -645,6 +672,20 @@ export default function AdminSponsors() {
                   data-testid="input-edit-instagram"
                 />
               </div>
+            </div>
+            <div className="flex items-center justify-between p-3 border rounded-lg">
+              <div className="space-y-0.5">
+                <Label htmlFor="edit-show-on-footer">Show on Footer</Label>
+                <div className="text-sm text-muted-foreground">
+                  Display this sponsor's logo in the "Sponsors & Partners" section above the footer
+                </div>
+              </div>
+              <Switch
+                id="edit-show-on-footer"
+                checked={formData.showOnFooter}
+                onCheckedChange={(checked) => setFormData({ ...formData, showOnFooter: checked })}
+                data-testid="switch-edit-show-on-footer"
+              />
             </div>
           </div>
           <DialogFooter>
