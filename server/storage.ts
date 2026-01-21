@@ -134,6 +134,7 @@ export interface IStorage {
   createLeaderboardEntry(entry: InsertLeaderboardEntry): Promise<LeaderboardEntry>;
   updateLeaderboardEntry(id: string, updates: UpdateLeaderboardEntry): Promise<LeaderboardEntry | undefined>;
   deleteLeaderboardEntry(id: string): Promise<boolean>;
+  recalculatePositions(competitionId: string): Promise<void>;
   
   // Payment methods
   createPayment(payment: InsertPayment): Promise<Payment>;

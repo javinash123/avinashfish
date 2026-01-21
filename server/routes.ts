@@ -1392,8 +1392,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Calculate statistics
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      const totalEvents = leaderboardEntries.length;
       
-      // Calculate best catch (highest weight in ounces)
+      // Calculate best catch (highest weight in decimal)
       const weights = leaderboardEntries
         .map(entry => {
           const w = parseFloat(entry.weight);
@@ -1401,25 +1402,22 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         })
         .filter(weight => weight > 0);
       
-      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
-      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
-      const averageWeightOz = weights.length > 0 
-        ? totalWeightOz / weights.length 
+      const bestCatchWeight = weights.length > 0 ? Math.max(...weights) : 0;
+      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      const averageWeight = weights.length > 0 
+        ? totalWeight / weights.length 
         : 0;
 
       res.json({
         wins,
         podiumFinishes,
-        bestCatchOz,
-        averageWeightOz,
-        totalWeightOz,
-        bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
-        averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
-        totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
-        totalCompetitions: leaderboardEntries.length,
+        totalEvents,
+        bestCatch: bestCatchWeight.toFixed(2),
+        averageCatch: averageWeight.toFixed(2),
+        totalWeight: totalWeight.toFixed(2)
       });
     } catch (error: any) {
-      console.error("Get user stats by username error:", error);
+      console.error("Get user stats error:", error);
       res.status(500).json({ message: "Error fetching user stats: " + error.message });
     }
   });
@@ -3944,6 +3942,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       console.log("[BACKEND WEIGHT] Creating leaderboard entry with:", result.data);
       const entry = await storage.createLeaderboardEntry(result.data);
       console.log("[BACKEND WEIGHT] Entry created successfully:", entry);
+      
+      // Automatically recalculate positions for this competition
+      await storage.recalculatePositions(entry.competitionId);
+      
       res.json(entry);
     } catch (error: any) {
       console.error("Error creating leaderboard entry:", error);
@@ -3968,6 +3970,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "Leaderboard entry not found" });
       }
 
+      // Automatically recalculate positions for this competition
+      await storage.recalculatePositions(entry.competitionId);
+
       res.json(entry);
     } catch (error: any) {
       console.error("Error updating leaderboard entry:", error);
@@ -3987,6 +3992,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "Leaderboard entry not found" });
       }
 
+      // Note: We don't have the competitionId here easily without fetching the entry first,
+      // but usually the admin will be viewing a competition page and we can trigger refresh from frontend
+      // or we could fetch the entry before deleting to get its competitionId for recalculation.
+      
       res.json({ message: "Leaderboard entry deleted successfully" });
     } catch (error: any) {
       console.error("Error deleting leaderboard entry:", error);

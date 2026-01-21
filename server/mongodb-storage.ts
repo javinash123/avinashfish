@@ -1389,6 +1389,25 @@ export class MongoDBStorage implements IStorage {
     return result || undefined;
   }
 
+  async recalculatePositions(competitionId: string): Promise<void> {
+    const entries = await this.leaderboardEntries.find({ competitionId }).toArray();
+    
+    // Sort by weight descending
+    const sorted = [...entries].sort((a, b) => {
+      const wA = parseFloat(a.weight) || 0;
+      const wB = parseFloat(b.weight) || 0;
+      return wB - wA;
+    });
+
+    for (let i = 0; i < sorted.length; i++) {
+      const position = i + 1;
+      await this.leaderboardEntries.updateOne(
+        { id: sorted[i].id },
+        { $set: { position, updatedAt: new Date() } }
+      );
+    }
+  }
+
   async deleteLeaderboardEntry(id: string): Promise<boolean> {
     const result = await this.leaderboardEntries.deleteOne({ id });
     return result.deletedCount === 1;
