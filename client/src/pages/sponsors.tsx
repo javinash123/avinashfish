@@ -697,7 +697,7 @@ export default function Sponsors() {
 
               <div className="pt-4">
                 <Button variant="secondary" asChild data-testid="button-sponsor-contact">
-                  <a href="/contact">
+                  <a href="mailto:info@pegslam.com">
                     <Mail className="h-4 w-4 mr-2" />
                     Contact Us About Sponsorship
                   </a>

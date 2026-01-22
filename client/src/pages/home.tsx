@@ -27,8 +27,9 @@ export default function Home() {
     if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
       return imagePath;
     }
-    // Return original image instead of optimized webp to match competition images
-    return `/attached-assets/uploads/news/${imagePath}`;
+    // Clean optimized suffix
+    const cleanPath = imagePath.replace('-optimized.webp', '');
+    return `/attached-assets/uploads/news/${cleanPath}`;
   };
 
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -218,61 +219,61 @@ export default function Home() {
                 const CategoryIcon = categoryInfo.icon;
                 
                 return (
-                  <Link key={news.id} href={`/news?article=${news.id}`} className="block">
-                    <Card className="overflow-hidden hover-elevate transition-all duration-200 cursor-pointer h-full" data-testid={`card-news-${news.id}`}>
-                      <div className="relative w-full bg-gradient-to-br from-primary/20 to-chart-2/20 overflow-hidden flex items-center justify-center">
-                        <img
-                          src={getNewsImageUrl(news.image)}
-                          alt={news.title}
-                          className="w-full h-full object-contain object-center"
-                          loading="lazy"
-                        />
-                        <div className="absolute top-3 right-3">
-                          <Badge variant={categoryInfo.variant} data-testid={`badge-status-${news.category}`}>
-                            {categoryInfo.label}
-                          </Badge>
+                  <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
+                    <div className="relative w-full h-48 overflow-hidden bg-muted">
+                      <img
+                        src={getNewsImageUrl(news.image)}
+                        alt={news.title}
+                        className="w-full h-full object-contain"
+                      />
+                      <div className="absolute top-2 left-2">
+                        <Badge variant={categoryInfo.variant}>
+                          <CategoryIcon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardHeader>
+                      <h3 className="text-xl font-semibold line-clamp-2" data-testid={`text-news-title-${news.id}`}>
+                        {news.title}
+                      </h3>
+                    </CardHeader>
+                    <CardContent className="flex-1">
+                      <p className="text-muted-foreground">{news.excerpt}</p>
+                    </CardContent>
+                    <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
+                      <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-3 w-3" />
+                          <span>{news.date}</span>
+                        </div>
+                        <div className="flex items-center gap-1">
+                          <Clock className="h-3 w-3" />
+                          <span>{news.readTime}</span>
                         </div>
                       </div>
-
-                      <CardHeader className="pb-3">
-                        <h3 className="text-xl font-bold line-clamp-1" data-testid="text-news-title">{news.title}</h3>
-                      </CardHeader>
-
-                      <CardContent className="space-y-3">
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Calendar className="h-4 w-4" />
-                          <span data-testid="text-date">{news.date}</span>
-                        </div>
-                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                          <Clock className="h-4 w-4" />
-                          <span className="line-clamp-1" data-testid="text-read-time">{news.readTime} read</span>
-                        </div>
-                        <p className="text-muted-foreground line-clamp-2 text-sm" data-testid="text-excerpt">{news.excerpt}</p>
-                      </CardContent>
-
-                      <CardFooter className="flex items-center justify-between gap-2 pt-3">
-                        <div className="text-lg font-bold">News</div>
-                        <Button
-                          variant="secondary"
-                          data-testid="button-view-details"
-                          onClick={(e) => {
-                            e.preventDefault();
-                            const articleUrl = `${window.location.origin}/news?article=${news.id}`;
-                            updateMetaTags({
-                              title: news.title,
-                              description: news.excerpt,
-                              image: getNewsImageUrl(news.image),
-                              url: articleUrl,
-                              type: 'article',
-                            });
-                            window.location.href = `/news?article=${news.id}`;
-                          }}
-                        >
-                          Read More
-                        </Button>
-                      </CardFooter>
-                    </Card>
-                  </Link>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => {
+                          // Update meta tags for social sharing before navigation
+                          const articleUrl = `${window.location.origin}/news?article=${news.id}`;
+                          updateMetaTags({
+                            title: news.title,
+                            description: news.excerpt,
+                            image: getNewsImageUrl(news.image),
+                            url: articleUrl,
+                            type: 'article',
+                          });
+                          window.location.href = `/news?article=${news.id}`;
+                        }}
+                        data-testid={`button-read-more-${news.id}`}
+                      >
+                        Read More
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </Button>
+                    </CardFooter>
+                  </Card>
                 );
               })}
             </div>
