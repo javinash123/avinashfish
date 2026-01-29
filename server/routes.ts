@@ -2282,7 +2282,24 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     try {
       const page = parseInt(req.query.page as string) || 1;
       const limit = parseInt(req.query.limit as string) || 6;
-      const allNews = await storage.getAllNews();
+      const category = req.query.category as string;
+      const search = req.query.search as string;
+      
+      let allNews = await storage.getAllNews();
+      
+      // Filter by category
+      if (category && category !== "all") {
+        allNews = allNews.filter(n => n.category === category);
+      }
+      
+      // Filter by search query
+      if (search) {
+        const searchLower = search.toLowerCase();
+        allNews = allNews.filter(n => 
+          n.title.toLowerCase().includes(searchLower) || 
+          n.excerpt.toLowerCase().includes(searchLower)
+        );
+      }
       
       // Sort by date descending (newest first)
       const sortedNews = allNews.sort((a, b) => {

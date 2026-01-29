@@ -69,9 +69,15 @@ export default function NewsPage() {
   const ITEMS_PER_PAGE = 6;
 
   const { data: newsData, isLoading } = useQuery<PaginatedNewsResponse>({
-    queryKey: ["/api/news", currentPage, ITEMS_PER_PAGE],
+    queryKey: ["/api/news", currentPage, ITEMS_PER_PAGE, selectedCategory, searchQuery],
     queryFn: async () => {
-      const response = await fetch(`/api/news?page=${currentPage}&limit=${ITEMS_PER_PAGE}`);
+      const params = new URLSearchParams({
+        page: currentPage.toString(),
+        limit: ITEMS_PER_PAGE.toString(),
+        category: selectedCategory,
+        search: searchQuery
+      });
+      const response = await fetch(`/api/news?${params.toString()}`);
       if (!response.ok) throw new Error("Failed to fetch news");
       return response.json();
     },
@@ -81,6 +87,11 @@ export default function NewsPage() {
 
   const newsArticles = newsData?.news || [];
   const pagination = newsData?.pagination;
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedCategory, searchQuery]);
 
   // Fetch full article when opening dialog
   const { data: fullArticle, isLoading: isLoadingArticle } = useQuery<News>({
@@ -131,13 +142,8 @@ export default function NewsPage() {
     setLocation('/news');
   };
 
-  // Filter articles client-side (only for current page)
-  const filteredArticles = newsArticles.filter((article) => {
-    const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      article.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === "all" || article.category === selectedCategory;
-    return matchesSearch && matchesCategory;
-  });
+  // The filteredArticles now come directly from the API result
+  const filteredArticles = newsArticles;
 
   const getCategoryBadge = (category: string) => {
     switch (category) {
@@ -212,6 +218,13 @@ export default function NewsPage() {
               data-testid="button-filter-general"
             >
               General
+            </Button>
+            <Button
+              variant={selectedCategory === "news" ? "default" : "outline"}
+              onClick={() => setSelectedCategory("news")}
+              data-testid="button-filter-news"
+            >
+              News
             </Button>
           </div>
         </div>
