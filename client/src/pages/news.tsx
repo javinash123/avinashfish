@@ -31,21 +31,11 @@ interface NewsSummary {
 const getNewsImageUrl = (imagePath: string) => {
   if (!imagePath) return "/attached-assets/placeholder-news.jpg";
   
-  // If it's already a full path, use it as is
   if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
-    // Check if it's already an optimized version
-    if (imagePath.includes('-optimized.webp')) return imagePath;
-    
-    // If it's a news upload, try to use the optimized version
-    if (imagePath.includes('/uploads/news/')) {
-       return imagePath.replace(/(\.[^.]+)$/, '-optimized.webp');
-    }
     return imagePath;
   }
   
-  // Try to use optimized version if available
-  const optimizedPath = imagePath.replace(/(\.[^.]+)$/, '-optimized.webp');
-  return `/attached-assets/uploads/news/${optimizedPath}`;
+  return `/attached-assets/uploads/news/${imagePath}`;
 };
 
 interface PaginatedNewsResponse {

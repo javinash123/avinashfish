@@ -27,9 +27,7 @@ export default function Home() {
     if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
       return imagePath;
     }
-    // Clean optimized suffix
-    const cleanPath = imagePath.replace('-optimized.webp', '');
-    return `/attached-assets/uploads/news/${cleanPath}`;
+    return `/attached-assets/uploads/news/${imagePath}`;
   };
 
   const { data: competitionsData = [] } = useQuery<Competition[]>({
