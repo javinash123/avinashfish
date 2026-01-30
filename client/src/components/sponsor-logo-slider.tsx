@@ -21,7 +21,9 @@ export function SponsorLogoSlider() {
     queryKey: ["/api/sponsors"],
   });
 
-  if (isLoading || sponsors.length === 0) {
+  const featuredSponsors = sponsors.filter(s => s.featuredAboveFooter !== false);
+
+  if (isLoading || featuredSponsors.length === 0) {
     return null;
   }
 
@@ -59,7 +61,7 @@ export function SponsorLogoSlider() {
           </div>
           
           <div className="flex flex-wrap items-center justify-center gap-8 md:gap-12">
-            {sponsors.map((sponsor) => (
+            {featuredSponsors.map((sponsor) => (
               <button
                 key={sponsor.id}
                 onClick={() => handleSponsorClick(sponsor)}

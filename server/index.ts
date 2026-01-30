@@ -146,15 +146,15 @@ proxy: true
 */
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-  resave: false,
-  saveUninitialized: true,
-  cookie: {
-    secure: false, // ⚠️ temporary fix until you use HTTPS
-    sameSite: "lax",
-    httpOnly: true,
-  },
-  proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
+secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+resave: false,
+saveUninitialized: true,
+cookie: {
+secure: false, // ⚠️ temporary fix until you use HTTPS
+sameSite: "lax",
+httpOnly: true,
+},
+proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
 }));
 // Disable caching for API routes to ensure real-time data updates
 app.use((req, res, next) => {

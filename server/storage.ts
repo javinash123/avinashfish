@@ -142,9 +142,23 @@ export interface IStorage {
   getCompetitionPayments(competitionId: string): Promise<Payment[]>;
   getUserPayments(userId: string): Promise<Payment[]>;
   updatePaymentStatus(id: string, status: string): Promise<Payment | undefined>;
+  listNews(query: {
+    category?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ news: any[]; pagination: any }>;
 }
 
 export async function initializeStorage(): Promise<IStorage> {
+  if (process.env.MONGODB_URI) {
+    console.log("🔌 Initializing MongoDB storage...");
+    const { MongoDBStorage } = await import("./mongodb-storage");
+    const mongoStorage = new MongoDBStorage(process.env.MONGODB_URI);
+    await mongoStorage.connect();
+    return mongoStorage;
+  }
+  console.log("🔌 Initializing In-memory storage (fallback)...");
   return storage;
 }
 
@@ -1262,6 +1276,48 @@ export class MemStorage implements IStorage {
     const updatedPayment = { ...payment, status };
     this.payments.set(id, updatedPayment);
     return updatedPayment;
+  }
+
+  async listNews(query: {
+    category?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ news: any[]; pagination: any }> {
+    const { category, search, page = 1, limit = 10 } = query;
+    let filteredNews = Array.from(this.news.values());
+
+    if (category && category !== "all") {
+      filteredNews = filteredNews.filter((n) => n.category === category);
+    }
+
+    if (search) {
+      const searchLower = search.toLowerCase();
+      filteredNews = filteredNews.filter(
+        (n) =>
+          n.title.toLowerCase().includes(searchLower) ||
+          n.excerpt.toLowerCase().includes(searchLower) ||
+          n.content.toLowerCase().includes(searchLower)
+      );
+    }
+
+    filteredNews.sort((a, b) => new Date(b.date || b.createdAt).getTime() - new Date(a.date || a.createdAt).getTime());
+
+    const totalItems = filteredNews.length;
+    const totalPages = Math.ceil(totalItems / limit);
+    const skip = (page - 1) * limit;
+    const paginatedNews = filteredNews.slice(skip, skip + limit).map(({ content, ...rest }) => rest as any);
+
+    return {
+      news: paginatedNews,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasMore: page < totalPages,
+      },
+    };
   }
 }
 

@@ -229,6 +229,7 @@ export const sponsors = pgTable("sponsors", {
   shortDescription: text("short_description").notNull(),
   description: text("description").notNull(),
   social: json("social").$type<{ facebook?: string; twitter?: string; instagram?: string; }>(),
+  featuredAboveFooter: boolean("featured_above_footer").notNull().default(true),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 

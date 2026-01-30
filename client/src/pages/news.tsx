@@ -25,7 +25,7 @@ interface NewsSummary {
   readTime: string;
   author: string;
   featured?: boolean;
-  content?: string; // Add content to summary for immediate display
+  content?: string;
 }
 
 const getNewsImageUrl = (imagePath: string) => {

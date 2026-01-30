@@ -90,7 +90,13 @@ export class MongoDBStorage implements IStorage {
     await this.teamMembers.createIndex({ teamId: 1, userId: 1 }, { unique: true });
   }
 
-  private async initializeDefaultData() {
+  async initializeDefaultData() {
+    // Migration for existing sponsors: ensure featuredAboveFooter is set to true if missing
+    await this.sponsors.updateMany(
+      { featuredAboveFooter: { $exists: false } },
+      { $set: { featuredAboveFooter: true } }
+    );
+
     // Check if admin exists
     const adminCount = await this.admins.countDocuments();
     if (adminCount === 0) {
@@ -841,6 +847,7 @@ export class MongoDBStorage implements IStorage {
         twitter: sponsor.social.twitter as string | undefined,
         instagram: sponsor.social.instagram as string | undefined,
       } : null,
+      featuredAboveFooter: sponsor.featuredAboveFooter ?? true,
       createdAt: new Date(),
     };
     await this.sponsors.insertOne(newSponsor);
@@ -871,12 +878,55 @@ export class MongoDBStorage implements IStorage {
 
   // News methods
   async getAllNews(): Promise<News[]> {
-    return await this.news.find({}).sort({ publishDate: -1 }).toArray();
+    return await this.news.find({}).sort({ date: -1, createdAt: -1 }).toArray();
   }
 
   async getNews(id: string): Promise<News | undefined> {
     const newsItem = await this.news.findOne({ id });
     return newsItem || undefined;
+  }
+
+  async listNews(query: {
+    category?: string;
+    search?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ news: News[]; pagination: any }> {
+    const { category, search, page = 1, limit = 10 } = query;
+    const skip = (page - 1) * limit;
+
+    const filter: any = {};
+    if (category && category !== "all") {
+      filter.category = category;
+    }
+    if (search) {
+      filter.$or = [
+        { title: { $regex: search, $options: "i" } },
+        { excerpt: { $regex: search, $options: "i" } },
+        { content: { $regex: search, $options: "i" } }
+      ];
+    }
+
+    const totalItems = await this.news.countDocuments(filter);
+    const totalPages = Math.ceil(totalItems / limit);
+
+    const news = await this.news.find(filter)
+      .project({ content: 0 }) // Exclude full content for list view performance
+      .sort({ date: -1, createdAt: -1 })
+      .skip(skip)
+      .limit(limit)
+      .toArray();
+
+    return {
+      news,
+      pagination: {
+        page,
+        limit,
+        totalItems,
+        totalPages,
+        hasMore: page < totalPages
+      }
+    };
   }
 
   async createNews(news: InsertNews): Promise<News> {
@@ -1582,24 +1632,6 @@ export class MongoDBStorage implements IStorage {
   async removeTeamMember(id: string): Promise<boolean> {
     const result = await this.teamMembers.deleteOne({ id });
     return result.deletedCount > 0;
-  }
-
-  async updateTeam(id: string, updates: Partial<Team>): Promise<Team | undefined> {
-    const result = await this.teams.findOneAndUpdate(
-      { id },
-      { $set: updates },
-      { returnDocument: "after" }
-    );
-    return result ? (result as any) as Team : undefined;
-  }
-
-  async updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined> {
-    const result = await this.teamMembers.findOneAndUpdate(
-      { id },
-      { $set: updates },
-      { returnDocument: "after" }
-    );
-    return result ? (result as any) as TeamMember : undefined;
   }
 
   async isUserInTeam(teamId: string, userId: string): Promise<boolean> {

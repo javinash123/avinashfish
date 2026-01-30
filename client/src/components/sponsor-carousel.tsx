@@ -6,6 +6,7 @@ interface Sponsor {
   name: string;
   logo: string;
   website?: string;
+  featuredAboveFooter?: boolean;
 }
 
 interface SponsorCarouselProps {
@@ -13,24 +14,25 @@ interface SponsorCarouselProps {
 }
 
 export function SponsorCarousel({ sponsors }: SponsorCarouselProps) {
+  const featuredSponsors = sponsors.filter(s => s.featuredAboveFooter !== false);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
 
   useEffect(() => {
-    if (isPaused || sponsors.length <= 1) return;
+    if (isPaused || featuredSponsors.length <= 1) return;
 
     const interval = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % sponsors.length);
+      setCurrentIndex((prev) => (prev + 1) % featuredSponsors.length);
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [isPaused, sponsors.length]);
+  }, [isPaused, featuredSponsors.length]);
 
-  const visibleSponsors = sponsors.length > 0 
+  const visibleSponsors = featuredSponsors.length > 0 
     ? [
-        sponsors[currentIndex % sponsors.length],
-        sponsors[(currentIndex + 1) % sponsors.length],
-        sponsors[(currentIndex + 2) % sponsors.length],
+        featuredSponsors[currentIndex % featuredSponsors.length],
+        featuredSponsors[(currentIndex + 1) % featuredSponsors.length],
+        featuredSponsors[(currentIndex + 2) % featuredSponsors.length],
       ]
     : [];
 
