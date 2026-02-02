@@ -2322,9 +2322,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     try {
       // 1. Instant Memory Cache (Shared across ALL users)
       const cached = (global as any).newsCache?.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp < 86400000)) { // 24 hour internal cache
+      if (cached && (Date.now() - cached.timestamp < 3600000)) { // 1 hour internal cache (more frequent refresh)
         res.setHeader('X-Cache', 'HIT');
-        res.setHeader('Cache-Control', 'public, max-auto, max-age=3600, stale-while-revalidate=86400');
+        res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
         return res.json(cached.data);
       }
 

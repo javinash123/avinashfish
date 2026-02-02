@@ -892,6 +892,7 @@ export class MongoDBStorage implements IStorage {
 
   async getNews(id: string): Promise<News | undefined> {
     // Fast indexed query - returns full document for news detail page
+    // Using lean findOne with id index
     const newsItem = await this.news.findOne({ id });
     return newsItem || undefined;
   }
