@@ -891,18 +891,8 @@ export class MongoDBStorage implements IStorage {
   }
 
   async getNews(id: string): Promise<News | undefined> {
-    const startTime = Date.now();
-    // Optimization: Lean projection for fastest possible response for the detail page
-    const newsItem = await this.news.findOne({ id }, { projection: { content: 1, title: 1, imageUrl: 1, date: 1, category: 1, readTime: 1, excerpt: 1, competition: 1, featured: 1 } });
-    const duration = Date.now() - startTime;
-    
-    if (newsItem) {
-      const sizeKB = Math.round(JSON.stringify(newsItem).length / 1024);
-      if (sizeKB > 500 || duration > 100) {
-        console.warn(`[PERF] News article ${id}: ${sizeKB}KB fetched in ${duration}ms`);
-      }
-    }
-    
+    // Fast indexed query - returns full document for news detail page
+    const newsItem = await this.news.findOne({ id });
     return newsItem || undefined;
   }
 
