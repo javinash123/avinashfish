@@ -6,14 +6,9 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2, ChevronLeft, ChevronRight } from "lucide-react";
-import { SiFacebook, SiX } from "react-icons/si";
-import { FaWhatsapp } from "react-icons/fa";
+import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, ChevronLeft, ChevronRight } from "lucide-react";
 import type { News } from "@shared/schema";
-import { updateMetaTags, resetMetaTags } from "@/lib/meta-tags";
-import { apiRequest } from "@/lib/queryClient";
 
 interface NewsSummary {
   id: string;
@@ -28,14 +23,25 @@ interface NewsSummary {
   content?: string;
 }
 
-const getNewsImageUrl = (imagePath: string) => {
-  if (!imagePath) return "/attached-assets/placeholder-news.jpg";
+const getNewsImageUrl = (image: string | any) => {
+  if (!image) return "/attached-assets/placeholder-news.jpg";
   
-  if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
-    return imagePath;
+  // If it's an object (News with potential thumbnail fields)
+  if (typeof image === 'object') {
+    const thumb = image.thumbnailUrlMd || image.thumbnailUrl || image.image;
+    if (!thumb) return "/attached-assets/placeholder-news.jpg";
+    if (thumb.startsWith('http') || thumb.startsWith('data:') || thumb.startsWith('/')) {
+      return thumb;
+    }
+    return `/attached-assets/uploads/news/${thumb}`;
+  }
+
+  // If it's a string
+  if (image.startsWith('http') || image.startsWith('data:') || image.startsWith('/')) {
+    return image;
   }
   
-  return `/attached-assets/uploads/news/${imagePath}`;
+  return `/attached-assets/uploads/news/${image}`;
 };
 
 interface PaginatedNewsResponse {
@@ -52,10 +58,9 @@ interface PaginatedNewsResponse {
 export default function NewsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
   const [currentPage, setCurrentPage] = useState(1);
   const { toast } = useToast();
-  const [location, setLocation] = useLocation();
+  const [, setLocation] = useLocation();
   const ITEMS_PER_PAGE = 6;
 
   const { data: newsData, isLoading } = useQuery<PaginatedNewsResponse>({
@@ -83,53 +88,8 @@ export default function NewsPage() {
     setCurrentPage(1);
   }, [selectedCategory, searchQuery]);
 
-  // Fetch full article when opening dialog
-  const { data: fullArticle, isLoading: isLoadingArticle } = useQuery<News>({
-    queryKey: ["/api/news", selectedArticle?.id],
-    queryFn: async () => {
-      const response = await fetch(`/api/news/${selectedArticle?.id}`);
-      if (!response.ok) throw new Error("Failed to fetch article");
-      return response.json();
-    },
-    enabled: !!selectedArticle?.id,
-  });
-
-  // Handle deep linking - auto-open article from URL parameter
-  useEffect(() => {
-    const urlParams = new URLSearchParams(window.location.search);
-    const articleId = urlParams.get('article');
-    
-    if (articleId && newsArticles.length > 0) {
-      const article = newsArticles.find(a => a.id === articleId);
-      if (article) {
-        setSelectedArticle(article as unknown as News);
-      }
-    }
-  }, [newsArticles, location]);
-
-  // Update meta tags when full article is loaded
-  useEffect(() => {
-    if (fullArticle) {
-      const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
-      updateMetaTags({
-        title: fullArticle.title,
-        description: fullArticle.excerpt,
-        image: fullArticle.image,
-        url: articleUrl,
-        type: 'article',
-      });
-    }
-  }, [fullArticle]);
-
   const handleArticleOpen = (article: NewsSummary) => {
-    setSelectedArticle(article as unknown as News);
-    setLocation(`/news?article=${article.id}`);
-  };
-
-  const handleArticleClose = () => {
-    setSelectedArticle(null);
-    resetMetaTags();
-    setLocation('/news');
+    setLocation(`/news/${article.id}`);
   };
 
   // The filteredArticles now come directly from the API result
@@ -245,11 +205,11 @@ export default function NewsPage() {
                 
                 return (
                   <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
-                    <div className="relative w-full h-48 overflow-hidden bg-muted">
+                    <div className="relative w-full overflow-hidden bg-muted">
                       <img
-                        src={getNewsImageUrl(article.image)}
+                        src={getNewsImageUrl(article)}
                         alt={article.title}
-                        className="w-full h-full object-contain"
+                        className="w-full h-auto object-cover"
                         loading="lazy"
                       />
                       <div className="absolute top-2 left-2">
@@ -343,131 +303,6 @@ export default function NewsPage() {
           </>
         )}
       </div>
-
-      <Dialog open={!!selectedArticle} onOpenChange={(open) => { if (!open) handleArticleClose(); }}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-news-detail">
-          {selectedArticle && (
-            <>
-              <DialogHeader>
-                <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
-              </DialogHeader>
-              {isLoadingArticle ? (
-                <div className="space-y-4">
-                  <Skeleton className="w-full h-64 rounded-md" />
-                  <Skeleton className="h-4 w-full" />
-                  <Skeleton className="h-4 w-3/4" />
-                  <Skeleton className="h-32 w-full" />
-                </div>
-              ) : fullArticle ? (
-                <div className="space-y-4">
-                  <div className="relative w-full h-64 overflow-hidden rounded-md bg-muted">
-                    <img
-                      src={getNewsImageUrl(fullArticle?.image || selectedArticle.image)}
-                      alt={fullArticle?.title || selectedArticle.title}
-                      className="w-full h-full object-contain"
-                      loading="lazy"
-                    />
-                  </div>
-                  <div className="flex flex-wrap items-center gap-4">
-                    {(() => {
-                      const categoryInfo = getCategoryBadge(fullArticle.category);
-                      const CategoryIcon = categoryInfo.icon;
-                      return (
-                        <Badge variant={categoryInfo.variant}>
-                          <CategoryIcon className="h-3 w-3 mr-1" />
-                          {categoryInfo.label}
-                        </Badge>
-                      );
-                    })()}
-                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-3 w-3" />
-                        <span data-testid="text-dialog-news-date">{fullArticle.date}</span>
-                      </div>
-                      <div className="flex items-center gap-1">
-                        <Clock className="h-3 w-3" />
-                        <span>{fullArticle.readTime}</span>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="space-y-3">
-                    <div className="prose prose-sm max-w-none dark:prose-invert text-foreground mb-4" data-testid="text-dialog-news-excerpt">
-                      <strong>{fullArticle.excerpt}</strong>
-                    </div>
-                    <div className="prose prose-sm max-w-none dark:prose-invert text-foreground" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: fullArticle.content }} />
-                    <div className="flex items-center gap-4 text-sm pt-4 border-t">
-                      <span className="text-muted-foreground">By {fullArticle.author}</span>
-                      {fullArticle.competition && (
-                        <>
-                          <span className="text-muted-foreground">-</span>
-                          <div className="flex items-center gap-2">
-                            <Trophy className="h-4 w-4 text-muted-foreground" />
-                            <span data-testid="text-dialog-news-competition">{fullArticle.competition}</span>
-                          </div>
-                        </>
-                      )}
-                    </div>
-                    <div className="flex items-center gap-2 pt-4 border-t mt-4">
-                      <Share2 className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm text-muted-foreground mr-2">Share:</span>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
-                          const text = fullArticle.title;
-                          window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + articleUrl)}`, '_blank');
-                        }}
-                        data-testid="button-share-whatsapp"
-                      >
-                        <FaWhatsapp className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
-                          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`, '_blank');
-                        }}
-                        data-testid="button-share-facebook"
-                      >
-                        <SiFacebook className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="icon"
-                        onClick={() => {
-                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
-                          const text = fullArticle.title;
-                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(articleUrl)}`, '_blank');
-                        }}
-                        data-testid="button-share-x"
-                      >
-                        <SiX className="h-4 w-4" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => {
-                          const articleUrl = `${window.location.origin}/news?article=${fullArticle.id}`;
-                          navigator.clipboard.writeText(articleUrl);
-                          toast({
-                            title: "Link copied",
-                            description: "Article link copied to clipboard - share it anywhere!",
-                          });
-                        }}
-                        data-testid="button-copy-link"
-                      >
-                        Copy Link
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : null}
-            </>
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

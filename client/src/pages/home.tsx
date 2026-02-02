@@ -22,12 +22,23 @@ import { formatWeight } from "@shared/weight-utils";
 import { updateMetaTags } from "@/lib/meta-tags";
 
 export default function Home() {
-  const getNewsImageUrl = (imagePath: string) => {
-    if (!imagePath) return "/attached-assets/placeholder-news.jpg";
-    if (imagePath.startsWith('http') || imagePath.startsWith('data:') || imagePath.startsWith('/')) {
-      return imagePath;
+  const getNewsImageUrl = (image: string | any) => {
+    if (!image) return "/attached-assets/placeholder-news.jpg";
+    
+    // Handle object if passed (for news articles with thumbnails)
+    if (typeof image === 'object') {
+      const thumb = image.thumbnailUrlMd || image.thumbnailUrl || image.image;
+      if (!thumb) return "/attached-assets/placeholder-news.jpg";
+      if (thumb.startsWith('http') || thumb.startsWith('data:') || thumb.startsWith('/')) {
+        return thumb;
+      }
+      return `/attached-assets/uploads/news/${thumb}`;
     }
-    return `/attached-assets/uploads/news/${imagePath}`;
+
+    if (image.startsWith('http') || image.startsWith('data:') || image.startsWith('/')) {
+      return image;
+    }
+    return `/attached-assets/uploads/news/${image}`;
   };
 
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -218,11 +229,11 @@ export default function Home() {
                 
                 return (
                   <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
-                    <div className="relative w-full h-48 overflow-hidden bg-muted">
+                    <div className="relative w-full overflow-hidden bg-muted">
                       <img
-                        src={getNewsImageUrl(news.image)}
+                        src={getNewsImageUrl(news)}
                         alt={news.title}
-                        className="w-full h-full object-contain"
+                        className="w-full h-auto object-cover"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>

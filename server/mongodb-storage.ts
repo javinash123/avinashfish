@@ -23,7 +23,13 @@ export class MongoDBStorage implements IStorage {
   private payments!: Collection<Payment>;
 
   constructor(uri: string) {
-    this.client = new MongoClient(uri);
+    this.client = new MongoClient(uri, {
+      maxPoolSize: 50,
+      minPoolSize: 10,
+      connectTimeoutMS: 5000,
+      socketTimeoutMS: 30000,
+      waitQueueTimeoutMS: 10000
+    });
   }
 
   async connect() {
@@ -88,6 +94,9 @@ export class MongoDBStorage implements IStorage {
     await this.teamMembers.createIndex({ teamId: 1 });
     await this.teamMembers.createIndex({ userId: 1 });
     await this.teamMembers.createIndex({ teamId: 1, userId: 1 }, { unique: true });
+
+    // Index for news detail page performance
+    await this.news.createIndex({ id: 1 });
   }
 
   async initializeDefaultData() {
@@ -882,7 +891,18 @@ export class MongoDBStorage implements IStorage {
   }
 
   async getNews(id: string): Promise<News | undefined> {
-    const newsItem = await this.news.findOne({ id });
+    const startTime = Date.now();
+    // Optimization: Lean projection for fastest possible response for the detail page
+    const newsItem = await this.news.findOne({ id }, { projection: { content: 1, title: 1, imageUrl: 1, date: 1, category: 1, readTime: 1, excerpt: 1, competition: 1, featured: 1 } });
+    const duration = Date.now() - startTime;
+    
+    if (newsItem) {
+      const sizeKB = Math.round(JSON.stringify(newsItem).length / 1024);
+      if (sizeKB > 500 || duration > 100) {
+        console.warn(`[PERF] News article ${id}: ${sizeKB}KB fetched in ${duration}ms`);
+      }
+    }
+    
     return newsItem || undefined;
   }
 

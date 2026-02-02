@@ -79,12 +79,26 @@ const app = express();
 // Trust proxy - required when behind AWS load balancer or reverse proxy
 app.set('trust proxy', 1);
 
+// TCP Keep-Alive
+app.use((req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=60');
+  next();
+});
+
 // Disable ETag generation to prevent HTTP 304 caching
 app.set('etag', false);
 
 // Increase body size limit to handle rich text content with embedded images
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100mb' }));
+
+// Performance optimization: Connection and caching headers
+app.use((req, res, next) => {
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('Keep-Alive', 'timeout=60');
+  next();
+});
 
 // Configure CORS based on environment
 const allowedOrigins = process.env.ALLOWED_ORIGINS 

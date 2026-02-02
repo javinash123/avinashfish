@@ -23,6 +23,7 @@ import AdminDashboard from "@/pages/admin-dashboard";
 import AdminLogin from "@/pages/admin-login";
 import Gallery from "@/pages/gallery";
 import News from "@/pages/news";
+import NewsDetail from "@/pages/news-detail";
 import Sponsors from "@/pages/sponsors";
 import Profile from "@/pages/profile";
 import TeamProfile from "@/pages/team-profile";
@@ -62,6 +63,7 @@ function Router() {
           <Route path="/angler-directory" component={AnglerDirectory} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/news" component={News} />
+          <Route path="/news/:id" component={NewsDetail} />
           <Route path="/sponsors" component={Sponsors} />
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />

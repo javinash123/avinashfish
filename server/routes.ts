@@ -166,42 +166,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       
       const fileUrl = `/attached-assets/uploads/${type}/${fileName}`;
 
-      // Optimize news images for faster loading
+      // Process news images - generate thumbnails like competitions
       if (type === 'news') {
         try {
+          const thumbnails = await generateCompetitionThumbnails(targetPath, targetDir, fileName);
+          console.log('Generated news thumbnails:', thumbnails);
+          
+          // Also optimize the content image itself (the original for detail view)
           const sharp = (await import('sharp')).default;
           const ext = path.extname(fileName);
           const nameWithoutExt = path.basename(fileName, ext);
-          const optimizedFileName = `${nameWithoutExt}-optimized.webp`;
-          const optimizedPath = path.join(targetDir, optimizedFileName);
+          const contentOptimizedName = `${nameWithoutExt}-content.webp`;
+          const contentOptimizedPath = path.join(targetDir, contentOptimizedName);
           
-          // Resize and compress news image - max width 1200px for good quality on all devices
           await sharp(targetPath)
-            .resize(1200, null, {
-              fit: 'inside',
-              withoutEnlargement: true
-            })
-            .webp({ quality: 75 }) // Reduced quality slightly for better speed
-            .toFile(optimizedPath);
-          
-          // Return the optimized version URL
-          const optimizedUrl = `/attached-assets/uploads/${type}/${optimizedFileName}`;
-          console.log(`Optimized news image: ${optimizedFileName}`);
-          
+            .resize(1200, null, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 65 })
+            .toFile(contentOptimizedPath);
+
           res.json({ 
-            url: optimizedUrl,
-            originalUrl: fileUrl,
-            filename: optimizedFileName,
-            message: "News image uploaded and optimized successfully" 
+            url: `/attached-assets/uploads/news/${contentOptimizedName}`,
+            filename: contentOptimizedName,
+            thumbnailUrl: thumbnails.thumbnailUrl,
+            thumbnailUrlMd: thumbnails.thumbnailUrlMd,
+            thumbnailUrlLg: thumbnails.thumbnailUrlLg,
+            message: "News image uploaded successfully with thumbnails and content optimization" 
           });
           return;
         } catch (optimizeError) {
-          console.error("News image optimization error:", optimizeError);
-          // Fall back to original if optimization fails
+          console.error("News image processing error:", optimizeError);
+          // Fall back to original if processing fails
           res.json({ 
             url: fileUrl,
             filename: fileName,
-            message: "File uploaded successfully (optimization failed)" 
+            message: "File uploaded successfully (processing failed)" 
           });
           return;
         }
@@ -2318,11 +2316,34 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   // Get single news article with full content
   app.get("/api/news/:id", async (req, res) => {
+    const startTime = Date.now();
+    const cacheKey = `news_${req.params.id}`;
+    
     try {
+      // 1. Instant Memory Cache (Shared across ALL users)
+      const cached = (global as any).newsCache?.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < 86400000)) { // 24 hour internal cache
+        res.setHeader('X-Cache', 'HIT');
+        res.setHeader('Cache-Control', 'public, max-auto, max-age=3600, stale-while-revalidate=86400');
+        return res.json(cached.data);
+      }
+
+      // 2. High-Priority Database Fetch for the "First Person"
+      // We use a lean projection to get the data as fast as humanly possible
       const article = await storage.getNews(req.params.id);
       if (!article) {
         return res.status(404).json({ message: "Article not found" });
       }
+
+      // 3. Pre-load cache for everyone else
+      if (!(global as any).newsCache) (global as any).newsCache = new Map();
+      (global as any).newsCache.set(cacheKey, { data: article, timestamp: Date.now() });
+
+      const duration = Date.now() - startTime;
+      res.setHeader('X-Response-Time', `${duration}ms`);
+      res.setHeader('X-Cache', 'MISS');
+      // 4. Aggressive Browser Caching
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
       res.json(article);
     } catch (error: any) {
       console.error("Error fetching news article:", error);
