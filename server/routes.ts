@@ -1394,7 +1394,16 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
-          const w = parseFloat(entry.weight);
+          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
+          // We need to handle both.
+          const weightStr = entry.weight || "0";
+          if (weightStr.includes('lb')) {
+            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
+            if (match) {
+              return parseInt(match[1]) * 16 + parseInt(match[2]);
+            }
+          }
+          const w = parseFloat(weightStr);
           return isNaN(w) ? 0 : w;
         })
         .filter(weight => weight > 0);
@@ -1513,7 +1522,16 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
-          const w = parseFloat(entry.weight);
+          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
+          // We need to handle both.
+          const weightStr = entry.weight || "0";
+          if (weightStr.includes('lb')) {
+            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
+            if (match) {
+              return parseInt(match[1]) * 16 + parseInt(match[2]);
+            }
+          }
+          const w = parseFloat(weightStr);
           return isNaN(w) ? 0 : w;
         })
         .filter(weight => weight > 0);
@@ -1789,7 +1807,16 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
-          const w = parseFloat(entry.weight);
+          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
+          // We need to handle both.
+          const weightStr = entry.weight || "0";
+          if (weightStr.includes('lb')) {
+            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
+            if (match) {
+              return parseInt(match[1]) * 16 + parseInt(match[2]);
+            }
+          }
+          const w = parseFloat(weightStr);
           return isNaN(w) ? 0 : w;
         })
         .filter(weight => weight > 0);
