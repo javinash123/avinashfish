@@ -1391,7 +1391,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight in ounces)
+      // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
           const w = parseFloat(entry.weight);
@@ -1510,7 +1510,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight in ounces)
+      // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
           const w = parseFloat(entry.weight);
@@ -1786,7 +1786,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
       const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
       
-      // Calculate best catch (highest weight in ounces)
+      // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
           const w = parseFloat(entry.weight);
