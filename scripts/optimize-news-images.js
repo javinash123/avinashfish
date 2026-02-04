@@ -19,7 +19,7 @@ async function optimizeExistingNews() {
   const client = new MongoClient(MONGODB_URI);
   try {
     await client.connect();
-    const db = client.db();
+    const db = client.db("peg_slam");
     const newsCollection = db.collection('news');
     
     // Check for "articles" as well in case the collection name is different in legacy data
@@ -39,20 +39,57 @@ async function optimizeExistingNews() {
       if (!article.image) continue;
 
       let fileName = article.image;
+      // Handle URLs like /attached-assets/uploads/news/image.png
       if (fileName.startsWith('/')) {
         const parts = fileName.split('/');
         fileName = parts[parts.length - 1];
       }
 
-      const filePath = path.join(UPLOADS_DIR, fileName);
+      // First check in news directory
+      let filePath = path.join(process.cwd(), 'attached_assets', 'uploads', 'news', fileName);
+      let currentDir = 'news';
       
       if (!fs.existsSync(filePath)) {
-        console.log(`File not found for article ${article._id}: ${filePath}`);
-        continue;
+        // Search in all subdirectories of attached_assets/uploads
+        const uploadBase = path.join(process.cwd(), 'attached_assets', 'uploads');
+        const subdirs = fs.readdirSync(uploadBase);
+        let found = false;
+        
+        for (const subdir of subdirs) {
+          const subdirPath = path.join(uploadBase, subdir);
+          if (fs.statSync(subdirPath).isDirectory()) {
+            const checkPath = path.join(subdirPath, fileName);
+            if (fs.existsSync(checkPath)) {
+              filePath = checkPath;
+              currentDir = subdir;
+              found = true;
+              break;
+            }
+          }
+        }
+
+        if (!found) {
+          // If still not found, try a case-insensitive search in news directory
+          const newsFiles = fs.readdirSync(path.join(uploadBase, 'news'));
+          const lowerFileName = fileName.toLowerCase();
+          const caseInsensitiveMatch = newsFiles.find(f => f.toLowerCase() === lowerFileName);
+          
+          if (caseInsensitiveMatch) {
+            filePath = path.join(uploadBase, 'news', caseInsensitiveMatch);
+            fileName = caseInsensitiveMatch;
+            currentDir = 'news';
+            found = true;
+          }
+        }
+
+        if (!found) {
+          console.log(`File not found for article ${article.id || article._id}: ${fileName}`);
+          continue;
+        }
       }
 
       if (fileName.endsWith('-content.webp')) {
-        console.log(`Article ${article._id} already optimized.`);
+        console.log(`Article ${article.id || article._id} already optimized.`);
         continue;
       }
 
@@ -60,22 +97,22 @@ async function optimizeExistingNews() {
         const ext = path.extname(fileName);
         const nameWithoutExt = path.basename(fileName, ext);
         const optimizedName = `${nameWithoutExt}-content.webp`;
-        const optimizedPath = path.join(UPLOADS_DIR, optimizedName);
+        const optimizedPath = path.join(process.cwd(), 'attached_assets', 'uploads', currentDir, optimizedName);
 
-        console.log(`Optimizing ${fileName} -> ${optimizedName}`);
+        console.log(`Optimizing ${fileName} in ${currentDir} -> ${optimizedName}`);
         
         await sharp(filePath)
           .resize(1200, null, { fit: 'inside', withoutEnlargement: true })
           .webp({ quality: 75, effort: 6 })
           .toFile(optimizedPath);
 
-        const newUrl = `/attached-assets/uploads/news/${optimizedName}`;
-        await newsCollection.updateOne(
+        const newUrl = `/attached-assets/uploads/${currentDir}/${optimizedName}`;
+        await collection.updateOne(
           { _id: article._id },
           { $set: { image: newUrl } }
         );
         
-        console.log(`Updated article ${article._id} with optimized image.`);
+        console.log(`Updated article ${article.id || article._id} with optimized image.`);
       } catch (err) {
         console.error(`Failed to optimize image for article ${article._id}:`, err);
       }
