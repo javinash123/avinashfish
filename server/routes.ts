@@ -181,7 +181,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           
           await sharp(targetPath)
             .resize(1200, null, { fit: 'inside', withoutEnlargement: true })
-            .webp({ quality: 65 })
+            .webp({ quality: 75, effort: 6 })
             .toFile(contentOptimizedPath);
 
           res.json({ 
