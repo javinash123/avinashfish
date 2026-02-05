@@ -1,4 +1,4 @@
-import { formatWeight } from "@shared/weight-utils";
+import { formatWeight, parseWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
@@ -1387,32 +1387,48 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       const leaderboardEntries = await storage.getUserLeaderboardEntries(user.id);
       
+      // Group entries by competition to calculate correct positions and total weights
+      const compMap = new Map<string, { totalWeightOz: number, position?: number }>();
+      
+      // We need to fetch the full leaderboard for each competition to know the true position
+      const uniqueCompIds = [...new Set(leaderboardEntries.map(e => e.competitionId))];
+      
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
+        const fullLeaderboard = await storage.getLeaderboard(compId);
+        // Find this user's entry in the full leaderboard (aggregated by storage.getLeaderboard)
+        const userEntry = fullLeaderboard.find(e => e.userId === user.id);
+        if (userEntry) {
+          return {
+            competitionId: compId,
+            totalWeightOz: parseWeight(userEntry.weight),
+            position: userEntry.position
+          };
+        }
+        return null;
+      }));
+
+      const validResults = compResults.filter((r): r is { competitionId: string; totalWeightOz: number; position: number } => r !== null);
+      
       // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      const wins = validResults.filter(r => r.position === 1).length;
+      const podiumFinishes = validResults.filter(r => r.position <= 3).length;
       
-      // Calculate best catch (highest weight in ounces/decimal)
-      const weights = leaderboardEntries
-        .map(entry => {
-          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
-          // We need to handle both.
-          const weightStr = entry.weight || "0";
-          if (weightStr.includes('lb')) {
-            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
-            if (match) {
-              return parseInt(match[1]) * 16 + parseInt(match[2]);
-            }
-          }
-          const w = parseFloat(weightStr);
-          return isNaN(w) ? 0 : w;
-        })
-        .filter(weight => weight > 0);
+      // USER LOGIC:
+      // 1. Get all weights from leaderboard_entries for this user
+      const allWeights = leaderboardEntries
+        .map(entry => parseWeight(entry.weight))
+        .filter(w => w > 0);
       
-      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeightOz = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
+      // 2. Best catch = maximum weight found in any entry
+      const bestCatchOz = allWeights.length > 0 ? Math.max(...allWeights) : 0;
+      
+      // 3. Total weight = sum of all weights
+      const totalWeightOz = allWeights.reduce((sum, weight) => sum + weight, 0);
+      
+      // 4. Average weight = total weight / number of unique competitions entered
+      const averageWeightOz = uniqueCompIds.length > 0 
+        ? totalWeightOz / uniqueCompIds.length 
         : 0;
-      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
 
       res.json({
         wins,
@@ -1423,7 +1439,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
         averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
         totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
-        totalCompetitions: leaderboardEntries.length,
+        totalCompetitions: uniqueCompIds.length,
       });
     } catch (error: any) {
       console.error("Get user stats by username error:", error);
@@ -1515,32 +1531,44 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
       
+      // Group entries by competition to calculate correct positions and total weights
+      const uniqueCompIds = [...new Set(leaderboardEntries.map(e => e.competitionId))];
+      
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
+        const fullLeaderboard = await storage.getLeaderboard(compId);
+        const userEntry = fullLeaderboard.find(e => e.userId === userId);
+        if (userEntry) {
+          return {
+            competitionId: compId,
+            totalWeightOz: parseWeight(userEntry.weight),
+            position: userEntry.position
+          };
+        }
+        return null;
+      }));
+
+      const validResults = compResults.filter((r): r is { competitionId: string; totalWeightOz: number; position: number } => r !== null);
+      
       // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      const wins = validResults.filter(r => r.position === 1).length;
+      const podiumFinishes = validResults.filter(r => r.position <= 3).length;
       
-      // Calculate best catch (highest weight in ounces/decimal)
-      const weights = leaderboardEntries
-        .map(entry => {
-          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
-          // We need to handle both.
-          const weightStr = entry.weight || "0";
-          if (weightStr.includes('lb')) {
-            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
-            if (match) {
-              return parseInt(match[1]) * 16 + parseInt(match[2]);
-            }
-          }
-          const w = parseFloat(weightStr);
-          return isNaN(w) ? 0 : w;
-        })
-        .filter(weight => weight > 0);
+      // USER LOGIC:
+      // 1. Get all weights from leaderboard_entries for this user
+      const allWeights = leaderboardEntries
+        .map(entry => parseWeight(entry.weight))
+        .filter(w => w > 0);
       
-      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeightOz = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
+      // 2. Best catch = maximum weight found in any entry
+      const bestCatchOz = allWeights.length > 0 ? Math.max(...allWeights) : 0;
+      
+      // 3. Total weight = sum of all weights
+      const totalWeightOz = allWeights.reduce((sum, weight) => sum + weight, 0);
+      
+      // 4. Average weight = total weight / number of unique competitions entered
+      const averageWeightOz = uniqueCompIds.length > 0 
+        ? totalWeightOz / uniqueCompIds.length 
         : 0;
-      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
 
       res.json({
         wins,
@@ -1551,7 +1579,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
         averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
         totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
-        totalCompetitions: leaderboardEntries.length,
+        totalCompetitions: uniqueCompIds.length,
       });
     } catch (error: any) {
       console.error("Get user stats error:", error);
@@ -1807,17 +1835,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       // Calculate best catch (highest weight in ounces/decimal)
       const weights = leaderboardEntries
         .map(entry => {
-          // Weight is stored as "Xlb Yoz" in leaderboard entries, or as a string number
-          // We need to handle both.
           const weightStr = entry.weight || "0";
-          if (weightStr.includes('lb')) {
-            const match = weightStr.match(/(\d+)lb\s*(\d+)oz/);
-            if (match) {
-              return parseInt(match[1]) * 16 + parseInt(match[2]);
-            }
-          }
-          const w = parseFloat(weightStr);
-          return isNaN(w) ? 0 : w;
+          return parseWeight(weightStr);
         })
         .filter(weight => weight > 0);
       
