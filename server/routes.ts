@@ -1413,19 +1413,15 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = validResults.filter(r => r.position === 1).length;
       const podiumFinishes = validResults.filter(r => r.position <= 3).length;
       
-      // USER LOGIC:
-      // 1. Get all weights from leaderboard_entries for this user
-      const allWeights = leaderboardEntries
-        .map(entry => parseWeight(entry.weight))
-        .filter(w => w > 0);
+      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
+      const bestCatchOz = leaderboardEntries.length > 0 
+        ? Math.max(...leaderboardEntries.map(e => parseWeight(e.weight))) 
+        : 0;
       
-      // 2. Best catch = maximum weight found in any entry
-      const bestCatchOz = allWeights.length > 0 ? Math.max(...allWeights) : 0;
+      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
+      const totalWeightOz = leaderboardEntries.reduce((sum, e) => sum + parseWeight(e.weight), 0);
       
-      // 3. Total weight = sum of all weights
-      const totalWeightOz = allWeights.reduce((sum, weight) => sum + weight, 0);
-      
-      // 4. Average weight = total weight / number of unique competitions entered
+      // Calculate Average Weight: Total Weight / Total unique competitions participated in
       const averageWeightOz = uniqueCompIds.length > 0 
         ? totalWeightOz / uniqueCompIds.length 
         : 0;
@@ -1553,19 +1549,15 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const wins = validResults.filter(r => r.position === 1).length;
       const podiumFinishes = validResults.filter(r => r.position <= 3).length;
       
-      // USER LOGIC:
-      // 1. Get all weights from leaderboard_entries for this user
-      const allWeights = leaderboardEntries
-        .map(entry => parseWeight(entry.weight))
-        .filter(w => w > 0);
+      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
+      const bestCatchOz = leaderboardEntries.length > 0 
+        ? Math.max(...leaderboardEntries.map(e => parseWeight(e.weight))) 
+        : 0;
       
-      // 2. Best catch = maximum weight found in any entry
-      const bestCatchOz = allWeights.length > 0 ? Math.max(...allWeights) : 0;
+      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
+      const totalWeightOz = leaderboardEntries.reduce((sum, e) => sum + parseWeight(e.weight), 0);
       
-      // 3. Total weight = sum of all weights
-      const totalWeightOz = allWeights.reduce((sum, weight) => sum + weight, 0);
-      
-      // 4. Average weight = total weight / number of unique competitions entered
+      // Calculate Average Weight: Total Weight / Total unique competitions participated in
       const averageWeightOz = uniqueCompIds.length > 0 
         ? totalWeightOz / uniqueCompIds.length 
         : 0;
