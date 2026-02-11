@@ -1385,56 +1385,54 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Get ALL entries for this user across all competitions
       const leaderboardEntries = await storage.getUserLeaderboardEntries(user.id);
       
-      // Group entries by competition to calculate correct positions and total weights
-      const compMap = new Map<string, { totalWeightOz: number, position?: number }>();
+      console.log(`[STATS DEBUG] Public Profile for ${user.username} (${user.id}): Found ${leaderboardEntries.length} entries`);
       
-      // We need to fetch the full leaderboard for each competition to know the true position
-      const uniqueCompIds = [...new Set(leaderboardEntries.map(e => e.competitionId))];
+      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
+      const weightsList = leaderboardEntries.map(e => {
+        const parsed = parseWeight(e.weight);
+        console.log(`[STATS DEBUG] Entry ${e.id} in comp ${e.competitionId}: Weight="${e.weight}" parsed=${parsed} oz`);
+        return parsed;
+      });
+
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
       
-      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
+      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      // Calculate Average Weight: Total Weight / Number of competitions where a weight was recorded
+      // Use unique competition count where weight > 0
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      
+      const compCount = weightRecordedCompIds.length;
+      const averageWeightOz = compCount > 0 
+        ? totalWeightOz / compCount 
+        : 0;
+
+      // Wins and podiums require checking full leaderboards
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId: string) => {
         const fullLeaderboard = await storage.getLeaderboard(compId);
-        // Find this user's entry in the full leaderboard
+        // Important: Position should be calculated based on the summarized weight for this competition,
+        // which matches how we sum weights in weightsList.
         const userEntry = fullLeaderboard.find(e => e.userId === user.id);
-        
-        console.log(`[STATS DEBUG] Competition ${compId} leaderboard for public profile:`, fullLeaderboard.map(e => ({ u: e.userId, w: e.weight, p: e.position })));
-        
-        if (userEntry) {
-          return {
-            competitionId: compId,
-            totalWeightOz: parseWeight(userEntry.weight),
-            position: userEntry.position
-          };
+        if (userEntry && userEntry.position) {
+          return userEntry.position;
         }
         return null;
       }));
 
-      const validResults = compResults.filter((r): r is { competitionId: string; totalWeightOz: number; position: number } => r !== null);
-      
-      // Calculate statistics
-      const wins = validResults.filter(r => r.position === 1).length;
-      const podiumFinishes = validResults.filter(r => r.position <= 3).length;
-      
-      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
-      // Note: We sum all entries to get the total lifetime weight
-      const totalWeightOz = leaderboardEntries.reduce((sum, e) => {
-        const w = parseWeight(e.weight);
-        console.log(`[STATS DEBUG] Public Profile Adding weight for entry ${e.id}: Raw="${e.weight}" parsed=${w} oz`);
-        return sum + w;
-      }, 0);
-      
-      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
-      const weightsList = leaderboardEntries.map(e => parseWeight(e.weight));
-      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+      const positions = compResults.filter((p: number | null): p is number => p !== null);
+      const wins = positions.filter((p: number) => p === 1).length;
+      const podiumFinishes = positions.filter((p: number) => p <= 3).length;
 
-      // Calculate Average Weight: Total Weight / Number of entries with weight
-      const weightEntriesCount = weightsList.filter(w => w > 0).length;
-      const averageWeightOz = weightEntriesCount > 0 
-        ? totalWeightOz / weightEntriesCount 
-        : 0;
-
-      console.log(`[STATS DEBUG] Public Profile User: ${user.id}, Total entries: ${leaderboardEntries.length}, Weight entries: ${weightEntriesCount}, Total Oz: ${totalWeightOz}, Best: ${bestCatchOz}`);
+      console.log(`[STATS DEBUG] Summary: TotalOz=${totalWeightOz}, BestOz=${bestCatchOz}, AvgOz=${averageWeightOz}, CompsWithWeight=${compCount}`);
 
       res.json({
         wins,
@@ -1537,51 +1535,48 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
       
-      // Group entries by competition to calculate correct positions and total weights
-      const uniqueCompIds = [...new Set(leaderboardEntries.map(e => e.competitionId))];
+      console.log(`[STATS DEBUG] Private Profile for ${userId}: Found ${leaderboardEntries.length} entries`);
       
-      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
+      // Calculate Total Weight
+      const weightsList = leaderboardEntries.map(e => {
+        const parsed = parseWeight(e.weight);
+        console.log(`[STATS DEBUG] Entry ${e.id} in comp ${e.competitionId}: Weight="${e.weight}" parsed=${parsed} oz`);
+        return parsed;
+      });
+
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
+      
+      // Calculate Best Catch
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      // Calculate Average Weight
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      
+      const compCount = weightRecordedCompIds.length;
+      const averageWeightOz = compCount > 0 
+        ? totalWeightOz / compCount 
+        : 0;
+
+      // Calculate Wins and Podium Finishes
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId: string) => {
         const fullLeaderboard = await storage.getLeaderboard(compId);
-        // Find this user's entry in the full leaderboard
         const userEntry = fullLeaderboard.find(e => e.userId === userId);
-        
-        console.log(`[STATS DEBUG] Competition ${compId} leaderboard:`, fullLeaderboard.map(e => ({ u: e.userId, w: e.weight, p: e.position })));
-        
-        if (userEntry) {
-          return {
-            competitionId: compId,
-            totalWeightOz: parseWeight(userEntry.weight),
-            position: userEntry.position
-          };
+        if (userEntry && userEntry.position) {
+          return userEntry.position;
         }
         return null;
       }));
 
-      const validResults = compResults.filter((r): r is { competitionId: string; totalWeightOz: number; position: number } => r !== null);
-      
-      // Calculate statistics
-      const wins = validResults.filter(r => r.position === 1).length;
-      const podiumFinishes = validResults.filter(r => r.position <= 3).length;
-      
-      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
-      // Note: We sum all entries to get the total lifetime weight
-      const totalWeightOz = leaderboardEntries.reduce((sum, e) => {
-        const w = parseWeight(e.weight);
-        console.log(`[STATS DEBUG] Public Profile Adding weight for entry ${e.id}: Raw="${e.weight}" parsed=${w} oz`);
-        return sum + w;
-      }, 0);
-      
-      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
-      const weightsList = leaderboardEntries.map(e => parseWeight(e.weight));
-      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+      const positions = compResults.filter((p): p is number => p !== null);
+      const wins = positions.filter(p => p === 1).length;
+      const podiumFinishes = positions.filter(p => p <= 3).length;
 
-      // Calculate Average Weight: Total Weight / Number of entries with weight
-      const weightEntriesCount = weightsList.filter(w => w > 0).length;
-      const averageWeightOz = weightEntriesCount > 0 
-        ? totalWeightOz / weightEntriesCount 
-        : 0;
-
-      console.log(`[STATS DEBUG] Public Profile User: ${user.id}, Total entries: ${leaderboardEntries.length}, Weight entries: ${weightEntriesCount}, Total Oz: ${totalWeightOz}, Best: ${bestCatchOz}`);
+      console.log(`[STATS DEBUG] Private Summary: TotalOz=${totalWeightOz}, BestOz=${bestCatchOz}, AvgOz=${averageWeightOz}, CompsWithWeight=${compCount}`);
 
       res.json({
         wins,
@@ -1838,38 +1833,44 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
 
       const userId = req.params.id;
-      const participations = await storage.getUserParticipations(userId);
       const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
       
       // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
-      
-      // Calculate best catch (highest weight in ounces/decimal)
-      const weights = leaderboardEntries
-        .map(entry => {
-          const weightStr = entry.weight || "0";
-          return parseWeight(weightStr);
-        })
-        .filter(weight => weight > 0);
-      
-      const bestCatchOz = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeightOz = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
-        : 0;
-      const totalWeightOz = weights.reduce((sum, weight) => sum + weight, 0);
+      const weightsList = leaderboardEntries.map(e => parseWeight(e.weight));
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      const compCountWithWeight = weightRecordedCompIds.length;
+      const averageWeightOz = compCountWithWeight > 0 ? totalWeightOz / compCountWithWeight : 0;
+
+      // Wins and Podium Finishes
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
+        const fullLeaderboard = await storage.getLeaderboard(compId);
+        const userEntry = fullLeaderboard.find(e => e.userId === userId);
+        return userEntry?.position || null;
+      }));
+
+      const positions = compResults.filter((p): p is number => p !== null);
+      const wins = positions.filter(p => p === 1).length;
+      const podiumFinishes = positions.filter(p => p <= 3).length;
 
       res.json({
-        totalMatches: participations.length,
+        totalMatches: uniqueCompIds.length,
         wins,
         podiumFinishes,
         bestCatchOz,
         averageWeightOz,
         totalWeightOz,
-        bestCatch: bestCatchOz > 0 ? formatWeight(bestCatchOz) : "-",
-        avgWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
-        averageWeight: averageWeightOz > 0 ? formatWeight(averageWeightOz) : "-",
-        totalWeight: totalWeightOz > 0 ? formatWeight(totalWeightOz) : "-",
+        bestCatch: formatWeight(bestCatchOz),
+        avgWeight: formatWeight(averageWeightOz),
+        averageWeight: formatWeight(averageWeightOz),
+        totalWeight: formatWeight(totalWeightOz),
       });
     } catch (error: any) {
       console.error("Error fetching angler stats:", error);

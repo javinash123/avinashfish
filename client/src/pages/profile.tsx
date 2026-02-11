@@ -699,7 +699,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-best-catch">
-                {stats ? formatWeight(stats.bestCatch) : "-"}
+                {stats?.bestCatch || "0 lb 0 oz"}
               </div>
             </CardContent>
           </Card>
@@ -711,10 +711,10 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-average">
-                {stats ? formatWeight(stats.averageWeight) : "-"}
+                {stats?.averageWeight || "0 lb 0 oz"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total: {stats ? formatWeight(stats.totalWeight) : "-"}
+                Total: {stats?.totalWeight || "0 lb 0 oz"}
               </p>
             </CardContent>
           </Card>
