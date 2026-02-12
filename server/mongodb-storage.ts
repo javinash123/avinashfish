@@ -97,7 +97,14 @@ export class MongoDBStorage implements IStorage {
 
     // Index for news detail page performance
     await this.news.createIndex({ id: 1 });
-    await this.news.createIndex({ slug: 1 }, { unique: true });
+    // Use partial index to only enforce uniqueness on non-null slugs
+    await this.news.createIndex(
+      { slug: 1 }, 
+      { 
+        unique: true, 
+        partialFilterExpression: { slug: { $type: "string" } } 
+      }
+    );
   }
 
   async initializeDefaultData() {

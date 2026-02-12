@@ -1,0 +1,115 @@
+[root@ip-172-31-21-92 html]# node dist/index.js
+[dotenv@17.2.3] injecting env (13) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: production
+   Stripe Public Key: pk_live_51... ✅ LIVE
+   Stripe Secret Key: sk_live_51... ✅ LIVE
+   MongoDB: configured
+
+🔌 Initializing MongoDB storage...
+❌ MongoDB connection error: MongoServerError: Index build failed: f494c669-4aa5-4081-85ea-36e6f45d603c: Collection peg_slam.news ( 5cbc171d-4381-4abd-acd3-f18d5a915a26 ) :: caused by :: E11000 duplicate key error collection: peg_slam.news index: slug_1 dup key: { slug: null }
+    at Connection.sendCommand (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:306:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.command (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:334:26)
+    at async Server.command (/var/www/html/node_modules/mongodb/lib/sdam/server.js:194:29)
+    at async tryOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:213:32)
+    at async executeOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:78:16)
+    at async Collection.createIndex (/var/www/html/node_modules/mongodb/lib/collection.js:373:25)
+    at async MongoDBStorage.createIndexes (file:///var/www/html/dist/index.js:96:9)
+    at async MongoDBStorage.connect (file:///var/www/html/dist/index.js:68:11)
+    at async initializeStorage (file:///var/www/html/dist/index.js:1471:5) {
+  errorLabelSet: Set(0) {},
+  errorResponse: {
+    ok: 0,
+    errmsg: 'Index build failed: f494c669-4aa5-4081-85ea-36e6f45d603c: Collection peg_slam.news ( 5cbc171d-4381-4abd-acd3-f18d5a915a26 ) :: caused by :: E11000 duplicate key error collection: peg_slam.news index: slug_1 dup key: { slug: null }',
+    code: 11000,
+    codeName: 'DuplicateKey',
+    keyPattern: { slug: 1 },
+    keyValue: { slug: null },
+    '$clusterTime': {
+      clusterTime: new Timestamp({ t: 1770889452, i: 25 }),
+      signature: [Object]
+    },
+    operationTime: new Timestamp({ t: 1770889452, i: 25 })
+  },
+  ok: 0,
+  code: 11000,
+  codeName: 'DuplicateKey',
+  keyPattern: { slug: 1 },
+  keyValue: { slug: null },
+  '$clusterTime': {
+    clusterTime: new Timestamp({ t: 1770889452, i: 25 }),
+    signature: {
+      hash: Binary.createFromBase64('lV3s8boKNE0EcZta6cFbgwDxq/c=', 0),
+      keyId: new Long('7544038913585709057')
+    }
+  },
+  operationTime: new Timestamp({ t: 1770889452, i: 25 })
+}
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+MongoServerError: Index build failed: f494c669-4aa5-4081-85ea-36e6f45d603c: Collection peg_slam.news ( 5cbc171d-4381-4abd-acd3-f18d5a915a26 ) :: caused by :: E11000 duplicate key error collection: peg_slam.news index: slug_1 dup key: { slug: null }
+    at Connection.sendCommand (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:306:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.command (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:334:26)
+    at async Server.command (/var/www/html/node_modules/mongodb/lib/sdam/server.js:194:29)
+    at async tryOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:213:32)
+    at async executeOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:78:16)
+    at async Collection.createIndex (/var/www/html/node_modules/mongodb/lib/collection.js:373:25)
+    at async MongoDBStorage.createIndexes (file:///var/www/html/dist/index.js:96:9)
+    at async MongoDBStorage.connect (file:///var/www/html/dist/index.js:68:11)
+    at async initializeStorage (file:///var/www/html/dist/index.js:1471:5) {
+  errorLabelSet: Set(0) {},
+  errorResponse: {
+    ok: 0,
+    errmsg: 'Index build failed: f494c669-4aa5-4081-85ea-36e6f45d603c: Collection peg_slam.news ( 5cbc171d-4381-4abd-acd3-f18d5a915a26 ) :: caused by :: E11000 duplicate key error collection: peg_slam.news index: slug_1 dup key: { slug: null }',
+    code: 11000,
+    codeName: 'DuplicateKey',
+    keyPattern: { slug: 1 },
+    keyValue: { slug: null },
+    '$clusterTime': {
+      clusterTime: Timestamp { low: 25, high: 1770889452, unsigned: true },
+      signature: {
+        hash: Binary {
+          sub_type: 0,
+          buffer: Buffer(20) [Uint8Array] [
+            149,  93, 236, 241, 186,  10,
+             52,  77,   4, 113, 155,  90,
+            233, 193,  91, 131,   0, 241,
+            171, 247
+          ],
+          position: 20
+        },
+        keyId: Long { low: 1, high: 1756483436, unsigned: false }
+      }
+    },
+    operationTime: Timestamp { low: 25, high: 1770889452, unsigned: true }
+  },
+  ok: 0,
+  code: 11000,
+  codeName: 'DuplicateKey',
+  keyPattern: { slug: 1 },
+  keyValue: { slug: null },
+  '$clusterTime': {
+    clusterTime: Timestamp { low: 25, high: 1770889452, unsigned: true },
+    signature: {
+      hash: Binary {
+        sub_type: 0,
+        buffer: Buffer(20) [Uint8Array] [
+          149,  93, 236, 241, 186,  10,
+           52,  77,   4, 113, 155,  90,
+          233, 193,  91, 131,   0, 241,
+          171, 247
+        ],
+        position: 20
+      },
+      keyId: Long { low: 1, high: 1756483436, unsigned: false }
+    }
+  },
+  operationTime: Timestamp { low: 25, high: 1770889452, unsigned: true }
+}
+
+Node.js v22.19.0
+[root@ip-172-31-21-92 html]#
