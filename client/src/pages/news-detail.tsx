@@ -139,7 +139,7 @@ export default function NewsDetail() {
               alt={article.title}
               className="w-full h-auto object-contain max-h-[800px] bg-black/5"
               fetchPriority="high"
-              loading="eager"
+              loading="lazy"
               width="1200"
               height="630"
               onLoad={(e) => {

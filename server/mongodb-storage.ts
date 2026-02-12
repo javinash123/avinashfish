@@ -97,6 +97,7 @@ export class MongoDBStorage implements IStorage {
 
     // Index for news detail page performance
     await this.news.createIndex({ id: 1 });
+    await this.news.createIndex({ slug: 1 }, { unique: true });
   }
 
   async initializeDefaultData() {
@@ -893,7 +894,12 @@ export class MongoDBStorage implements IStorage {
   async getNews(id: string): Promise<News | undefined> {
     // Fast indexed query - returns full document for news detail page
     // Using lean findOne with id index
-    const newsItem = await this.news.findOne({ id });
+    const newsItem = await this.news.findOne({ id }, { projection: { _id: 0 } });
+    return newsItem || undefined;
+  }
+
+  async getNewsBySlug(slug: string): Promise<News | undefined> {
+    const newsItem = await this.news.findOne({ slug }, { projection: { _id: 0 } });
     return newsItem || undefined;
   }
 
@@ -1284,8 +1290,6 @@ export class MongoDBStorage implements IStorage {
 
   async updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined> {
     try {
-      // Update the peg number atomically
-      // The unique compound index on {competitionId, pegNumber} will prevent duplicate assignments
       const result = await this.competitionParticipants.findOneAndUpdate(
         { id: participantId },
         { $set: { pegNumber } },
@@ -1293,10 +1297,23 @@ export class MongoDBStorage implements IStorage {
       );
       return result || undefined;
     } catch (error: any) {
-      // MongoDB duplicate key error code is 11000
       if (error.code === 11000) {
         throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
       }
+      throw error;
+    }
+  }
+
+  async updateParticipantPosition(participantId: string, position: number): Promise<CompetitionParticipant | undefined> {
+    try {
+      const result = await this.competitionParticipants.findOneAndUpdate(
+        { id: participantId },
+        { $set: { position } },
+        { returnDocument: "after" }
+      );
+      return result || undefined;
+    } catch (error: any) {
+      console.error("Error updating participant position:", error);
       throw error;
     }
   }

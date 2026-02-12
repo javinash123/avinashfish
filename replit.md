@@ -39,6 +39,8 @@ Preferred communication style: Simple, everyday language.
 - **Primary Database**: MongoDB via MongoClient
 - **ORM/Schema**: Drizzle ORM with PostgreSQL schema definitions (used for type generation and potential PostgreSQL migration)
 - **Schema Location**: `shared/schema.ts` contains all data models with Zod validation schemas
+- **Key Fields**: 
+  - `competition_participants.position`: Stores the final rank (1, 2, 3...) of an angler after a competition is completed. Used for calculating career wins and podiums.
 - **Connection**: Neon serverless PostgreSQL driver configured but MongoDB is the active storage layer
 
 ### Authentication & Authorization

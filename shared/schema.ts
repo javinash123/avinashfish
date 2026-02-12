@@ -405,6 +405,7 @@ export const competitionParticipants = pgTable("competition_participants", {
   competitionId: varchar("competition_id").notNull(),
   userId: varchar("user_id").notNull(),
   pegNumber: integer("peg_number"),
+  position: integer("position"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 

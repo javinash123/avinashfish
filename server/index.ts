@@ -10,6 +10,7 @@ const envPath = path.join(projectRoot, '.env');
 dotenv.config({ path: envPath, override: true }); // Load from .env file, override existing env vars
 
 import express, { type Request, Response, NextFunction } from "express";
+import compression from "compression";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
@@ -76,15 +77,11 @@ if (process.env.NODE_ENV === 'production') {
    
 const app = express();
 
+// Enable gzip compression
+app.use(compression());
+
 // Trust proxy - required when behind AWS load balancer or reverse proxy
 app.set('trust proxy', 1);
-
-// TCP Keep-Alive
-app.use((req, res, next) => {
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=60');
-  next();
-});
 
 // Disable ETag generation to prevent HTTP 304 caching
 app.set('etag', false);
@@ -92,13 +89,6 @@ app.set('etag', false);
 // Increase body size limit to handle rich text content with embedded images
 app.use(express.json({ limit: '100mb' }));
 app.use(express.urlencoded({ extended: false, limit: '100mb' }));
-
-// Performance optimization: Connection and caching headers
-app.use((req, res, next) => {
-  res.setHeader('Connection', 'keep-alive');
-  res.setHeader('Keep-Alive', 'timeout=60');
-  next();
-});
 
 // Configure CORS based on environment
 const allowedOrigins = process.env.ALLOWED_ORIGINS 
@@ -142,33 +132,33 @@ const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
 
 /* 
 app.use(session({
-secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-resave: false,
-saveUninitialized: true,
-store: new MemoryStore({
-checkPeriod: 86400000, // prune expired entries every 24h
-}),
-cookie: {
-path: EXPRESS_BASE_PATH || '/',
-maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-httpOnly: true,
-secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-sameSite: "lax",
-},
-proxy: true
+  secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: true,
+  store: new MemoryStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
+  cookie: {
+    path: EXPRESS_BASE_PATH || '/',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    sameSite: "lax",
+  },
+  proxy: true
 }));
 */
 
 app.use(session({
-secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-resave: false,
-saveUninitialized: true,
-cookie: {
-secure: false, // ⚠️ temporary fix until you use HTTPS
-sameSite: "lax",
-httpOnly: true,
-},
-proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
+  secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: true,
+  cookie: {
+    secure: false, // ⚠️ temporary fix until you use HTTPS
+    sameSite: "lax",
+    httpOnly: true,
+  },
+  proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
 }));
 // Disable caching for API routes to ensure real-time data updates
 app.use((req, res, next) => {
@@ -227,8 +217,13 @@ app.use((req, res, next) => {
   // New uploads use /attached-assets to avoid Vite bundle conflicts
   // The /assets route only serves the attached_assets/uploads subdirectory to avoid
   // conflicts with Vite's /assets output (which contains CSS/JS bundles)
-  app.use('/assets/uploads', express.static('attached_assets/uploads'));
-  app.use('/attached-assets', express.static('attached_assets'));
+  const staticOptions = {
+    maxAge: '1d',
+    immutable: true,
+    index: false
+  };
+  app.use('/assets/uploads', express.static('attached_assets/uploads', staticOptions));
+  app.use('/attached-assets', express.static('attached_assets', staticOptions));
   
   // Register routes after storage is ready - pass storage instance directly
   const server = await registerRoutes(app, storage);

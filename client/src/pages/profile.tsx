@@ -684,10 +684,10 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary" data-testid="text-stat-wins">
-                {stats ? stats.wins : 0}
+                {stats?.wins || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats ? stats.podiumFinishes : 0} podium finishes
+                {stats?.podiumFinishes || 0} podium finishes
               </p>
             </CardContent>
           </Card>

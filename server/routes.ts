@@ -1850,15 +1850,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const averageWeightOz = compCountWithWeight > 0 ? totalWeightOz / compCountWithWeight : 0;
 
       // Wins and Podium Finishes
-      const compResults = await Promise.all(uniqueCompIds.map(async (compId) => {
-        const fullLeaderboard = await storage.getLeaderboard(compId);
-        const userEntry = fullLeaderboard.find(e => e.userId === userId);
-        return userEntry?.position || null;
-      }));
-
-      const positions = compResults.filter((p): p is number => p !== null);
-      const wins = positions.filter(p => p === 1).length;
-      const podiumFinishes = positions.filter(p => p <= 3).length;
+      const participations = await storage.getUserParticipations(userId);
+      const wins = participations.filter(p => p.position === 1).length;
+      const podiumFinishes = participations.filter(p => p.position !== null && p.position <= 3).length;
 
       res.json({
         totalMatches: uniqueCompIds.length,
@@ -2801,6 +2795,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const competition = await storage.updateCompetition(req.params.id, result.data);
       if (!competition) {
         return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // If competition is marked as completed, update participant positions
+      if (result.data.status === "completed") {
+        try {
+          const leaderboard = await storage.getLeaderboard(req.params.id);
+          const participants = await storage.getCompetitionParticipants(req.params.id);
+          
+          await Promise.all(participants.map(async (p) => {
+            const entry = leaderboard.find(e => e.userId === p.userId);
+            if (entry && entry.position) {
+              await storage.updateParticipantPosition(p.id, entry.position);
+            }
+          }));
+        } catch (error) {
+          console.error("Error updating participant positions on competition completion:", error);
+        }
       }
 
       res.json(competition);

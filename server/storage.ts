@@ -106,6 +106,7 @@ export interface IStorage {
   isUserInCompetition(competitionId: string, userId: string): Promise<boolean>;
   getAvailablePegs(competitionId: string): Promise<number[]>;
   updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined>;
+  updateParticipantPosition(participantId: string, position: number): Promise<CompetitionParticipant | undefined>;
   updateTeamPeg(teamId: string, pegNumber: number): Promise<Team | undefined>;
   
   // Team methods
@@ -1101,6 +1102,14 @@ export class MemStorage implements IStorage {
     const participant = this.competitionParticipants.get(participantId);
     if (!participant) return undefined;
     const updatedParticipant = { ...participant, pegNumber };
+    this.competitionParticipants.set(participantId, updatedParticipant);
+    return updatedParticipant;
+  }
+
+  async updateParticipantPosition(participantId: string, position: number): Promise<CompetitionParticipant | undefined> {
+    const participant = this.competitionParticipants.get(participantId);
+    if (!participant) return undefined;
+    const updatedParticipant = { ...participant, position };
     this.competitionParticipants.set(participantId, updatedParticipant);
     return updatedParticipant;
   }
