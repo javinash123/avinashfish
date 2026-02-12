@@ -289,3 +289,96 @@ export async function sendEmailVerification(toEmail: string, verificationToken: 
     throw error;
   }
 }
+
+export async function sendCompetitionBookingEmail(toEmail: string, data: {
+  userName: string;
+  competitionName: string;
+  date: string;
+  venue: string;
+  pegNumber: number | string;
+  entryFee: string;
+}) {
+  try {
+    const { client, fromEmail } = await getUncachableResendClient();
+    
+    const htmlContent = `
+      <!DOCTYPE html>
+      <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; background-color: #f9fafb; margin: 0; padding: 0; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #2d7a4f 0%, #1e5a3a 100%); color: white; padding: 30px 20px; text-align: center; border-radius: 8px 8px 0 0; }
+            .logo { font-size: 28px; font-weight: bold; margin: 0; }
+            .content { background-color: white; padding: 40px 30px; border-radius: 0 0 8px 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
+            .info-card { background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; }
+            .info-row { display: flex; justify-content: space-between; padding: 10px 0; border-bottom: 1px solid #e5e7eb; }
+            .info-row:last-child { border-bottom: none; }
+            .label { font-weight: 600; color: #4b5563; }
+            .value { color: #111827; }
+            .footer { text-align: center; color: #6b7280; font-size: 13px; margin-top: 30px; padding: 20px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1 class="logo">Peg Slam</h1>
+              <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Booking Confirmation</p>
+            </div>
+            <div class="content">
+              <h2 style="color: #2d7a4f; margin-top: 0;">Tight Lines, ${data.userName}!</h2>
+              <p>Your booking for <strong>${data.competitionName}</strong> has been confirmed. We look forward to seeing you at the bank!</p>
+              
+              <div class="info-card">
+                <div class="info-row">
+                  <span class="label">Competition</span>
+                  <span class="value">${data.competitionName}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Date</span>
+                  <span class="value">${data.date}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Venue</span>
+                  <span class="value">${data.venue}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Peg Number</span>
+                  <span class="value">${data.pegNumber}</span>
+                </div>
+                <div class="info-row">
+                  <span class="label">Entry Fee</span>
+                  <span class="value">£${data.entryFee}</span>
+                </div>
+              </div>
+              
+              <p style="font-size: 14px; color: #6b7280;">Please ensure you arrive at the venue at least 30 minutes before the start time for the draw and briefing.</p>
+            </div>
+            <div class="footer">
+              <p>&copy; ${new Date().getFullYear()} Peg Slam. All rights reserved.</p>
+              <p>UK's Premier Fishing Competitions</p>
+            </div>
+          </div>
+        </body>
+      </html>
+    `;
+
+    const { data: resData, error } = await client.emails.send({
+      from: fromEmail,
+      to: toEmail,
+      subject: `Booking Confirmed: ${data.competitionName} - Peg Slam`,
+      html: htmlContent,
+    });
+
+    if (error) {
+      console.error('Failed to send booking email:', error);
+      return { success: false, error };
+    }
+
+    return { success: true, messageId: resData?.id };
+  } catch (error) {
+    console.error('Error sending booking email:', error);
+    return { success: false, error };
+  }
+}

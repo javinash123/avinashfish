@@ -3,7 +3,7 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema } from "@shared/schema";
-import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
+import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification, sendCompetitionBookingEmail } from "./email";
 import { generateCompetitionThumbnails } from "./thumbnail-generator";
 import { regenerateAllThumbnails, regenerateSingleThumbnail } from "./thumbnail-regenerator";
 import { randomBytes, createHash } from "crypto";
@@ -539,6 +539,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
         console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + pegsToIncrement}`);
 
+        // Send confirmation emails to team creator
+        try {
+          const user = await storage.getUser(userId);
+          if (user) {
+            await sendCompetitionBookingEmail(user.email, {
+              userName: `${user.firstName} ${user.lastName}`,
+              competitionName: competition.name,
+              date: competition.date,
+              venue: competition.venue,
+              pegNumber: pegAssignmentMode === "team" ? availablePegs[0] : availablePegs.join(", "),
+              entryFee: competition.entryFee
+            });
+          }
+        } catch (emailErr) {
+          console.error("Failed to send team booking email:", emailErr);
+        }
+
         res.json({ 
           success: true,
           team: updatedTeam || { ...team, pegNumber: teamPegNumber, paymentStatus: "succeeded" },
@@ -560,6 +577,24 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           userId: userId,
           // pegNumber is not passed, so it will be auto-assigned
         });
+
+        // Send confirmation email
+        try {
+          const user = await storage.getUser(userId);
+          const competition = await storage.getCompetition(competitionId);
+          if (user && competition) {
+            await sendCompetitionBookingEmail(user.email, {
+              userName: `${user.firstName} ${user.lastName}`,
+              competitionName: competition.name,
+              date: competition.date,
+              venue: competition.venue,
+              pegNumber: participant.pegNumber || "Assigned on arrival",
+              entryFee: competition.entryFee
+            });
+          }
+        } catch (emailErr) {
+          console.error("Failed to send individual booking email:", emailErr);
+        }
 
         res.json({ 
           success: true,

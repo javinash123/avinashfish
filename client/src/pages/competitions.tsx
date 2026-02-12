@@ -40,14 +40,39 @@ export default function Competitions() {
     thumbnailUrlLg: (comp as any).thumbnailUrlLg || undefined,
   }));
 
-  const filteredCompetitions = competitions.filter((comp) => {
-    const matchesSearch =
-      comp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      comp.venue.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || comp.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredCompetitions = competitions
+    .filter((comp) => {
+      const matchesSearch =
+        comp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        comp.venue.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || comp.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const statusOrder: Record<string, number> = {
+        live: 1,
+        upcoming: 2,
+        completed: 3,
+      };
+
+      if (statusOrder[a.status] !== statusOrder[b.status]) {
+        return statusOrder[a.status] - statusOrder[b.status];
+      }
+
+      const dateA = new Date(a.date).getTime();
+      const dateB = new Date(b.date).getTime();
+
+      if (a.status === "upcoming") {
+        return dateA - dateB; // Nearest date first
+      }
+
+      if (a.status === "completed") {
+        return dateB - dateA; // Latest completed first
+      }
+
+      return 0;
+    });
 
   return (
     <div className="min-h-screen py-8">
