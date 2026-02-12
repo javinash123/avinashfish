@@ -60,8 +60,19 @@ export default function Competitions() {
         return statusOrder[a.status] - statusOrder[b.status];
       }
 
-      const dateA = new Date(a.date).getTime();
-      const dateB = new Date(b.date).getTime();
+      // competition-card.tsx likely uses comp.date which is a formatted string "do MMMM yyyy"
+      // competitions.tsx uses comp.date from shared/schema.ts but it's formatted in line 29
+      // Let's use the actual date from the data if possible, but competitions.tsx formats it early.
+      // Wait, line 26-41 maps comp to competitions. 
+      // comp.date in schema is string (ISO date). 
+      // a.date is "do MMMM yyyy" which is hard to parse back.
+      // I should look at competitionsData if I want the original date.
+      
+      const originalA = competitionsData.find(c => c.id === a.id);
+      const originalB = competitionsData.find(c => c.id === b.id);
+      
+      const dateA = originalA ? new Date(originalA.date).getTime() : 0;
+      const dateB = originalB ? new Date(originalB.date).getTime() : 0;
 
       if (a.status === "upcoming") {
         return dateA - dateB; // Nearest date first
@@ -71,7 +82,11 @@ export default function Competitions() {
         return dateB - dateA; // Latest completed first
       }
 
-      return 0;
+      if (a.status === "live") {
+        return dateB - dateA; // Latest live first (usually only one, but if multiple)
+      }
+
+      return dateB - dateA; // Default to latest first
     });
 
   return (

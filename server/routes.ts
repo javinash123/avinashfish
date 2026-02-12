@@ -539,21 +539,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
         console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + pegsToIncrement}`);
 
-        // Send confirmation emails to team creator
+        // Send confirmation emails to ALL accepted team members
         try {
-          const user = await storage.getUser(userId);
-          if (user) {
-            await sendCompetitionBookingEmail(user.email, {
-              userName: `${user.firstName} ${user.lastName}`,
-              competitionName: competition.name,
-              date: competition.date,
-              venue: competition.venue,
-              pegNumber: pegAssignmentMode === "team" ? availablePegs[0] : availablePegs.join(", "),
-              entryFee: competition.entryFee
-            });
+          const competition = await storage.getCompetition(competitionId);
+          if (competition) {
+            for (let i = 0; i < acceptedMembers.length; i++) {
+              const member = acceptedMembers[i];
+              const user = await storage.getUser(member.userId);
+              if (user) {
+                console.log(`[TEAM BOOKING] Sending confirmation email to member ${user.email} for competition ${competition.name}`);
+                const pegNumber = pegAssignmentMode === "team" ? (availablePegs[0]?.toString() || "TBA") : availablePegs[i].toString();
+                await sendCompetitionBookingEmail(user.email, {
+                  userName: `${user.firstName} ${user.lastName}`,
+                  competitionName: competition.name,
+                  date: competition.date,
+                  venue: competition.venue,
+                  pegNumber: pegNumber,
+                  entryFee: competition.entryFee
+                });
+              }
+            }
           }
         } catch (emailErr) {
-          console.error("Failed to send team booking email:", emailErr);
+          console.error("Failed to send team booking emails:", emailErr);
         }
 
         res.json({ 
@@ -583,7 +591,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           const user = await storage.getUser(userId);
           const competition = await storage.getCompetition(competitionId);
           if (user && competition) {
-            await sendCompetitionBookingEmail(user.email, {
+            console.log(`[INDIVIDUAL BOOKING] Sending confirmation email to ${user.email} for competition ${competition.name}`);
+            const emailResult = await sendCompetitionBookingEmail(user.email, {
               userName: `${user.firstName} ${user.lastName}`,
               competitionName: competition.name,
               date: competition.date,
@@ -591,6 +600,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
               pegNumber: participant.pegNumber || "Assigned on arrival",
               entryFee: competition.entryFee
             });
+            console.log(`[INDIVIDUAL BOOKING] Email result:`, emailResult);
           }
         } catch (emailErr) {
           console.error("Failed to send individual booking email:", emailErr);
