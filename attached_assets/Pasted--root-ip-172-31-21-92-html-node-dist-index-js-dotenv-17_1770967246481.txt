@@ -1,0 +1,70 @@
+[root@ip-172-31-21-92 html]# node dist/index.js
+[dotenv@17.2.3] injecting env (13) from .env -- tip: ⚙️  suppress all logs with { quiet: true }
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: production
+   Stripe Public Key: pk_live_51... ✅ LIVE
+   Stripe Secret Key: sk_live_51... ✅ LIVE
+   MongoDB: configured
+
+🔌 Initializing MongoDB storage...
+✅ Connected to MongoDB Atlas successfully
+✅ Migration: Updated 30 legacy user profiles with missing fields
+7:18:56 AM [express] serving on port 7118
+7:19:02 AM [express] GET /api/user/me 401 in 3ms :: {"message":"Not authenticated"}
+7:19:02 AM [express] GET /api/site-settings 200 in 207ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+7:19:03 AM [express] GET /api/slider-images 200 in 208ms :: [{"_id":"6907edd757e524ccd352b8a0","id":…
+7:19:03 AM [express] GET /api/sponsors 200 in 191ms :: [{"_id":"69067bef57e524ccd352b883","id":"0464…
+7:19:03 AM [express] GET /api/youtube-videos 200 in 188ms :: [{"_id":"693338ddb5ca33664314d2dc","tit…
+7:19:03 AM [express] GET /api/competitions 200 in 203ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":"…
+7:19:04 AM [express] GET /api/gallery/featured 200 in 410ms :: [{"_id":"690721da57e524ccd352b88e","i…
+7:19:06 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 4…
+7:19:08 AM [express] GET /api/news/featured 200 in 4950ms :: [{"id":"18451ae6-0fb8-4a95-bd26-2ff4e06…
+7:19:32 AM [express] POST /api/user/login 401 in 209ms :: {"message":"Invalid email or password"}
+7:19:37 AM [express] POST /api/user/login 200 in 205ms :: {"id":"e353b455-c08d-422a-914a-6a36765cf19…
+7:19:38 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 4…
+7:19:42 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf 200 in 215ms :: {"_i…
+7:19:42 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 3…
+7:19:43 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/participants 200 in …
+7:19:43 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/is-joined 200 in 200…
+7:19:45 AM [express] GET /api/user/me 200 in 198ms :: {"_id":"695f452724f12ab40bc906df","id":"e353b4…
+7:19:46 AM [express] GET /api/site-settings 200 in 198ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+7:19:46 AM [express] GET /api/competitions 200 in 200ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":"…
+7:19:47 AM [express] GET /api/gallery/featured 200 in 396ms :: [{"_id":"690721da57e524ccd352b88e","i…
+7:19:48 AM [express] GET /api/youtube-videos 200 in 199ms :: [{"_id":"693338ddb5ca33664314d2dc","tit…
+7:19:48 AM [express] GET /api/slider-images 200 in 205ms :: [{"_id":"6907edd757e524ccd352b8a0","id":…
+7:19:48 AM [express] GET /api/sponsors 200 in 206ms :: [{"_id":"69067bef57e524ccd352b883","id":"0464…
+7:19:52 AM [express] GET /api/user/me 200 in 198ms :: {"_id":"695f452724f12ab40bc906df","id":"e353b4…
+7:19:52 AM [express] GET /api/site-settings 200 in 204ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+7:19:52 AM [express] GET /api/sponsors 200 in 205ms :: [{"_id":"69067bef57e524ccd352b883","id":"0464…
+7:19:52 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/is-joined 200 in 188…
+7:19:52 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf 200 in 216ms :: {"_i…
+7:19:52 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 4…
+7:19:52 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/participants 200 in …
+7:19:56 AM [express] GET /api/site-settings 200 in 186ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+7:19:56 AM [express] GET /api/user/me 200 in 201ms :: {"_id":"695f452724f12ab40bc906df","id":"e353b4…
+7:19:56 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/is-joined 200 in 205…
+7:19:56 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf 200 in 204ms :: {"_i…
+7:19:56 AM [express] GET /api/sponsors 200 in 216ms :: [{"_id":"69067bef57e524ccd352b883","id":"0464…
+7:19:56 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 3…
+7:19:56 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/participants 200 in …
+7:20:00 AM [express] GET /api/site-settings 200 in 187ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+7:20:00 AM [express] GET /api/user/me 200 in 202ms :: {"_id":"695f452724f12ab40bc906df","id":"e353b4…
+7:20:00 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/is-joined 200 in 189…
+7:20:00 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf 200 in 201ms :: {"_i…
+7:20:00 AM [express] GET /api/sponsors 200 in 221ms :: [{"_id":"69067bef57e524ccd352b883","id":"0464…
+7:20:00 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/leaderboard 200 in 4…
+7:20:00 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/participants 200 in …
+[PARTICIPANT_JOIN] Starting join process - competitionId: 784818c5-5fd7-43ae-860e-451cf0d52dbf, userId: e353b455-c08d-422a-914a-6a36765cf19b
+[PARTICIPANT_JOIN] Competition found: 784818c5-5fd7-43ae-860e-451cf0d52dbf, pegs total: 5
+[PARTICIPANT_JOIN] Starting automatic peg assignment
+[PARTICIPANT_JOIN] Automatic assignment attempt 1/5
+[PARTICIPANT_JOIN] Booked pegs: 2 (1/5)
+[PARTICIPANT_JOIN] Attempting to assign peg 4 (4 available)
+[PARTICIPANT_JOIN] Inserting participant with peg 4
+[PARTICIPANT_JOIN] Participant inserted successfully
+[PARTICIPANT_JOIN] Updating competition pegs booked count
+[PARTICIPANT_JOIN] Competition updated successfully
+7:20:02 AM [express] POST /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/join 200 in 1282ms …
+7:20:02 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf 200 in 205ms :: {"_i…
+7:20:02 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/is-joined 200 in 206…
+7:20:03 AM [express] GET /api/competitions/784818c5-5fd7-43ae-860e-451cf0d52dbf/participants 200 in …

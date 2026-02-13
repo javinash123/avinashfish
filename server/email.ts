@@ -298,8 +298,12 @@ export async function sendCompetitionBookingEmail(toEmail: string, data: {
   pegNumber: number | string;
   entryFee: string;
 }) {
+  console.log(`[EMAIL_DEBUG] Attempting to send booking email to: ${toEmail}`);
+  console.log(`[EMAIL_DEBUG] Competition: ${data.competitionName}, Venue: ${data.venue}, Peg: ${data.pegNumber}`);
+  
   try {
     const { client, fromEmail } = await getUncachableResendClient();
+    console.log(`[EMAIL_DEBUG] Using fromEmail: ${fromEmail}`);
     
     const htmlContent = `
       <!DOCTYPE html>
@@ -372,13 +376,14 @@ export async function sendCompetitionBookingEmail(toEmail: string, data: {
     });
 
     if (error) {
-      console.error('Failed to send booking email:', error);
+      console.error('[EMAIL_DEBUG] Resend API error:', error);
       return { success: false, error };
     }
 
+    console.log('[EMAIL_DEBUG] Email sent successfully, Resend ID:', resData?.id);
     return { success: true, messageId: resData?.id };
   } catch (error) {
-    console.error('Error sending booking email:', error);
+    console.error('[EMAIL_DEBUG] Unexpected error in sendCompetitionBookingEmail:', error);
     return { success: false, error };
   }
 }

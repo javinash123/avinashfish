@@ -2,7 +2,7 @@ import { formatWeight, parseWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema } from "@shared/schema";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema, insertTestimonialSchema, updateTestimonialSchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification, sendCompetitionBookingEmail } from "./email";
 import { generateCompetitionThumbnails } from "./thumbnail-generator";
 import { regenerateAllThumbnails, regenerateSingleThumbnail } from "./thumbnail-regenerator";
@@ -549,7 +549,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
               if (user) {
                 console.log(`[TEAM BOOKING] Sending confirmation email to member ${user.email} for competition ${competition.name}`);
                 const pegNumber = pegAssignmentMode === "team" ? (availablePegs[0]?.toString() || "TBA") : availablePegs[i].toString();
-                await sendCompetitionBookingEmail(user.email, {
+                const emailResult = await sendCompetitionBookingEmail(user.email, {
                   userName: `${user.firstName} ${user.lastName}`,
                   competitionName: competition.name,
                   date: competition.date,
@@ -557,6 +557,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
                   pegNumber: pegNumber,
                   entryFee: competition.entryFee
                 });
+                console.log(`[TEAM BOOKING] Email send result for ${user.email}:`, emailResult);
               }
             }
           }
@@ -3048,6 +3049,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         userId,
         pegNumber: req.body.pegNumber || undefined,
       });
+
+      console.log(`[PARTICIPANT_JOIN] Participant join successful, triggering email for user ${userId}`);
+      
+      // Trigger confirmation email for individual booking
+      try {
+        const user = await storage.getUser(userId);
+        if (user) {
+          console.log(`[PARTICIPANT_JOIN] Sending confirmation email to: ${user.email}`);
+          const emailResult = await sendCompetitionBookingEmail(user.email, {
+            userName: `${user.firstName} ${user.lastName}`,
+            competitionName: competition.name,
+            date: competition.date,
+            venue: competition.venue,
+            pegNumber: participant.pegNumber || "TBA",
+            entryFee: competition.entryFee
+          });
+          console.log(`[PARTICIPANT_JOIN] Email send result:`, emailResult);
+        } else {
+          console.warn(`[PARTICIPANT_JOIN] User not found for email notification: ${userId}`);
+        }
+      } catch (emailErr) {
+        console.error("[PARTICIPANT_JOIN] Failed to send booking email:", emailErr);
+      }
 
       res.json(participant);
     } catch (error: any) {

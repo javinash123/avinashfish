@@ -130,22 +130,24 @@ app.use(cors({
 const MemoryStore = createMemoryStore(session);
 const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
 
-// app.use(session({
-//   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
-//   resave: false,
-//   saveUninitialized: true,
-//   store: new MemoryStore({
-//     checkPeriod: 86400000, // prune expired entries every 24h
-//   }),
-//   cookie: {
-//     path: EXPRESS_BASE_PATH || '/',
-//     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
-//     httpOnly: true,
-//     secure: process.env.NODE_ENV === "production", // Use secure cookies in production
-//     sameSite: "lax",
-//   },
-//   proxy: true
-// }));
+/*
+app.use(session({
+  secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+  resave: false,
+  saveUninitialized: true,
+  store: new MemoryStore({
+    checkPeriod: 86400000, // prune expired entries every 24h
+  }),
+  cookie: {
+    path: EXPRESS_BASE_PATH || '/',
+    maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+    sameSite: "lax",
+  },
+  proxy: true
+}));
+*/
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",

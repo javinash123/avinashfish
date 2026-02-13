@@ -535,6 +535,32 @@ export type InsertUserGalleryPhoto = z.infer<typeof insertUserGalleryPhotoSchema
 export type UpdateUserGalleryPhoto = z.infer<typeof updateUserGalleryPhotoSchema>;
 export type UserGalleryPhoto = typeof userGalleryPhotos.$inferSelect;
 
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  role: text("role"),
+  content: text("content").notNull(),
+  avatar: text("avatar"),
+  rating: integer("rating").notNull().default(5),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type UpdateTestimonial = z.infer<typeof updateTestimonialSchema>;
+export type Testimonial = typeof testimonials.$inferSelect;
+
 export const updateUserProfileSchema = z.object({
   bio: z.string().optional(),
   club: z.string().optional(),

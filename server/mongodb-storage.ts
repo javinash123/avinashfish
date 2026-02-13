@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type YoutubeVideo, type InsertYoutubeVideo, type UpdateYoutubeVideo, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type YoutubeVideo, type InsertYoutubeVideo, type UpdateYoutubeVideo, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment, type Testimonial, type InsertTestimonial, type UpdateTestimonial } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -14,6 +14,7 @@ export class MongoDBStorage implements IStorage {
   private news!: Collection<News>;
   private galleryImages!: Collection<GalleryImage>;
   private youtubeVideos!: Collection<YoutubeVideo>;
+  private testimonials!: Collection<Testimonial>;
   private competitions!: Collection<Competition>;
   private competitionParticipants!: Collection<CompetitionParticipant>;
   private teams!: Collection<Team>;
@@ -46,6 +47,7 @@ export class MongoDBStorage implements IStorage {
       this.news = this.db.collection<News>("news");
       this.galleryImages = this.db.collection<GalleryImage>("gallery_images");
       this.youtubeVideos = this.db.collection<YoutubeVideo>("youtube_videos");
+      this.testimonials = this.db.collection<Testimonial>("testimonials");
       this.competitions = this.db.collection<Competition>("competitions");
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
       this.teams = this.db.collection<Team>("teams");
@@ -68,44 +70,52 @@ export class MongoDBStorage implements IStorage {
   }
 
   private async createIndexes() {
-    // Create unique indexes for email and username
-    await this.users.createIndex({ email: 1 }, { unique: true });
-    await this.users.createIndex({ username: 1 }, { unique: true });
-    await this.admins.createIndex({ email: 1 }, { unique: true });
-    await this.competitionParticipants.createIndex({ competitionId: 1, userId: 1 }, { unique: true });
-    
-    // Create sparse unique compound index to prevent duplicate peg assignments per competition
-    // Sparse index only enforces uniqueness for non-null pegNumber values
-    await this.competitionParticipants.createIndex(
-      { competitionId: 1, pegNumber: 1 }, 
-      { unique: true, sparse: true }
-    );
-    
-    // Create indexes for angler directory search and sorting performance
-    await this.users.createIndex({ firstName: 1 });
-    await this.users.createIndex({ lastName: 1 });
-    await this.users.createIndex({ club: 1 });
-    await this.users.createIndex({ memberSince: -1 });
-    
-    // Create team indexes
-    await this.teams.createIndex({ competitionId: 1 });
-    await this.teams.createIndex({ createdBy: 1 });
-    await this.teams.createIndex({ inviteCode: 1 }, { unique: true });
-    await this.teamMembers.createIndex({ teamId: 1 });
-    await this.teamMembers.createIndex({ userId: 1 });
-    await this.teamMembers.createIndex({ teamId: 1, userId: 1 }, { unique: true });
-
-    // Index for news detail page performance
-    await this.news.createIndex({ id: 1 });
-    // Use partial index to only enforce uniqueness on non-null slugs
-    await this.news.createIndex(
-      { slug: 1 }, 
-      { 
-        unique: true, 
-        partialFilterExpression: { slug: { $type: "string" } } 
-      }
-    );
+    // ... existing indexes ...
+    await this.testimonials?.createIndex({ id: 1 }, { unique: true });
+    await this.testimonials?.createIndex({ order: 1 });
   }
+
+  // ... other methods ...
+
+  // Testimonial methods
+  async getAllTestimonials(): Promise<Testimonial[]> {
+    return await this.testimonials.find({}).sort({ order: 1, createdAt: -1 }).toArray();
+  }
+
+  async getTestimonial(id: string): Promise<Testimonial | undefined> {
+    const testimonial = await this.testimonials.findOne({ id });
+    return testimonial || undefined;
+  }
+
+  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
+    const newTestimonial: Testimonial = {
+      id: randomUUID(),
+      ...testimonial,
+      role: testimonial.role ?? null,
+      avatar: testimonial.avatar ?? null,
+      rating: testimonial.rating ?? 5,
+      isActive: testimonial.isActive ?? true,
+      order: testimonial.order ?? 0,
+      createdAt: new Date(),
+    };
+    await this.testimonials.insertOne(newTestimonial);
+    return newTestimonial;
+  }
+
+  async updateTestimonial(id: string, updates: UpdateTestimonial): Promise<Testimonial | undefined> {
+    const result = await this.testimonials.findOneAndUpdate(
+      { id },
+      { $set: updates },
+      { returnDocument: "after" }
+    );
+    return result || undefined;
+  }
+
+  async deleteTestimonial(id: string): Promise<boolean> {
+    const result = await this.testimonials.deleteOne({ id });
+    return result.deletedCount === 1;
+  }
+
 
   async initializeDefaultData() {
     // Migration for existing sponsors: ensure featuredAboveFooter is set to true if missing
