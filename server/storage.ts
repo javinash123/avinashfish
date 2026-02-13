@@ -187,6 +187,7 @@ export class MemStorage implements IStorage {
   private leaderboardEntries: Map<string, LeaderboardEntry>;
   private userGalleryPhotos: Map<string, UserGalleryPhoto>;
   private payments: Map<string, Payment>;
+  private testimonials: Map<string, Testimonial>;
 
   constructor() {
     this.users = new Map();
@@ -197,6 +198,7 @@ export class MemStorage implements IStorage {
     this.news = new Map();
     this.galleryImages = new Map();
     this.youtubeVideos = new Map();
+    this.testimonials = new Map();
     this.competitions = new Map();
     this.competitionParticipants = new Map();
     this.teams = new Map();
@@ -1292,6 +1294,43 @@ export class MemStorage implements IStorage {
     const updatedPayment = { ...payment, status };
     this.payments.set(id, updatedPayment);
     return updatedPayment;
+  }
+
+  // Testimonial methods
+  async getAllTestimonials(): Promise<Testimonial[]> {
+    return Array.from(this.testimonials.values()).sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+  }
+
+  async getTestimonial(id: string): Promise<Testimonial | undefined> {
+    return this.testimonials.get(id);
+  }
+
+  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
+    const id = randomUUID();
+    const newTestimonial: Testimonial = {
+      id,
+      ...testimonial,
+      role: testimonial.role ?? null,
+      avatar: testimonial.avatar ?? null,
+      rating: testimonial.rating ?? 5,
+      isActive: testimonial.isActive ?? true,
+      order: testimonial.order ?? 0,
+      createdAt: new Date(),
+    };
+    this.testimonials.set(id, newTestimonial);
+    return newTestimonial;
+  }
+
+  async updateTestimonial(id: string, updates: UpdateTestimonial): Promise<Testimonial | undefined> {
+    const testimonial = this.testimonials.get(id);
+    if (!testimonial) return undefined;
+    const updatedTestimonial = { ...testimonial, ...updates };
+    this.testimonials.set(id, updatedTestimonial);
+    return updatedTestimonial;
+  }
+
+  async deleteTestimonial(id: string): Promise<boolean> {
+    return this.testimonials.delete(id);
   }
 
   async listNews(query: {

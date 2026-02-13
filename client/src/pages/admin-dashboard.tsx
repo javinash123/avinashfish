@@ -28,6 +28,9 @@ import {
   LogOut,
   Images,
   Youtube,
+  Star,
+  ShieldCheck,
+  UsersRound,
 } from "lucide-react";
 import {
   Sidebar,
@@ -56,7 +59,6 @@ import AdminTestimonials from "./admin-testimonials";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
-import { ShieldCheck, UsersRound } from "lucide-react";
 
 type AdminSection = "dashboard" | "competitions" | "teams" | "anglers" | "sponsors" | "news" | "gallery" | "youtube-videos" | "settings" | "profile" | "slider" | "staff" | "testimonials";
 

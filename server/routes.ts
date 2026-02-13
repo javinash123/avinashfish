@@ -129,6 +129,112 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     next();
   };
 
+  // Staff login route
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const result = staffLoginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const { email, password } = result.data;
+      
+      // Try to find in staff table first
+      const staffMember = await storage.getStaffByEmail(email);
+      if (staffMember && staffMember.password === password && staffMember.isActive) {
+        req.session.staffId = staffMember.id;
+        return res.json({ 
+          id: staffMember.id,
+          email: staffMember.email,
+          firstName: staffMember.firstName,
+          lastName: staffMember.lastName,
+          role: staffMember.role,
+        });
+      }
+
+      // Fallback to legacy admin table
+      const admin = await storage.getAdminByEmail(email);
+      if (admin && admin.password === password) {
+        req.session.adminId = admin.id; // Support legacy session key
+        req.session.staffId = admin.id; // Support new session key
+        return res.json({ 
+          id: admin.id,
+          email: admin.email,
+          name: admin.name,
+          role: "admin",
+        });
+      }
+
+      res.status(401).json({ message: "Invalid email or password" });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get current staff/admin session
+  app.get("/api/admin/me", requireStaffAuth, (req: any, res) => {
+    res.json(req.staff);
+  });
+
+  // Admin logout
+  app.post("/api/admin/logout", (req, res) => {
+    req.session.staffId = undefined;
+    req.session.adminId = undefined;
+    res.json({ message: "Logged out successfully" });
+  });
+
+  // Testimonial routes
+  app.get("/api/testimonials", async (req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  app.post("/api/testimonials", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const result = insertTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+      const testimonial = await storage.createTestimonial(result.data);
+      res.json(testimonial);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create testimonial" });
+    }
+  });
+
+  app.patch("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const result = updateTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+      const testimonial = await storage.updateTestimonial(req.params.id, result.data);
+      if (!testimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json(testimonial);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update testimonial" });
+    }
+  });
+
+  app.delete("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const success = await storage.deleteTestimonial(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
   // File upload endpoint
   app.post("/api/upload", upload.single('image'), async (req, res) => {
     try {
