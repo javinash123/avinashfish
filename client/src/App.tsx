@@ -21,6 +21,7 @@ import VerifyEmail from "@/pages/verify-email";
 import CompetitionDetails from "@/pages/competition-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminLogin from "@/pages/admin-login";
+import AdminTestimonials from "@/pages/admin-testimonials";
 import Gallery from "@/pages/gallery";
 import News from "@/pages/news";
 import NewsDetail from "@/pages/news-detail";
@@ -81,6 +82,7 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/testimonials" component={AdminTestimonials} />
           <Route component={NotFound} />
         </Switch>
       </div>

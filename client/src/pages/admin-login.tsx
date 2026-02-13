@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,8 +11,9 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Lock, Mail } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
@@ -20,6 +21,18 @@ export default function AdminLogin() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if already logged in
+  const { data: admin } = useQuery({
+    queryKey: ["/api/admin/me"],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (admin) {
+      setLocation("/admin");
+    }
+  }, [admin, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,25 +54,26 @@ export default function AdminLogin() {
         password 
       });
 
+      // apiRequest already handles error status codes if configured, 
+      // but let's check what it returns. If it throws, it goes to catch.
       const data = await response.json();
 
-      if (response.ok) {
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${data.firstName} ${data.lastName}!`,
-        });
-        setLocation("/admin");
-      } else {
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid credentials",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
+      // If we got here, it means response.ok was likely true based on apiRequest implementation
       toast({
-        title: "Error",
-        description: error.message || "Failed to login",
+        title: "Login successful",
+        description: `Welcome back!`,
+      });
+      
+      // Invalidate queries to update UI
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+      
+      setLocation("/admin");
+    } catch (error: any) {
+      const errorMessage = error.message || "Invalid credentials";
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {

@@ -75,8 +75,6 @@ export class MongoDBStorage implements IStorage {
     await this.testimonials?.createIndex({ order: 1 });
   }
 
-  // ... other methods ...
-
   // Testimonial methods
   async getAllTestimonials(): Promise<Testimonial[]> {
     return await this.testimonials.find({}).sort({ order: 1, createdAt: -1 }).toArray();
@@ -115,7 +113,6 @@ export class MongoDBStorage implements IStorage {
     const result = await this.testimonials.deleteOne({ id });
     return result.deletedCount === 1;
   }
-
 
   async initializeDefaultData() {
     // Migration for existing sponsors: ensure featuredAboveFooter is set to true if missing

@@ -4,7 +4,7 @@ import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play, Star } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition, News, GalleryImage, YoutubeVideo } from "@shared/schema";
@@ -20,6 +20,13 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
 import { updateMetaTags } from "@/lib/meta-tags";
+import { 
+  Carousel, 
+  CarouselContent, 
+  CarouselItem, 
+  CarouselNext, 
+  CarouselPrevious 
+} from "@/components/ui/carousel";
 
 export default function Home() {
   const getNewsImageUrl = (image: string | any) => {
@@ -57,6 +64,10 @@ export default function Home() {
 
   const { data: youtubeVideos = [] } = useQuery<YoutubeVideo[]>({
     queryKey: ["/api/youtube-videos"],
+  });
+
+  const { data: testimonials = [] } = useQuery<Testimonial[]>({
+    queryKey: ["/api/testimonials"],
   });
 
   // State for randomly selected featured news by category
@@ -286,6 +297,69 @@ export default function Home() {
                 );
               })}
             </div>
+          </div>
+        </section>
+      )}
+
+      {testimonials.length > 0 && (
+        <section className="py-16 bg-primary/5">
+          <div className="container mx-auto px-4 lg:px-8 text-center">
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Anglers Say</h2>
+            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">
+              Read about the experiences of our community members and competition participants.
+            </p>
+            
+            <Carousel
+              opts={{
+                align: "start",
+                loop: true,
+              }}
+              className="w-full max-w-6xl mx-auto px-12"
+            >
+              <CarouselContent>
+                {testimonials.filter(t => t.isActive).map((testimonial) => (
+                  <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 h-full">
+                    <Card className="h-full border-none bg-background/50 backdrop-blur-sm shadow-md hover-elevate transition-all duration-300">
+                      <CardContent className="p-8 flex flex-col h-full text-left">
+                        <div className="flex gap-1 mb-6">
+                          {Array.from({ length: 5 }).map((_, i) => (
+                            <Star key={i} className={`h-4 w-4 ${i < testimonial.rating ? "fill-primary text-primary" : "text-muted"}`} />
+                          ))}
+                        </div>
+                        
+                        <blockquote className="flex-1 italic text-lg text-muted-foreground leading-relaxed mb-8">
+                          "{testimonial.content}"
+                        </blockquote>
+                        
+                        <div className="flex items-center gap-4 mt-auto">
+                          <div className="h-14 w-14 rounded-full bg-primary/10 overflow-hidden flex-shrink-0 border-2 border-primary/20">
+                            {testimonial.avatar ? (
+                              <img 
+                                src={testimonial.avatar} 
+                                alt={testimonial.name} 
+                                className="h-full w-full object-cover"
+                              />
+                            ) : (
+                              <div className="h-full w-full flex items-center justify-center text-xl font-bold text-primary">
+                                {testimonial.name.charAt(0)}
+                              </div>
+                            )}
+                          </div>
+                          <div>
+                            <div className="font-bold text-lg">{testimonial.name}</div>
+                            {testimonial.role && (
+                              <div className="text-sm text-primary font-medium">{testimonial.role}</div>
+                            )}
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </CarouselItem>
+                ))}
+              </CarouselContent>
+              <CarouselPrevious className="-left-4 lg:-left-12 h-12 w-12 border-primary/20 hover:bg-primary hover:text-white transition-colors" />
+              <CarouselNext className="-right-4 lg:-right-12 h-12 w-12 border-primary/20 hover:bg-primary hover:text-white transition-colors" />
+            </Carousel>
           </div>
         </section>
       )}
