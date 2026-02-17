@@ -30,6 +30,7 @@ import Profile from "@/pages/profile";
 import TeamProfile from "@/pages/team-profile";
 import Booking from "@/pages/booking";
 import AnglerDirectory from "@/pages/angler-directory";
+import Ambassadors from "@/pages/ambassadors";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsConditions from "@/pages/terms-conditions";
 import CookiePolicy from "@/pages/cookie-policy";
@@ -62,6 +63,7 @@ function Router() {
           <Route path="/competition/:id" component={CompetitionDetails} />
           <Route path="/leaderboard" component={Leaderboard} />
           <Route path="/angler-directory" component={AnglerDirectory} />
+          <Route path="/ambassadors" component={Ambassadors} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/news" component={News} />
           <Route path="/news/:id" component={NewsDetail} />

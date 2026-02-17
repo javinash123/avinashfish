@@ -20,6 +20,7 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
 import { updateMetaTags } from "@/lib/meta-tags";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { 
   Carousel, 
   CarouselContent, 
@@ -168,6 +169,50 @@ export default function Home() {
     weight: entry.weight,
     club: entry.club,
   }));
+
+  function AmbassadorSection() {
+    const { data: ambassadors = [], isLoading } = useQuery<any[]>({
+      queryKey: ["/api/ambassadors"],
+    });
+
+    if (isLoading || ambassadors.length === 0) return null;
+
+    return (
+      <section className="py-12 bg-background">
+        <div className="container mx-auto px-4 lg:px-8">
+          <div className="flex items-center justify-between mb-8">
+            <h2 className="text-2xl sm:text-3xl font-bold">Our Ambassadors</h2>
+            <Link href="/ambassadors">
+              <Button variant="outline" data-testid="button-view-all-ambassadors">
+                View All
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Button>
+            </Link>
+          </div>
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
+            {ambassadors.slice(0, 5).map((ambassador) => (
+              <Link key={ambassador.id} href={`/profile/${ambassador.username}`}>
+                <Card className="hover-elevate cursor-pointer border-none bg-transparent shadow-none">
+                  <CardContent className="p-0 flex flex-col items-center">
+                    <Avatar className="h-24 w-24 sm:h-32 sm:w-32 mb-4 border-4 border-primary/10">
+                      <AvatarImage src={ambassador.avatar || undefined} alt={`${ambassador.firstName} ${ambassador.lastName}`} className="object-cover" />
+                      <AvatarFallback className="text-2xl">
+                        {ambassador.firstName[0]}{ambassador.lastName[0]}
+                      </AvatarFallback>
+                    </Avatar>
+                    <h3 className="font-semibold text-center line-clamp-1">
+                      {ambassador.firstName} {ambassador.lastName}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">@{ambassador.username}</p>
+                  </CardContent>
+                </Card>
+              </Link>
+            ))}
+          </div>
+        </div>
+      </section>
+    );
+  }
 
   return (
     <div className="min-h-screen">
@@ -484,6 +529,8 @@ export default function Home() {
           </div>
         </section>
       )}
+
+      <AmbassadorSection />
 
       {featuredGallery.length > 0 && (
         <section className="py-12 bg-muted/30">

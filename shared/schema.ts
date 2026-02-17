@@ -32,6 +32,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   verificationTokenExpiry: timestamp("verification_token_expiry"),
+  isAmbassador: boolean("is_ambassador").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -39,6 +40,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   status: true,
   memberSince: true,
   createdAt: true,
+}).extend({
+  isAmbassador: z.boolean().optional(),
 });
 
 export const registerUserSchema = insertUserSchema.pick({

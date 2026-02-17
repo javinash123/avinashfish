@@ -196,6 +196,7 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
+          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -223,6 +224,7 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
+          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -250,6 +252,7 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
+          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -277,6 +280,7 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
+          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -304,6 +308,7 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
+          isAmbassador: false,
         },
       ];
       await this.users.insertMany(sampleUsers);
@@ -598,6 +603,7 @@ export class MongoDBStorage implements IStorage {
       emailVerified: false,
       verificationToken: null,
       verificationTokenExpiry: null,
+      isAmbassador: user.isAmbassador ?? false,
     };
     await this.users.insertOne(newUser);
     return newUser;

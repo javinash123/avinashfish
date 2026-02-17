@@ -184,6 +184,27 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     res.json({ message: "Logged out successfully" });
   });
 
+  app.get("/api/ambassadors", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const ambassadors = users.filter(u => u.isAmbassador).map(u => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        avatar: u.avatar,
+        club: u.club,
+        location: u.location,
+        favouriteMethod: u.favouriteMethod,
+        favouriteSpecies: u.favouriteSpecies,
+        memberSince: u.memberSince,
+      }));
+      res.json(ambassadors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ambassadors" });
+    }
+  });
+
   // Testimonial routes
   app.get("/api/testimonials", async (req, res) => {
     try {
