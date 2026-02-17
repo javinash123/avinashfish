@@ -145,6 +145,7 @@ const MENU_ITEMS = [
   { id: 'home', label: 'Home', icon: '🏠', color: '#fff' },
   { id: 'competitions', label: 'Competitions', icon: '🏆', color: '#fff' },
   { id: 'leaderboard', label: 'Leaderboard', icon: '📊', color: '#fff' },
+  { id: 'ambassadors', label: 'Ambassadors', icon: '🌟', color: '#fff' },
   { id: 'anglers', label: 'Anglers', icon: '👤', color: '#fff' },
   { id: 'news', label: 'News', icon: '📰', color: '#fff' },
   { id: 'gallery', label: 'Gallery', icon: '🖼️', color: '#fff' },
@@ -567,7 +568,17 @@ function SideDrawer({ visible, onClose, onMenuSelect, isLoggedIn, onLogout, acti
                   <Text style={[styles.drawerMenuLabel, activeMenu === 'profile' && styles.drawerMenuLabelActive]}>My Profile</Text>
                 </TouchableOpacity>
               )}
-              {MENU_ITEMS.map((item) => (
+              <TouchableOpacity
+              style={[styles.drawerMenuItem, activeMenu === 'ambassadors' && styles.drawerMenuItemActive]}
+              onPress={() => {
+                onMenuSelect('ambassadors');
+                onClose();
+              }}
+            >
+              <Text style={[styles.drawerMenuIcon, { color: activeMenu === 'ambassadors' ? '#1B7342' : '#fff' }]}>🌟</Text>
+              <Text style={[styles.drawerMenuLabel, activeMenu === 'ambassadors' && styles.drawerMenuLabelActive]}>Ambassadors</Text>
+            </TouchableOpacity>
+            {MENU_ITEMS.map((item) => (
                 <TouchableOpacity
                   key={item.id}
                   style={[styles.drawerMenuItem, activeMenu === item.id && styles.drawerMenuItemActive]}
@@ -2626,6 +2637,11 @@ function AnglerCard({ angler, onPress }: any) {
             <Text style={styles.avatarInitials}>{initials}</Text>
           </View>
         )}
+        {angler.isAmbassador && (
+          <View style={{ position: 'absolute', top: -2, right: -2, backgroundColor: '#000', borderRadius: 10, padding: 2, borderWidth: 1, borderColor: '#1B7342' }}>
+            <Text style={{ fontSize: 10 }}>🌟</Text>
+          </View>
+        )}
       </View>
       <View style={styles.anglerInfo}>
         <Text style={[styles.anglerName, { color: '#1B7342' }]} numberOfLines={1}>{angler.firstName} {angler.lastName}</Text>
@@ -2785,30 +2801,24 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
       
       // Calculate formatted values from raw data
       // Use potential field names from API: bestCatchOz, bestCatch, averageWeightOz, averageWeight, avgWeight
-      const bestCatchOz = data.bestCatchOz !== undefined ? data.bestCatchOz : 
-                         (data.bestCatchWeight !== undefined ? data.bestCatchWeight : 
-                         (data.bestCatch !== undefined && typeof data.bestCatch === 'number' ? data.bestCatch : 0));
+      const bestCatchOz = data.bestCatchOz !== undefined ? data.bestCatchOz : 0;
+      const avgWeightOz = data.averageWeightOz !== undefined ? data.averageWeightOz : 0;
       
-      const avgWeightOz = data.averageWeightOz !== undefined ? data.averageWeightOz :
-                         (data.averageWeight !== undefined && typeof data.averageWeight === 'number' ? data.averageWeight :
-                         (data.avgWeight !== undefined && typeof data.avgWeight === 'number' ? data.avgWeight : 0));
-      
-      console.log('Mobile Stats Parsing:', { bestCatchOz, avgWeightOz, rawBest: data.bestCatch, rawAvg: data.averageWeight });
+      console.log('Mobile Stats Parsing:', { 
+        bestCatchOz, 
+        avgWeightOz, 
+        totalComps: data.totalCompetitions,
+        wins: data.wins,
+        podiums: data.podiumFinishes 
+      });
 
-      // FORCE PARSING OF STRINGS LIKE "243.00 lbs"
-      const bestCatchParsed = parseWeight(data.bestCatch);
-      const avgWeightParsed = parseWeight(data.averageWeight || data.avgWeight);
-
-      const finalBestCatch = bestCatchOz > 0 ? formatWeight(bestCatchOz) : 
-                            (bestCatchParsed > 0 ? formatWeight(bestCatchParsed) : 
-                            (typeof data.bestCatch === 'string' && data.bestCatch.includes('lb') ? data.bestCatch : '-'));
-      
-      const finalAverageWeight = avgWeightOz > 0 ? formatWeight(avgWeightOz) : 
-                                (avgWeightParsed > 0 ? formatWeight(avgWeightParsed) : 
-                                (typeof data.averageWeight === 'string' && data.averageWeight.includes('lb') ? data.averageWeight : '-'));
+      const finalBestCatch = bestCatchOz > 0 ? formatWeight(bestCatchOz) : '-';
+      const finalAverageWeight = avgWeightOz > 0 ? formatWeight(avgWeightOz) : '-';
 
       setStats({
-        ...data,
+        totalCompetitions: data.totalCompetitions || 0,
+        wins: data.wins || 0,
+        podiumFinishes: data.podiumFinishes || 0,
         bestCatch: finalBestCatch,
         averageWeight: finalAverageWeight
       });
@@ -2943,7 +2953,14 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.profileAvatarText}>{initials}</Text>
             </View>
           )}
-          <Text style={styles.profileName}>{angler.firstName} {angler.lastName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={styles.profileName}>{angler.firstName} {angler.lastName}</Text>
+            {angler.isAmbassador && (
+              <View style={{ marginLeft: 8, backgroundColor: 'rgba(27, 115, 66, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#1B7342' }}>
+                <Text style={{ color: '#1B7342', fontSize: 10, fontWeight: 'bold' }}>AMBASSADOR</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.profileUsername}>@{angler.username}</Text>
         </View>
 
@@ -4318,7 +4335,14 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
               <Text style={styles.profileAvatarText}>{initials}</Text>
             </View>
           )}
-          <Text style={styles.profileName}>{user.firstName} {user.lastName}</Text>
+          <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
+            <Text style={styles.profileName}>{user.firstName} {user.lastName}</Text>
+            {user.isAmbassador && (
+              <View style={{ marginLeft: 8, backgroundColor: 'rgba(27, 115, 66, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#1B7342' }}>
+                <Text style={{ color: '#1B7342', fontSize: 10, fontWeight: 'bold' }}>AMBASSADOR</Text>
+              </View>
+            )}
+          </View>
           <Text style={styles.profileUsername}>@{user.username}</Text>
 
           {/* Profile Completion */}
@@ -4692,6 +4716,73 @@ export default function App() {
   const [showLoginModal, setShowLoginModal] = useState(false);
   const [currentPage, setCurrentPage] = useState('home');
   const [activeMenu, setActiveMenu] = useState('home');
+  const [ambassadors, setAmbassadors] = useState<any[]>([]);
+  const [loadingAmbassadors, setLoadingAmbassadors] = useState(false);
+
+  useEffect(() => {
+    if (activeMenu === 'ambassadors') {
+      fetchAmbassadors();
+    }
+  }, [activeMenu]);
+
+  const fetchAmbassadors = async () => {
+    setLoadingAmbassadors(true);
+    try {
+      const response = await apiClient.get('/api/ambassadors');
+      setAmbassadors(response.data || []);
+    } catch (error) {
+      console.error('Error fetching ambassadors:', error);
+    } finally {
+      setLoadingAmbassadors(false);
+    }
+  };
+
+  const renderAmbassadors = () => (
+    <View style={styles.screenContainer}>
+      <View style={styles.screenHeader}>
+        <Text style={styles.screenTitle}>Our Ambassadors</Text>
+        <Text style={styles.screenSubtitle}>Meet the professionals representing Peg Slam</Text>
+      </View>
+      
+      {loadingAmbassadors ? (
+        <ActivityIndicator size="large" color="#1B7342" style={{ marginTop: 50 }} />
+      ) : (
+        <FlatList
+          data={ambassadors}
+          keyExtractor={(item) => item.id.toString()}
+          contentContainerStyle={{ padding: 15 }}
+          renderItem={({ item }) => (
+            <TouchableOpacity 
+              style={styles.anglerCard}
+              onPress={() => {
+                setSelectedAngler(item);
+              }}
+            >
+              <View style={styles.anglerAvatar}>
+                {item.avatar ? (
+                  <Image source={{ uri: item.avatar.startsWith('http') ? item.avatar : `${API_URL}${item.avatar}` }} style={styles.avatarImage} />
+                ) : (
+                  <Text style={styles.avatarInitials}>{item.firstName[0]}{item.lastName[0]}</Text>
+                )}
+              </View>
+              <View style={styles.anglerInfo}>
+                <Text style={styles.anglerName}>{item.firstName} {item.lastName}</Text>
+                <Text style={styles.anglerUsername}>@{item.username}</Text>
+                {item.club && <Text style={styles.anglerClub}>{item.club}</Text>}
+              </View>
+              <Text style={styles.viewProfileText}>View Profile →</Text>
+            </TouchableOpacity>
+          )}
+          ListEmptyComponent={
+            <View style={styles.emptyContainer}>
+              <Text style={styles.emptyText}>No ambassadors found.</Text>
+            </View>
+          }
+        />
+      )}
+    </View>
+  );
+
   const [selectedCompetition, setSelectedCompetition] = useState<any>(null);
   const [selectedAngler, setSelectedAngler] = useState<any>(null);
   const [selectedNews, setSelectedNews] = useState<any>(null);
@@ -4801,14 +4892,17 @@ export default function App() {
   const fetchAllData = async () => {
     try {
       setDataLoading(true);
-      const [compRes, newsRes, galRes, anglersRes, spRes, ytRes] = await Promise.all([
+      const [compRes, newsRes, galRes, anglersRes, spRes, ytRes, ambRes] = await Promise.all([
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news?limit=100'),
         apiClient.get('/api/gallery').catch(() => ({ data: [] })),
         apiClient.get('/api/anglers?limit=100').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
+        apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),
       ]);
+      
+      setAmbassadors(ambRes.data || []);
       
       console.log('Competitions data:', compRes.data?.[0]);
       console.log('News data:', newsRes.data?.news?.[0]);
@@ -4827,7 +4921,26 @@ export default function App() {
         else if (now > end) status = 'completed';
         return { ...comp, status };
       });
-      setCompetitions(withStatus);
+
+      // Sort logic: Live first, then Upcoming (soonest first), then Completed (most recent first)
+      const sortedCompetitions = [...withStatus].sort((a, b) => {
+        const statusOrder: { [key: string]: number } = { 'live': 0, 'upcoming': 1, 'completed': 2 };
+        if (statusOrder[a.status] !== statusOrder[b.status]) {
+          return statusOrder[a.status] - statusOrder[b.status];
+        }
+        
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        
+        if (a.status === 'upcoming') {
+          return dateA - dateB; // Soonest upcoming first
+        } else if (a.status === 'completed') {
+          return dateB - dateA; // Most recent completed first
+        }
+        return dateA - dateB;
+      });
+
+      setCompetitions(sortedCompetitions);
       setNews(newsRes.data?.news || []);
       setGallery(galRes.data || []);
       setAnglers(anglersRes.data?.data || []);
@@ -5005,6 +5118,7 @@ export default function App() {
       'home': 'PEG SLAM',
       'competitions': 'Competitions',
       'leaderboard': 'Leaderboard',
+      'ambassadors': 'Our Ambassadors',
       'anglers': 'Angler Directory',
       'news': 'News & Updates',
       'gallery': 'Gallery',
@@ -5169,6 +5283,39 @@ export default function App() {
         {/* HOME PAGE */}
         {currentPage === 'home' && (
           <>
+            <View style={styles.section}>
+              <View style={styles.sectionHeader}>
+                <Text style={styles.sectionTitle}>Our Ambassadors</Text>
+                <TouchableOpacity onPress={() => handleMenuSelect('ambassadors')}>
+                  <Text style={styles.readMore}>View All →</Text>
+                </TouchableOpacity>
+              </View>
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -16 }}>
+                <View style={{ paddingHorizontal: 16, flexDirection: 'row', gap: 12 }}>
+                  {ambassadors.slice(0, 5).map((ambassador: any) => (
+                    <TouchableOpacity
+                      key={ambassador.id}
+                      style={{ alignItems: 'center', width: 100 }}
+                      onPress={() => setSelectedAngler(ambassador)}
+                    >
+                      <View style={[styles.anglerAvatar, { width: 80, height: 80, borderRadius: 40 }]}>
+                        {ambassador.avatar ? (
+                          <Image source={{ uri: ambassador.avatar.startsWith('http') ? ambassador.avatar : `${API_URL}${ambassador.avatar}` }} style={styles.avatarImage} />
+                        ) : (
+                          <Text style={styles.avatarInitials}>{ambassador.firstName[0]}{ambassador.lastName[0]}</Text>
+                        )}
+                        <View style={{ position: 'absolute', top: 0, right: 0, backgroundColor: '#000', borderRadius: 12, padding: 3, borderWidth: 1, borderColor: '#1B7342' }}>
+                          <Text style={{ fontSize: 12 }}>🌟</Text>
+                        </View>
+                      </View>
+                      <Text style={[styles.anglerName, { textAlign: 'center' }]} numberOfLines={1}>{ambassador.firstName}</Text>
+                      <Text style={styles.anglerUsername}>@{ambassador.username}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </ScrollView>
+            </View>
+
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured Competitions</Text>
@@ -5403,6 +5550,7 @@ export default function App() {
         )}
 
         {/* ANGLER DIRECTORY PAGE */}
+        {currentPage === 'ambassadors' && renderAmbassadors()}
         {currentPage === 'anglers' && (
           <AnglerDirectoryPage 
             anglers={getFilteredAndSortedAnglers()}
