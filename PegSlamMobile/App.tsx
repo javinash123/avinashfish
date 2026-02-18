@@ -2366,7 +2366,7 @@ function NewsDetailPage({ article, onClose }: any) {
   };
 
   const fullImageUrl = getFullImageUrl();
-  const currentArticle = fullArticle || article;
+  const currentArticleDisplay = fullArticle || article;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2374,7 +2374,7 @@ function NewsDetailPage({ article, onClose }: any) {
         <TouchableOpacity onPress={onClose} style={styles.detailsBackButton}>
           <Text style={styles.detailsBackText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={[styles.detailsTitle, { maxWidth: '70%' }]} numberOfLines={1}>{currentArticle.title}</Text>
+        <Text style={[styles.detailsTitle, { maxWidth: '70%' }]} numberOfLines={1}>{currentArticleDisplay.title}</Text>
         <View style={{ width: 40 }} />
       </View>
 
@@ -2392,15 +2392,15 @@ function NewsDetailPage({ article, onClose }: any) {
         )}
 
         <View style={styles.detailsSection}>
-          <Text style={styles.detailsSectionTitle}>{currentArticle.title}</Text>
+          <Text style={styles.detailsSectionTitle}>{currentArticleDisplay.title}</Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 12 }}>
             <View style={{ backgroundColor: '#1B7342', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 4, marginRight: 8 }}>
               <Text style={{ color: '#fff', fontSize: 10, fontWeight: 'bold' }}>
-                {(currentArticle.category || 'News').toUpperCase()}
+                {(currentArticleDisplay.category || 'News').toUpperCase()}
               </Text>
             </View>
             <Text style={{ color: '#999', fontSize: 12 }}>
-              {currentArticle.date || 'Today'} • {currentArticle.readTime || '3 min read'}
+              {currentArticleDisplay.date || 'Today'} • {currentArticleDisplay.readTime || '3 min read'}
             </Text>
           </View>
 
@@ -2408,17 +2408,17 @@ function NewsDetailPage({ article, onClose }: any) {
             <ActivityIndicator size="small" color="#1B7342" style={{ marginVertical: 20 }} />
           ) : (
             <>
-              {currentArticle.excerpt ? (
+              {currentArticleDisplay.excerpt ? (
                 <View style={{ marginBottom: 16 }}>
                   <Text style={[styles.detailsDescription, { fontWeight: 'bold' }]}>
-                    {stripHtml(currentArticle.excerpt)}
+                    {stripHtml(currentArticleDisplay.excerpt)}
                   </Text>
                 </View>
               ) : null}
               
               <View style={{ marginBottom: 20 }}>
-                {currentArticle.content ? (
-                  currentArticle.content.split(/<\/p>|<br\s*\/?>/).map((paragraph: string, index: number) => {
+                {currentArticleDisplay.content ? (
+                  currentArticleDisplay.content.split(/<\/p>|<br\s*\/?>/).map((paragraph: string, index: number) => {
                     // Extract images from this specific paragraph block
                     const paragraphImages = extractImagesFromHtml(paragraph);
                     const text = stripHtml(paragraph);
@@ -2446,9 +2446,9 @@ function NewsDetailPage({ article, onClose }: any) {
                 ) : (
                   <View>
                     <Text style={styles.detailsDescription}>
-                      {stripHtml(currentArticle.description || '')}
+                      {stripHtml(currentArticleDisplay.description || '')}
                     </Text>
-                    {extractImagesFromHtml(currentArticle.description || '').map((imgUrl, imgIdx) => (
+                    {extractImagesFromHtml(currentArticleDisplay.description || '').map((imgUrl, imgIdx) => (
                       <Image 
                         key={`desc-img-${imgIdx}`}
                         source={{ uri: imgUrl }}
@@ -2663,8 +2663,8 @@ function AnglerCard({ angler, onPress }: any) {
 }
 
 // Angler Directory Page
-function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSort, search, sortBy, page, onPageChange }: any) {
-  const filteredAnglers = anglers.slice((page - 1) * 12, page * 12);
+function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSort, search, sortBy, page, onPageChange, getFilteredAndSortedAnglers }: any) {
+  const filteredAnglers = getFilteredAndSortedAnglers().slice((page - 1) * 12, page * 12);
   
   return (
     <View style={styles.section}>
@@ -2711,7 +2711,7 @@ function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSor
               <AnglerCard key={idx} angler={angler} onPress={() => onSelectAngler(angler)} />
             ))}
           </View>
-          {Math.ceil(anglers.length / 12) > 1 && (
+          {Math.ceil(getFilteredAndSortedAnglers().length / 12) > 1 && (
             <View style={styles.paginationContainer}>
               <TouchableOpacity
                 style={[styles.paginationButton, page === 1 && styles.paginationButtonDisabled]}
@@ -2720,11 +2720,11 @@ function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSor
               >
                 <Text style={styles.paginationButtonText}>← Prev</Text>
               </TouchableOpacity>
-              <Text style={styles.paginationText}>Page {page} of {Math.ceil(anglers.length / 12)}</Text>
+              <Text style={styles.paginationText}>Page {page} of {Math.ceil(getFilteredAndSortedAnglers().length / 12)}</Text>
               <TouchableOpacity
-                style={[styles.paginationButton, page >= Math.ceil(anglers.length / 12) && styles.paginationButtonDisabled]}
-                onPress={() => onPageChange(Math.min(Math.ceil(anglers.length / 12), page + 1))}
-                disabled={page >= Math.ceil(anglers.length / 12)}
+                style={[styles.paginationButton, page >= Math.ceil(getFilteredAndSortedAnglers().length / 12) && styles.paginationButtonDisabled]}
+                onPress={() => onPageChange(Math.min(Math.ceil(getFilteredAndSortedAnglers().length / 12), page + 1))}
+                disabled={page >= Math.ceil(getFilteredAndSortedAnglers().length / 12)}
               >
                 <Text style={styles.paginationButtonText}>Next →</Text>
               </TouchableOpacity>
@@ -4904,7 +4904,7 @@ export default function App() {
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news?limit=100'),
         apiClient.get('/api/gallery').catch(() => ({ data: [] })),
-        apiClient.get('/api/anglers?limit=500').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/api/anglers?limit=1000').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
         apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),
@@ -5561,7 +5561,7 @@ export default function App() {
         {currentPage === 'ambassadors' && renderAmbassadors()}
         {currentPage === 'anglers' && (
           <AnglerDirectoryPage 
-            anglers={getFilteredAndSortedAnglers()}
+            anglers={anglers}
             loading={dataLoading}
             onSelectAngler={setSelectedAngler}
             onSearch={handleAnglerSearch}
@@ -5570,8 +5570,8 @@ export default function App() {
             sortBy={sortBy}
             page={page}
             onPageChange={setPage}
+            getFilteredAndSortedAnglers={getFilteredAndSortedAnglers}
           />
-        )}
 
         {/* NEWS PAGE */}
         {currentPage === 'news' && (
