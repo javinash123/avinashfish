@@ -169,6 +169,7 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
   const [errorMessage, setErrorMessage] = useState('');
   const [resetEmail, setResetEmail] = useState('');
   const [resetMessage, setResetMessage] = useState('');
+  const [logoUrl, setLogoUrl] = useState('');
   const [selectedRadio, setSelectedRadio] = useState<string | null>(null);
   const toggleRadio = (id: string) => {
     setSelectedRadio(selectedRadio === id ? null : id);
@@ -5572,6 +5573,7 @@ export default function App() {
             onPageChange={setPage}
             getFilteredAndSortedAnglers={getFilteredAndSortedAnglers}
           />
+        )}
 
         {/* NEWS PAGE */}
         {currentPage === 'news' && (
@@ -7499,6 +7501,40 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 11,
     fontWeight: '600',
+  },
+  newsCategoryBadge: {
+    backgroundColor: '#1B7342',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  newsCategoryText: {
+    color: '#000',
+    fontSize: 11,
+    fontWeight: 'bold',
+  },
+  newsExcerpt: {
+    color: '#999',
+    fontSize: 14,
+    lineHeight: 20,
+    marginBottom: 12,
+  },
+  newsFooter: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  newsReadMore: {
+    color: '#1B7342',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  emptyText: {
+    color: '#666',
+    fontSize: 14,
+    textAlign: 'center',
+    marginTop: 20,
   },
   galleryCardCategoryBadge: {
     position: 'absolute',
