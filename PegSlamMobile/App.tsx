@@ -4905,7 +4905,7 @@ export default function App() {
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news?limit=100'),
         apiClient.get('/api/gallery').catch(() => ({ data: [] })),
-        apiClient.get('/api/anglers?limit=1000').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/api/anglers?pageSize=1000').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
         apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),

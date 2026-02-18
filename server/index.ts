@@ -17,6 +17,9 @@ import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 
+// FIX: Add type declaration for compression to fix LSP error
+declare module 'compression';
+
 // Log environment info for debugging
 console.log('📋 ENVIRONMENT STARTUP INFO:');
 console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
