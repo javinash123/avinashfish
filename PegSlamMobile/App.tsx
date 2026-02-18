@@ -2258,12 +2258,17 @@ function BookingPaymentForm({ competition, userTeam, user, onSuccess, onCancel }
 // News Detail Page
 function NewsDetailPage({ article, onClose }: any) {
   const [fullArticle, setFullArticle] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const fetchFullArticle = async () => {
-      try {
+      // If we already have content, don't show loading spinner to user
+      // but still fetch the latest in background
+      if (!article.content) {
         setLoading(true);
+      }
+      
+      try {
         const response = await apiClient.get(`/api/news/${article.id}`);
         if (response.data) {
           setFullArticle(response.data);
@@ -2279,6 +2284,9 @@ function NewsDetailPage({ article, onClose }: any) {
       fetchFullArticle();
     }
   }, [article?.id]);
+
+  const currentArticle = fullArticle || article;
+  const loadingState = loading && !currentArticle.content;
 
   const shareNews = (platform: string) => {
     const newsUrl = `https://pegslam.com/news?article=${article.id}`;
@@ -2336,8 +2344,8 @@ function NewsDetailPage({ article, onClose }: any) {
   };
 
   const getFullImageUrl = () => {
-    const currentArticle = fullArticle || article;
-    const rawUrl = currentArticle.imageUrl || currentArticle.featuredImage || currentArticle.image;
+    const art = fullArticle || article;
+    const rawUrl = art.imageUrl || art.featuredImage || art.image;
     if (!rawUrl) return null;
     
     let url = rawUrl;
@@ -2396,7 +2404,7 @@ function NewsDetailPage({ article, onClose }: any) {
             </Text>
           </View>
 
-          {loading ? (
+          {loadingState ? (
             <ActivityIndicator size="small" color="#1B7342" style={{ marginVertical: 20 }} />
           ) : (
             <>
@@ -4896,7 +4904,7 @@ export default function App() {
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news?limit=100'),
         apiClient.get('/api/gallery').catch(() => ({ data: [] })),
-        apiClient.get('/api/anglers?limit=100').catch(() => ({ data: { data: [] } })),
+        apiClient.get('/api/anglers?limit=500').catch(() => ({ data: { data: [] } })),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
         apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),
