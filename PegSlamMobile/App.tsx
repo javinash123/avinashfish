@@ -26,6 +26,7 @@ import * as ImagePicker from 'expo-image-picker';
 // Import the Peg Slam logo
 const pegSlamLogo = require('./assets/peg-slam-logo-new.png');
 
+// API URL configuration
 const API_URL = 'https://pegslam.com';
 const STRIPE_PUBLISHABLE_KEY = 'pk_live_51OkNT9CWRF6gYXTMFu18Bqv7h8lPJPHW8n4bQN5m1E8lDnOBm1y4l2QGmvKfB4Yp9WvFmPCnEJ5vP5X4SYnCjE9e00ZVF4zZqS';
 const { width } = Dimensions.get('window');
@@ -4901,26 +4902,73 @@ export default function App() {
   const fetchAllData = async () => {
     try {
       setDataLoading(true);
-      const [compRes, newsRes, galRes, anglersRes, spRes, ytRes, ambRes] = await Promise.all([
+      
+      // Use the global API_URL
+      console.log('Fetching data from:', API_URL);
+
+      // Fetch all anglers using pagination
+      const fetchAllAnglers = async () => {
+        try {
+          // The production API has a hard limit of 100 per page.
+          // We use pageSize=100 which is confirmed to return all 31 anglers in testing.
+          console.log('[Angler Debug] Fetching first page with pageSize=100');
+          const res = await apiClient.get('/api/anglers', { params: { page: 1, pageSize: 100 } });
+          let allData = [];
+          
+          if (res.data) {
+            const responseData = res.data.data;
+            if (Array.isArray(responseData)) {
+              allData = responseData;
+              const total = res.data.total || responseData.length;
+              const pageSize = 100;
+              const totalPages = Math.ceil(total / pageSize);
+              
+              // If there are more than 100 anglers, fetch remaining pages
+              if (totalPages > 1) {
+                console.log(`[Angler Debug] Fetching remaining ${totalPages - 1} pages`);
+                const remainingPromises = [];
+                for (let p = 2; p <= totalPages; p++) {
+                  remainingPromises.push(apiClient.get('/api/anglers', { params: { page: p, pageSize } }));
+                }
+                const results = await Promise.all(remainingPromises);
+                results.forEach(r => {
+                  const rData = r.data.data;
+                  if (Array.isArray(rData)) {
+                    allData = [...allData, ...rData];
+                  }
+                });
+              }
+            } else if (Array.isArray(res.data)) {
+              allData = res.data;
+            }
+          }
+          
+          console.log(`[Angler Debug] Successfully loaded ${allData.length} anglers for directory`);
+          return allData;
+        } catch (err) {
+          console.error('Failed to fetch all anglers:', err.message);
+          return [];
+        }
+      };
+
+      const [compRes, newsRes, galRes, allAnglersList, spRes, ytRes, ambRes] = await Promise.all([
         apiClient.get('/api/competitions'),
-        apiClient.get('/api/news?limit=100'),
+        apiClient.get('/api/news', { params: { limit: 100 } }),
         apiClient.get('/api/gallery').catch(() => ({ data: [] })),
-        apiClient.get('/api/anglers?pageSize=1000').catch(() => ({ data: { data: [] } })),
+        fetchAllAnglers(),
         apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
         apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
         apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),
       ]);
-      
+
+      setAnglers(allAnglersList);
       setAmbassadors(ambRes.data || []);
       
-      console.log('Competitions data:', compRes.data?.[0]);
-      console.log('News data:', newsRes.data?.news?.[0]);
-      console.log('Gallery data:', galRes.data?.[0]);
-      console.log('Anglers data:', anglersRes.data?.data?.[0]);
-      console.log('Sponsors data:', spRes.data?.[0]);
-      console.log('YouTube videos:', ytRes.data?.[0]);
+      // Process competitions
+      const rawComps = compRes.data;
+      const comps = Array.isArray(rawComps) ? rawComps : (rawComps?.data || rawComps?.competitions || []);
       
-      const withStatus = (compRes.data || []).map((comp: any) => {
+      const withStatus = comps.map((comp: any) => {
         const now = new Date();
         const start = new Date(comp.date);
         const end = new Date(comp.endDate || comp.date);
@@ -4931,30 +4979,32 @@ export default function App() {
         return { ...comp, status };
       });
 
-      // Sort logic: Live first, then Upcoming (soonest first), then Completed (most recent first)
-      const sortedCompetitions = [...withStatus].sort((a, b) => {
+      const sortedComps = [...withStatus].sort((a, b) => {
         const statusOrder: { [key: string]: number } = { 'live': 0, 'upcoming': 1, 'completed': 2 };
         if (statusOrder[a.status] !== statusOrder[b.status]) {
           return statusOrder[a.status] - statusOrder[b.status];
         }
-        
         const dateA = new Date(a.date).getTime();
         const dateB = new Date(b.date).getTime();
-        
-        if (a.status === 'upcoming') {
-          return dateA - dateB; // Soonest upcoming first
-        } else if (a.status === 'completed') {
-          return dateB - dateA; // Most recent completed first
-        }
+        if (a.status === 'upcoming') return dateA - dateB;
+        if (a.status === 'completed') return dateB - dateA;
         return dateA - dateB;
       });
 
-      setCompetitions(sortedCompetitions);
-      setNews(newsRes.data?.news || []);
-      setGallery(galRes.data || []);
-      setAnglers(anglersRes.data?.data || []);
-      setSponsors(spRes.data || []);
-      setYoutubeVideos(ytRes.data || []);
+      setCompetitions(sortedComps);
+
+      // Process news
+      const newsData = newsRes.data?.news || newsRes.data?.data || (Array.isArray(newsRes.data) ? newsRes.data : []);
+      setNews(newsData);
+      
+      const galleryData = galRes.data?.gallery || galRes.data?.data || (Array.isArray(galRes.data) ? galRes.data : []);
+      setGallery(galleryData);
+      
+      const sponsorsData = spRes.data?.sponsors || spRes.data?.data || (Array.isArray(spRes.data) ? spRes.data : []);
+      setSponsors(sponsorsData);
+      
+      const videosData = ytRes.data?.videos || ytRes.data?.data || (Array.isArray(ytRes.data) ? ytRes.data : []);
+      setYoutubeVideos(videosData);
     } catch (error) {
       console.error('Error fetching data:', error);
     } finally {
@@ -5102,19 +5152,56 @@ export default function App() {
   const fetchInitialData = async () => {
     setDataLoading(true);
     try {
-      const [compsRes, newsRes, galleryRes, sponsorsRes, videosRes] = await Promise.all([
+      const [compsRes, newsRes, galleryRes, sponsorsRes, videosRes, ambassadorsRes] = await Promise.all([
         apiClient.get('/api/competitions'),
         apiClient.get('/api/news'),
-        apiClient.get('/api/gallery'),
-        apiClient.get('/api/sponsors'),
-        apiClient.get('/api/youtube-videos'),
+        apiClient.get('/api/gallery').catch(() => ({ data: [] })),
+        apiClient.get('/api/sponsors').catch(() => ({ data: [] })),
+        apiClient.get('/api/youtube-videos').catch(() => ({ data: [] })),
+        apiClient.get('/api/ambassadors').catch(() => ({ data: [] })),
       ]);
       
-      setCompetitions(compsRes.data || []);
-      setNews(newsRes.data || []);
-      setGallery(galleryRes.data || []);
-      setSponsors(sponsorsRes.data || []);
-      setYoutubeVideos(videosRes.data || []);
+      const rawCompsInitial = compsRes.data;
+      const compsInitial = Array.isArray(rawCompsInitial) ? rawCompsInitial : (rawCompsInitial?.data || rawCompsInitial?.competitions || []);
+      
+      const withStatusInitial = compsInitial.map((comp: any) => {
+        const now = new Date();
+        const start = new Date(comp.date);
+        const end = new Date(comp.endDate || comp.date);
+        
+        let status = 'upcoming';
+        if (now >= start && now <= end) status = 'live';
+        else if (now > end) status = 'completed';
+        return { ...comp, status };
+      });
+
+      const sortedInitial = [...withStatusInitial].sort((a, b) => {
+        const statusOrder: { [key: string]: number } = { 'live': 0, 'upcoming': 1, 'completed': 2 };
+        if (statusOrder[a.status] !== statusOrder[b.status]) {
+          return statusOrder[a.status] - statusOrder[b.status];
+        }
+        const dateA = new Date(a.date).getTime();
+        const dateB = new Date(b.date).getTime();
+        if (a.status === 'upcoming') return dateA - dateB;
+        if (a.status === 'completed') return dateB - dateA;
+        return dateA - dateB;
+      });
+
+      setCompetitions(sortedInitial);
+      
+      const newsDataInitial = newsRes.data?.news || newsRes.data?.data || newsRes.data || [];
+      setNews(newsDataInitial);
+      
+      const galleryDataInitial = galleryRes.data?.gallery || galleryRes.data?.data || galleryRes.data || [];
+      setGallery(galleryDataInitial);
+      
+      const sponsorsDataInitial = sponsorsRes.data?.sponsors || sponsorsRes.data?.data || sponsorsRes.data || [];
+      setSponsors(sponsorsDataInitial);
+      
+      const videosDataInitial = videosRes.data?.videos || videosRes.data?.data || videosRes.data || [];
+      setYoutubeVideos(videosDataInitial);
+
+      setAmbassadors(ambassadorsRes.data || []);
     } catch (error) {
       console.error('Error fetching initial data:', error);
     } finally {
@@ -5981,7 +6068,31 @@ export default function App() {
             ) : teamDetails && teamDetails.members ? (
               <ScrollView style={styles.teamModalContent}>
                 {teamDetails.members.map((member: any) => (
-                  <View key={member.userId} style={styles.teamMemberRow}>
+                  <TouchableOpacity
+                    key={member.userId}
+                    style={styles.teamMemberRow}
+                    onPress={() => {
+                      const angler = anglers.find((a: any) => a._id === member.userId || a.id === member.userId || a.username === member.username);
+                      if (angler) {
+                        setSelectedAngler(angler);
+                        setSelectedTeamId(null);
+                        setCurrentPage('profile');
+                      } else {
+                        // If not found in pre-loaded anglers, create a partial profile
+                        setSelectedAngler({
+                          _id: member.userId,
+                          id: member.userId,
+                          firstName: member.name?.split(' ')[0] || '',
+                          lastName: member.name?.split(' ').slice(1).join(' ') || '',
+                          username: member.username,
+                          avatar: member.avatar,
+                          club: member.club
+                        });
+                        setSelectedTeamId(null);
+                        setCurrentPage('profile');
+                      }
+                    }}
+                  >
                     <View style={styles.teamMemberAvatar}>
                       {member.avatar ? (
                         <Image source={{ uri: member.avatar }} style={styles.teamMemberAvatarImage} />
@@ -6003,7 +6114,7 @@ export default function App() {
                       <Text style={styles.teamMemberUsername}>@{member.username}</Text>
                       {member.club && <Text style={styles.teamMemberClub}>{member.club}</Text>}
                     </View>
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </ScrollView>
             ) : (
