@@ -1076,7 +1076,14 @@ export class MemStorage implements IStorage {
       p => p.competitionId === competitionId && p.userId === userId
     );
     if (participant) {
-      return this.competitionParticipants.delete(participant.id);
+      const deleted = this.competitionParticipants.delete(participant.id);
+      if (deleted) {
+        const competition = this.competitions.get(competitionId);
+        if (competition) {
+          competition.pegsBooked = Math.max(0, competition.pegsBooked - 1);
+        }
+      }
+      return deleted;
     }
     return false;
   }

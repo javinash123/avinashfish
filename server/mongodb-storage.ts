@@ -1284,7 +1284,14 @@ export class MongoDBStorage implements IStorage {
 
   async leaveCompetition(competitionId: string, userId: string): Promise<boolean> {
     const result = await this.competitionParticipants.deleteOne({ competitionId, userId });
-    return result.deletedCount === 1;
+    if (result.deletedCount === 1) {
+      await this.competitions.updateOne(
+        { id: competitionId },
+        { $inc: { pegsBooked: -1 } }
+      );
+      return true;
+    }
+    return false;
   }
 
   async deleteParticipant(participantId: string): Promise<boolean> {

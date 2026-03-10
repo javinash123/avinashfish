@@ -321,7 +321,12 @@ export async function sendCompetitionBookingEmail(toEmail: string, data: {
             .info-row:last-child { border-bottom: none; }
             .label { font-weight: 600; color: #4b5563; }
             .value { color: #111827; }
+            .section-title { color: #2d7a4f; font-weight: 600; margin-top: 20px; margin-bottom: 10px; }
+            .section-content { font-size: 14px; line-height: 1.8; color: #333; }
+            .section-content ul { padding-left: 20px; margin: 10px 0; }
+            .section-content li { margin-bottom: 8px; }
             .footer { text-align: center; color: #6b7280; font-size: 13px; margin-top: 30px; padding: 20px; }
+            .contact-info { background-color: #f3f4f6; padding: 15px; border-radius: 8px; margin: 15px 0; font-size: 14px; }
           </style>
         </head>
         <body>
@@ -331,8 +336,9 @@ export async function sendCompetitionBookingEmail(toEmail: string, data: {
               <p style="margin: 5px 0 0 0; font-size: 14px; opacity: 0.9;">Booking Confirmation</p>
             </div>
             <div class="content">
-              <h2 style="color: #2d7a4f; margin-top: 0;">Tight Lines, ${data.userName}!</h2>
-              <p>Your booking for <strong>${data.competitionName}</strong> has been confirmed. We look forward to seeing you at the bank!</p>
+              <h2 style="color: #2d7a4f; margin-top: 0;">Hi ${data.userName},</h2>
+              
+              <p style="font-weight: 600; color: #2d7a4f;">Congratulations — your place for the PegSlam event at ${data.venue} is now confirmed. We look forward to having you on the bank.</p>
               
               <div class="info-card">
                 <div class="info-row">
@@ -348,16 +354,40 @@ export async function sendCompetitionBookingEmail(toEmail: string, data: {
                   <span class="value">${data.venue}</span>
                 </div>
                 <div class="info-row">
-                  <span class="label">Peg Number</span>
-                  <span class="value">${data.pegNumber}</span>
-                </div>
-                <div class="info-row">
                   <span class="label">Entry Fee</span>
                   <span class="value">£${data.entryFee}</span>
                 </div>
               </div>
               
-              <p style="font-size: 14px; color: #6b7280;">Please ensure you arrive at the venue at least 30 minutes before the start time for the draw and briefing.</p>
+              <div class="section-content">
+                <p>Closer to the match date you will receive a full information pack. This will include draw details, arrival and gate times, parking arrangements, and any venue-specific guidance you need before the event.</p>
+                
+                <p class="section-title">Match Rules (Important):</p>
+                <ul>
+                  <li>The event follows the fishery's rules at all times.</li>
+                  <li>No bait boats are permitted.</li>
+                  <li>Baiting methods allowed: throwing sticks, catapults, spod or spomb only.</li>
+                  <li>Any additional fishery restrictions on rigs, bait or fish care will apply.</li>
+                  <li><strong>Under 18s:</strong> All anglers under 18 must attend with a responsible adult present for the duration of the event. The accompanying adult must also complete and sign the PegSlam disclaimer form, which will be sent to you before the match.</li>
+                </ul>
+                
+                <p>We will send updates and reminders in the lead-up to the event, including WhatsApp group details the day before the match.</p>
+                
+                <p>Please make sure your contact number is correct for the WhatsApp group and keep an eye on your email.</p>
+                
+                <p class="section-title">Follow Us:</p>
+                <p>You can follow results, photos and announcements on our social pages:<br>
+                <strong>Facebook / Instagram / TikTok — PegSlam</strong></p>
+                
+                <p class="section-title">Questions?</p>
+                <p>If you have any questions before the event, please contact:</p>
+                <div class="contact-info">
+                  <p style="margin: 5px 0;"><strong>Ian</strong> — 07727 055671</p>
+                  <p style="margin: 5px 0;"><strong>Alan</strong> — 07593 276882</p>
+                </div>
+              </div>
+              
+              <p style="margin-top: 30px; font-weight: 600; text-align: center; color: #2d7a4f;">PegSlam</p>
             </div>
             <div class="footer">
               <p>&copy; ${new Date().getFullYear()} Peg Slam. All rights reserved.</p>

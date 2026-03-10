@@ -5,12 +5,13 @@
 Peg Slam is a full-stack web application for managing UK fishing competitions. The platform enables anglers to register, enter matches, and track results while allowing organizers to manage competitions with peg allocations, live leaderboards, and payment processing. The system supports both individual and team-based competitions with qualifier-to-final progression flows.
 
 Key capabilities:
-- Competition management with peg booking system
+- Competition management with peg booking system with proper availability tracking
 - Angler profiles with competition history
 - Live leaderboards and weigh-in tracking
 - Stripe payment integration for entry fees
 - Admin panel for organizers
 - Mobile app (React Native/Expo) for on-the-go access
+- Transactional emails with detailed event information and rules
 
 ## User Preferences
 
