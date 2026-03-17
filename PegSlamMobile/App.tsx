@@ -42,13 +42,28 @@ const apiClient = axios.create({
   }
 });
 
-// For web platform, we need to ensure credentials are sent with every request
-if (isWeb) {
-  apiClient.interceptors.request.use((config) => {
-    config.withCredentials = true;
-    return config;
-  });
-}
+// Backend uses session-based auth with cookies, not JWT tokens
+// The withCredentials: true option ensures cookies are sent with every request
+apiClient.interceptors.request.use((config) => {
+  config.withCredentials = true;
+  console.log(`[API Request] ${config.method?.toUpperCase()} ${config.url}`);
+  return config;
+});
+
+// Log response status to help debug auth issues
+apiClient.interceptors.response.use(
+  (response) => {
+    console.log(`[API Response] ${response.status} ${response.config.url}`);
+    return response;
+  },
+  (error) => {
+    // Only log 4xx/5xx errors, not network errors
+    if (error.response) {
+      console.log(`[API Error] ${error.response?.status} ${error.config?.url}: ${error.response?.data?.message || error.message}`);
+    }
+    return Promise.reject(error);
+  }
+);
 
 // Utility to format weight in UK system (lb oz)
 const formatWeight = (totalOunces: number) => {
@@ -184,18 +199,21 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
     }
     setLoading(true);
     try {
+      console.log('[Login] Attempting login with email:', email);
       const response = await apiClient.post('/api/user/login', { email, password });
       if (response.data) {
+        console.log('[Login] Success! User:', response.data.username);
         await AsyncStorage.setItem('userToken', JSON.stringify(response.data));
+        setErrorMessage('');
         Alert.alert('Success', `Welcome back, ${response.data.firstName}!`);
         onLoginSuccess(response.data);
         onClose();
         setEmail('');
         setPassword('');
-        setErrorMessage('');
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Invalid email or password';
+      console.log('[Login Error] Status:', error.response?.status, 'Message:', error.response?.data?.message || error.message);
+      const message = error.response?.data?.message || error.message || 'Invalid email or password';
       setErrorMessage(message);
       Alert.alert('Login Failed', message);
     } finally {
@@ -215,6 +233,7 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
     }
     setLoading(true);
     try {
+      console.log('[Register] Attempting registration for:', email);
       const response = await apiClient.post('/api/user/register', {
         firstName,
         lastName,
@@ -224,7 +243,9 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
         club: club || undefined,
       });
       if (response.data) {
+        console.log('[Register] Success! User registered:', response.data.username);
         await AsyncStorage.setItem('userToken', JSON.stringify(response.data));
+        setErrorMessage('');
         Alert.alert('Success', 'Account created! Welcome to Peg Slam!');
         onLoginSuccess(response.data);
         onClose();
@@ -234,10 +255,10 @@ function LoginModal({ visible, onClose, onLoginSuccess }: any) {
         setUsername('');
         setPassword('');
         setClub('');
-        setErrorMessage('');
       }
     } catch (error: any) {
-      const message = error.response?.data?.message || 'Registration failed';
+      console.log('[Register Error] Status:', error.response?.status, 'Message:', error.response?.data?.message || error.message);
+      const message = error.response?.data?.message || error.message || 'Registration failed';
       setErrorMessage(message);
       Alert.alert('Registration Failed', message);
     } finally {
@@ -1282,19 +1303,33 @@ function CompetitionDetailsPage({
   };
 
   const handleAnglerClick = async (anglerId: string, username?: string) => {
+    // Use username as primary identifier since it's more reliable
+    const identifier = username || anglerId;
+    
+    // If identifier is undefined/null, don't proceed
+    if (!identifier) {
+      console.error('No angler identifier provided');
+      return;
+    }
+    
+    // If onAnglerClick callback provided, use it
+    if (onAnglerClick) {
+      onAnglerClick(identifier);
+      return;
+    }
+    
     setLoadingAnglerDetails(true);
     setShowAnglerModal(true);
     try {
       // Priority 1: Fetch by username if available (most reliable for all angler endpoints)
-      const identifier = username || anglerId;
       
       let angler = null;
       try {
-        // Try fetching full angler object from directory API
-        const res = await apiClient.get(`/api/anglers/${identifier}`);
+        // Try fetching full user object from API
+        const res = await apiClient.get(`/api/users/${identifier}`);
         if (res.data) angler = res.data;
       } catch (e) {
-        console.log(`Failed to fetch full angler by identifier ${identifier}:`, e);
+        console.log(`Failed to fetch full user by identifier ${identifier}:`, e);
       }
 
       // Priority 2: Main directory list fallback
@@ -1945,6 +1980,10 @@ function CompetitionDetailsPage({
                   setSelectedAnglerDetails(null);
                 }} 
                 currentUser={user}
+                onCompetitionSelect={(comp: any) => {
+                  setSelectedCompetition(comp);
+                  setSelectedAnglerDetails(null);
+                }}
               />
             ) : null}
           </SafeAreaView>
@@ -2607,7 +2646,7 @@ function GalleryDetailPage({ image, currentImageIndex, onClose, onNextImage, onP
 
 // Angler Card Component
 function AnglerCard({ angler, onPress }: any) {
-  const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
+  const initials = `${displayAngler.firstName?.[0] || 'A'}${displayAngler.lastName?.[0] || 'U'}`;
   const [imageLoaded, setImageLoaded] = useState(true);
   
   const getImageUrl = (url: string) => {
@@ -2654,9 +2693,9 @@ function AnglerCard({ angler, onPress }: any) {
         )}
       </View>
       <View style={styles.anglerInfo}>
-        <Text style={[styles.anglerName, { color: '#1B7342' }]} numberOfLines={1}>{angler.firstName} {angler.lastName}</Text>
+        <Text style={[styles.anglerName, { color: '#1B7342' }]} numberOfLines={1}>{displayAngler.firstName} {displayAngler.lastName}</Text>
         <Text style={styles.anglerUsername} numberOfLines={1}>@{angler.username}</Text>
-        {angler.club && <Text style={styles.anglerClub} numberOfLines={1}>{angler.club}</Text>}
+        {displayAngler.club && <Text style={styles.anglerClub} numberOfLines={1}>{displayAngler.club}</Text>}
       </View>
       {angler.location && <Text style={styles.anglerLocation} numberOfLines={1}>{angler.location}</Text>}
       {angler.favouriteSpecies && <Text style={styles.anglerSpecies} numberOfLines={1}>Species: {angler.favouriteSpecies}</Text>}
@@ -2741,8 +2780,10 @@ function AnglerDirectoryPage({ anglers, loading, onSelectAngler, onSearch, onSor
 }
 
 // Angler Profile Page
-function AnglerProfilePage({ angler, onClose, currentUser }: any) {
-  const initials = `${angler.firstName?.[0] || 'A'}${angler.lastName?.[0] || 'U'}`;
+function AnglerProfilePage({ angler, onClose, currentUser, onCompetitionSelect, onProfileUpdated }: any) {
+  const [localAngler, setLocalAngler] = useState(angler);
+  const displayAngler = localAngler || angler;
+  const initials = `${displayAngler.firstName?.[0] || 'A'}${displayAngler.lastName?.[0] || 'U'}`;
   
   const getImageUrl = (url: string) => {
     if (!url) return null;
@@ -2774,7 +2815,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const [editOpen, setEditOpen] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [selectedCompFromProfile, setSelectedCompFromProfile] = useState<any>(null);
-  const [editForm, setEditForm] = useState({ firstName: angler.firstName, lastName: angler.lastName, club: angler.club, bio: angler.bio, location: angler.location, favouriteMethod: angler.favouriteMethod, favouriteSpecies: angler.favouriteSpecies, avatar: angler.avatar });
+  const [editForm, setEditForm] = useState({ firstName: displayAngler.firstName, lastName: displayAngler.lastName, club: displayAngler.club, bio: displayAngler.bio, location: displayAngler.location, favouriteMethod: displayAngler.favouriteMethod, favouriteSpecies: displayAngler.favouriteSpecies, avatar: displayAngler.avatar });
   const [passwordForm, setPasswordForm] = useState({ currentPassword: '', newPassword: '', confirmPassword: '', showCurrent: false, showNew: false, showConfirm: false });
   const [galleryForm, setGalleryForm] = useState({ photoUri: '', caption: '' });
   const [avatarForm, setAvatarForm] = useState({ photoUri: '', uploading: false });
@@ -2797,17 +2838,17 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
     fetchStats();
     fetchGallery();
     fetchParticipations();
-    if (angler.youtubeUrl) {
-      setVideoId(extractYouTubeVideoId(angler.youtubeUrl));
+    if (displayAngler.youtubeUrl) {
+      setVideoId(extractYouTubeVideoId(displayAngler.youtubeUrl));
     }
-  }, [angler.username, angler.youtubeUrl]);
+  }, [displayAngler.username, displayAngler.youtubeUrl]);
 
   const fetchStats = async () => {
     try {
       setStatsLoading(true);
-      const response = await apiClient.get(`/api/users/${angler.username}/stats`);
+      const response = await apiClient.get(`/api/users/${displayAngler.username}/stats`);
       const data = response.data;
-      console.log('Fetched stats for', angler.username, ':', data);
+      console.log('Fetched stats for', displayAngler.username, ':', data);
       
       // Calculate formatted values from raw data
       // Use potential field names from API: bestCatchOz, bestCatch, averageWeightOz, averageWeight, avgWeight
@@ -2844,7 +2885,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const fetchGallery = async () => {
     try {
       setGalleryLoading(true);
-      const response = await apiClient.get(`/api/users/${angler.username}/gallery`);
+      const response = await apiClient.get(`/api/users/${displayAngler.username}/gallery`);
       setGallery(response.data || []);
     } catch (error) {
       console.error('Error fetching gallery:', error);
@@ -2856,7 +2897,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   const fetchParticipations = async () => {
     try {
       setParticipationsLoading(true);
-      const response = await apiClient.get(`/api/users/${angler.username}/participations`);
+      const response = await apiClient.get(`/api/users/${displayAngler.username}/participations`);
       setParticipations(response.data || []);
       // Ensure loading state is cleared on success
       setParticipationsLoading(false);
@@ -2885,8 +2926,8 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
   };
 
   const shareProfile = (platform: string) => {
-    const profileUrl = `https://pegslam.com/profile/${angler.username}`;
-    const text = `Check out ${angler.firstName} ${angler.lastName}'s fishing profile on Peg Slam!`;
+    const profileUrl = `https://pegslam.com/profile/${displayAngler.username}`;
+    const text = `Check out ${displayAngler.firstName} ${displayAngler.lastName}'s fishing profile on Peg Slam!`;
     
     try {
       if (platform === 'whatsapp') {
@@ -2942,7 +2983,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
     }
   };
 
-  const hasSocialLinks = angler.youtubeUrl || angler.facebookUrl || angler.twitterUrl || angler.instagramUrl || angler.tiktokUrl;
+  const hasSocialLinks = displayAngler.youtubeUrl || displayAngler.facebookUrl || displayAngler.twitterUrl || displayAngler.instagramUrl || displayAngler.tiktokUrl;
 
   return (
     <View style={styles.detailsContainer}>
@@ -2950,70 +2991,70 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
         <TouchableOpacity style={styles.detailsBackButton} onPress={onClose}>
           <Text style={styles.detailsBackText}>← Back</Text>
         </TouchableOpacity>
-        <Text style={styles.detailsTitle}>{angler.firstName}</Text>
+        <Text style={styles.detailsTitle}>{displayAngler.firstName}</Text>
         <View style={{ width: 50 }} />
       </View>
       <ScrollView style={styles.detailsContent} showsVerticalScrollIndicator={false}>
         {/* Avatar */}
         <View style={styles.profileAvatarContainer}>
-          {angler.avatar && getImageUrl(angler.avatar) ? (
-            <Image source={{ uri: getImageUrl(angler.avatar) }} style={styles.profileAvatar} />
+          {displayAngler.avatar && getImageUrl(displayAngler.avatar) ? (
+            <Image source={{ uri: getImageUrl(displayAngler.avatar) }} style={styles.profileAvatar} />
           ) : (
             <View style={[styles.profileAvatar, styles.profileAvatarPlaceholder]}>
               <Text style={styles.profileAvatarText}>{initials}</Text>
             </View>
           )}
           <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4 }}>
-            <Text style={styles.profileName}>{angler.firstName} {angler.lastName}</Text>
-            {angler.isAmbassador && (
+            <Text style={styles.profileName}>{displayAngler.firstName} {displayAngler.lastName}</Text>
+            {displayAngler.isAmbassador && (
               <View style={{ marginLeft: 8, backgroundColor: 'rgba(27, 115, 66, 0.1)', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 4, borderWidth: 1, borderColor: '#1B7342' }}>
                 <Text style={{ color: '#1B7342', fontSize: 10, fontWeight: 'bold' }}>AMBASSADOR</Text>
               </View>
             )}
           </View>
-          <Text style={styles.profileUsername}>@{angler.username}</Text>
+          <Text style={styles.profileUsername}>@{displayAngler.username}</Text>
         </View>
 
         {/* Basic Info */}
         <View style={styles.detailsSection}>
           <Text style={styles.detailsSectionTitle}>Basic Information</Text>
-          {angler.club && (
+          {displayAngler.club && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Club</Text>
-              <Text style={styles.detailRowValue}>{angler.club}</Text>
+              <Text style={styles.detailRowValue}>{displayAngler.club}</Text>
             </View>
           )}
-          {angler.location && (
+          {displayAngler.location && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Location</Text>
-              <Text style={styles.detailRowValue}>{angler.location}</Text>
+              <Text style={styles.detailRowValue}>{displayAngler.location}</Text>
             </View>
           )}
-          {angler.favouriteMethod && (
+          {displayAngler.favouriteMethod && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Fishing Method</Text>
-              <Text style={styles.detailRowValue}>{angler.favouriteMethod}</Text>
+              <Text style={styles.detailRowValue}>{displayAngler.favouriteMethod}</Text>
             </View>
           )}
-          {angler.favouriteSpecies && (
+          {displayAngler.favouriteSpecies && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Favorite Species</Text>
-              <Text style={styles.detailRowValue}>{angler.favouriteSpecies}</Text>
+              <Text style={styles.detailRowValue}>{displayAngler.favouriteSpecies}</Text>
             </View>
           )}
-          {angler.memberSince && (
+          {displayAngler.memberSince && (
             <View style={styles.detailRow}>
               <Text style={styles.detailRowLabel}>Member Since</Text>
-              <Text style={styles.detailRowValue}>{new Date(angler.memberSince || 0).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</Text>
+              <Text style={styles.detailRowValue}>{new Date(displayAngler.memberSince || 0).toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })}</Text>
             </View>
           )}
         </View>
 
         {/* Bio */}
-        {angler.bio && (
+        {displayAngler.bio && (
           <View style={styles.detailsSection}>
             <Text style={styles.detailsSectionTitle}>About</Text>
-            <Text style={styles.detailsDescription}>{angler.bio}</Text>
+            <Text style={styles.detailsDescription}>{displayAngler.bio}</Text>
           </View>
         )}
 
@@ -3023,7 +3064,7 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
             <Text style={styles.detailsSectionTitle}>Featured Video</Text>
             <TouchableOpacity 
               style={styles.videoThumbnail}
-              onPress={() => angler.youtubeUrl && Linking.openURL(angler.youtubeUrl)}
+              onPress={() => displayAngler.youtubeUrl && Linking.openURL(displayAngler.youtubeUrl)}
             >
               <Image
                 source={{ uri: `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg` }}
@@ -3067,24 +3108,18 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
           <CompetitionDetailsPage 
             competition={selectedCompFromProfile} 
             onClose={() => setSelectedCompFromProfile(null)}
-            anglers={anglers}
+            anglers={[]}
             onTeamClick={() => {}} // Simple placeholder for profile-nested view
             user={currentUser}
             onLogin={() => {}} // Should already be logged in if on profile, but for safety
             onAnglerClick={(angler: any) => {
               setSelectedCompFromProfile(null);
-              // Handle navigation to another angler profile if needed
-              if (onClose) {
-                // If we're already in a profile view, we might need a way to push/replace
-                // For now, let's just close current and let parent handle it if possible
-                // Or just show the new angler in-place if we were to lift state
-              }
             }}
           />
         )}
 
         {/* Action Buttons */}
-        {currentUser && angler.username === currentUser.username && (
+        {currentUser && displayAngler.username === currentUser.username && (
           <View style={{ flexDirection: 'row', gap: 12, marginVertical: 16 }}>
             <TouchableOpacity style={[styles.bookButton, { flex: 1, backgroundColor: '#1B7342' }]} onPress={() => setEditOpen(true)}>
               <Text style={styles.bookButtonText}>Edit Profile</Text>
@@ -3100,32 +3135,32 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
           <View style={styles.detailsSection}>
             <Text style={styles.detailsSectionTitle}>Follow on Social Media</Text>
             <View style={styles.socialIconsRow}>
-              {angler.youtubeUrl && (
-                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.youtubeUrl)}>
+              {displayAngler.youtubeUrl && (
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(displayAngler.youtubeUrl)}>
                   <Text style={styles.socialIconButtonText}>▶</Text>
                   <Text style={styles.socialIconLabel}>YouTube</Text>
                 </TouchableOpacity>
               )}
-              {angler.facebookUrl && (
-                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.facebookUrl)}>
+              {displayAngler.facebookUrl && (
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(displayAngler.facebookUrl)}>
                   <Text style={styles.socialIconButtonText}>f</Text>
                   <Text style={styles.socialIconLabel}>Facebook</Text>
                 </TouchableOpacity>
               )}
-              {angler.twitterUrl && (
-                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.twitterUrl)}>
+              {displayAngler.twitterUrl && (
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(displayAngler.twitterUrl)}>
                   <Text style={styles.socialIconButtonText}>𝕏</Text>
                   <Text style={styles.socialIconLabel}>Twitter</Text>
                 </TouchableOpacity>
               )}
-              {angler.instagramUrl && (
-                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.instagramUrl)}>
+              {displayAngler.instagramUrl && (
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(displayAngler.instagramUrl)}>
                   <Text style={[styles.socialIconButtonText, { color: '#E1306C' }]}></Text>
                   <Text style={styles.socialIconLabel}>Instagram</Text>
                 </TouchableOpacity>
               )}
-              {angler.tiktokUrl && (
-                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(angler.tiktokUrl)}>
+              {displayAngler.tiktokUrl && (
+                <TouchableOpacity style={styles.socialIconButton} onPress={() => handleSocialLinkPress(displayAngler.tiktokUrl)}>
                   <Text style={styles.socialIconButtonText}>♪</Text>
                   <Text style={styles.socialIconLabel}>TikTok</Text>
                 </TouchableOpacity>
@@ -3172,9 +3207,17 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                   <TouchableOpacity 
                     key={p.id} 
                     style={styles.competitionRow}
-                    onPress={() => {
-                      if (p.competition) {
-                        setSelectedCompFromProfile(p.competition);
+                    onPress={async () => {
+                      if (p.competition?.id && onCompetitionSelect) {
+                        try {
+                          const res = await apiClient.get(`/api/competitions/${p.competition.id}`);
+                          if (res.data) {
+                            onCompetitionSelect(res.data);
+                          }
+                        } catch (error) {
+                          console.error('Error loading competition:', error);
+                          Alert.alert('Error', 'Could not load competition details');
+                        }
                       }
                     }}
                   >
@@ -3206,16 +3249,32 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
                 <Text style={styles.emptyTabText}>No upcoming competitions</Text>
               ) : (
                 participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
-                  <View key={p.id} style={styles.competitionRow}>
+                  <TouchableOpacity 
+                    key={p.id} 
+                    style={styles.competitionRow}
+                    onPress={async () => {
+                      if (p.competition?.id && onCompetitionSelect) {
+                        try {
+                          const res = await apiClient.get(`/api/competitions/${p.competition.id}`);
+                          if (res.data) {
+                            onCompetitionSelect(res.data);
+                          }
+                        } catch (error) {
+                          console.error('Error loading competition:', error);
+                          Alert.alert('Error', 'Could not load competition details');
+                        }
+                      }
+                    }}
+                  >
                     <View style={styles.competitionRowTop}>
-                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                      <Text style={[styles.competitionName, { color: '#1B7342', textDecorationLine: 'underline' }]}>{p.competition?.name || 'Unknown Competition'}</Text>
                       <Text style={[styles.competitionBadge, getCompetitionStatus(p.competition) === 'live' && styles.competitionBadgeLive]}>
                         {(getCompetitionStatus(p.competition) || '').toUpperCase()}
                       </Text>
                     </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -3223,10 +3282,10 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
 
           {activeTab === 'gallery' && (
             <View>
-              <Text style={styles.tabTitle}>{angler.firstName}'s Gallery</Text>
+              <Text style={styles.tabTitle}>{displayAngler.firstName}'s Gallery</Text>
               
               {/* Upload Photo Form - Restricted to profile owner */}
-              {currentUser && currentUser.username === angler.username ? (
+              {currentUser && currentUser.username === displayAngler.username ? (
                 <View style={styles.galleryUploadSection}>
                   <TouchableOpacity style={styles.galleryUploadButton} onPress={async () => {
                     try {
@@ -3334,11 +3393,68 @@ function AnglerProfilePage({ angler, onClose, currentUser }: any) {
               <Text style={styles.editModalTitle}>Edit Profile</Text>
               <TouchableOpacity onPress={async () => {
                 try {
-                  await apiClient.patch('/api/user/profile', editForm);
+                  console.log('[Profile Edit] Sending PATCH request:', editForm);
+                  // Remove null/undefined values
+                  const cleanData = Object.fromEntries(
+                    Object.entries(editForm).filter(([_, v]) => v !== null && v !== undefined && v !== '')
+                  );
+                  const response = await apiClient.patch('/api/user/profile', cleanData);
+                  console.log('[Profile Edit] Success:', response.status, response.data);
+                  
+                  // After save, fetch fresh user data from public endpoint to ensure we display what's in DB
+                  try {
+                    const username = angler.username || currentUser?.username;
+                    if (username) {
+                      console.log('[Profile Edit] Fetching fresh data for:', username);
+                      const freshDataResponse = await apiClient.get(`/api/users/${username}`);
+                      console.log('[Profile Edit] Fresh data loaded:', freshDataResponse.data);
+                      
+                      if (freshDataResponse.data) {
+                        const freshAngler = freshDataResponse.data;
+                        // Update local display angler with complete fresh data
+                        setLocalAngler(freshAngler);
+                        setEditForm({
+                          firstName: freshAngler.firstName || '',
+                          lastName: freshAngler.lastName || '',
+                          club: freshAngler.club || '',
+                          bio: freshAngler.bio || '',
+                          location: freshAngler.location || '',
+                          favouriteMethod: freshAngler.favouriteMethod || '',
+                          favouriteSpecies: freshAngler.favouriteSpecies || '',
+                          avatar: freshAngler.avatar || '',
+                        });
+                        // Notify parent component with fresh data
+                        if (onProfileUpdated) {
+                          onProfileUpdated(freshAngler);
+                        }
+                      }
+                    }
+                  } catch (refreshError) {
+                    console.log('[Profile Edit] Warning: Could not refresh data after save:', refreshError);
+                    // Fallback: Update with response data if refresh fails
+                    if (response.data) {
+                      const updatedData = {
+                        firstName: response.data.firstName || editForm.firstName,
+                        lastName: response.data.lastName || editForm.lastName,
+                        club: response.data.club || editForm.club,
+                        bio: response.data.bio || editForm.bio,
+                        location: response.data.location || editForm.location,
+                        favouriteMethod: response.data.favouriteMethod || editForm.favouriteMethod,
+                        favouriteSpecies: response.data.favouriteSpecies || editForm.favouriteSpecies,
+                        avatar: response.data.avatar || editForm.avatar,
+                      };
+                      setLocalAngler({...displayAngler, ...updatedData});
+                      if (onProfileUpdated) {
+                        onProfileUpdated({...displayAngler, ...updatedData});
+                      }
+                    }
+                  }
+                  
                   Alert.alert('Success', 'Profile updated!');
                   setEditOpen(false);
-                } catch (error) {
-                  Alert.alert('Error', 'Failed to update profile');
+                } catch (error: any) {
+                  console.log('[Profile Edit Error]', error.response?.status, error.response?.data?.message || error.message);
+                  Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to update profile');
                 }
               }}>
                 <Text style={styles.editModalSave}>Save</Text>
@@ -3658,22 +3774,41 @@ function ChangePasswordModal({ visible, onClose }: any) {
 
 // Edit Profile Modal Component
 function EditProfileModal({ visible, user, onClose, onSave }: any) {
-  const [firstName, setFirstName] = useState(user.firstName || '');
-  const [lastName, setLastName] = useState(user.lastName || '');
-  const [bio, setBio] = useState(user.bio || '');
-  const [club, setClub] = useState(user.club || '');
-  const [location, setLocation] = useState(user.location || '');
-  const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || '');
-  const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || '');
-  const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || '');
-  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || '');
-  const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || '');
-  const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || '');
-  const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || '');
-  const [tiktokUrl, setTiktokUrl] = useState(user.tiktokUrl || '');
+  const [firstName, setFirstName] = useState(user?.firstName || '');
+  const [lastName, setLastName] = useState(user?.lastName || '');
+  const [bio, setBio] = useState(user?.bio || '');
+  const [club, setClub] = useState(user?.club || '');
+  const [location, setLocation] = useState(user?.location || '');
+  const [favouriteMethod, setFavouriteMethod] = useState(user?.favouriteMethod || '');
+  const [favouriteSpecies, setFavouriteSpecies] = useState(user?.favouriteSpecies || '');
+  const [youtubeUrl, setYoutubeUrl] = useState(user?.youtubeUrl || '');
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user?.youtubeVideoUrl || '');
+  const [facebookUrl, setFacebookUrl] = useState(user?.facebookUrl || '');
+  const [twitterUrl, setTwitterUrl] = useState(user?.twitterUrl || '');
+  const [instagramUrl, setInstagramUrl] = useState(user?.instagramUrl || '');
+  const [tiktokUrl, setTiktokUrl] = useState(user?.tiktokUrl || '');
   const [avatarUri, setAvatarUri] = useState<string | null>(null);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [loading, setLoading] = useState(false);
+
+  // Update form fields whenever user data changes (for prefilling when modal opens)
+  useEffect(() => {
+    if (user && visible) {
+      setFirstName(user.firstName || '');
+      setLastName(user.lastName || '');
+      setBio(user.bio || '');
+      setClub(user.club || '');
+      setLocation(user.location || '');
+      setFavouriteMethod(user.favouriteMethod || '');
+      setFavouriteSpecies(user.favouriteSpecies || '');
+      setYoutubeUrl(user.youtubeUrl || '');
+      setYoutubeVideoUrl(user.youtubeVideoUrl || '');
+      setFacebookUrl(user.facebookUrl || '');
+      setTwitterUrl(user.twitterUrl || '');
+      setInstagramUrl(user.instagramUrl || '');
+      setTiktokUrl(user.tiktokUrl || '');
+    }
+  }, [user, visible]);
 
   const pickAvatar = async () => {
     try {
@@ -3720,45 +3855,70 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
   const handleSave = async () => {
     setLoading(true);
     try {
-      const newAvatarUrl = await uploadAvatar();
+      console.log('[Profile Save] Starting profile update...');
       
-      await apiClient.patch('/api/user/profile', {
-        firstName,
-        lastName,
-        bio,
-        club,
-        location,
-        favouriteMethod,
-        favouriteSpecies,
-        youtubeUrl,
-        youtubeVideoUrl,
-        facebookUrl,
-        twitterUrl,
-        instagramUrl,
-        tiktokUrl,
-        avatar: newAvatarUrl,
-      });
+      let newAvatarUrl = user?.avatar;
+      if (avatarUri) {
+        newAvatarUrl = await uploadAvatar();
+      }
+      
+      // Build profile data with all fields
+      const profileData = {
+        firstName: firstName || '',
+        lastName: lastName || '',
+        bio: bio || '',
+        club: club || '',
+        location: location || '',
+        favouriteMethod: favouriteMethod || '',
+        favouriteSpecies: favouriteSpecies || '',
+        youtubeUrl: youtubeUrl || '',
+        youtubeVideoUrl: youtubeVideoUrl || '',
+        facebookUrl: facebookUrl || '',
+        twitterUrl: twitterUrl || '',
+        instagramUrl: instagramUrl || '',
+        tiktokUrl: tiktokUrl || '',
+      };
+      
+      if (newAvatarUrl) {
+        profileData.avatar = newAvatarUrl;
+      }
+      
+      console.log('[Profile Save] Sending PATCH request with data:', profileData);
+      const response = await apiClient.patch('/api/user/profile', profileData);
+      console.log('[Profile Save] Profile updated successfully:', response.status, response.data);
+      
+      // After save, fetch fresh user data from public endpoint to ensure we display what's in DB
+      try {
+        const username = user.username;
+        if (username) {
+          console.log('[Profile Save] Fetching fresh data for:', username);
+          const freshDataResponse = await apiClient.get(`/api/users/${username}`);
+          console.log('[Profile Save] Fresh data loaded:', freshDataResponse.data);
+          
+          if (freshDataResponse.data) {
+            const freshUser = freshDataResponse.data;
+            Alert.alert('Success', 'Profile updated successfully!');
+            onSave(freshUser);
+            onClose();
+            return;
+          }
+        }
+      } catch (freshError) {
+        console.log('[Profile Save] Warning: Could not refresh data after save:', freshError);
+      }
+      
+      // Fallback: Update with response data if refresh fails
       Alert.alert('Success', 'Profile updated successfully!');
-      onSave({
+      const updatedUser = {
         ...user,
-        firstName,
-        lastName,
-        bio,
-        club,
-        location,
-        favouriteMethod,
-        favouriteSpecies,
-        youtubeUrl,
-        youtubeVideoUrl,
-        facebookUrl,
-        twitterUrl,
-        instagramUrl,
-        tiktokUrl,
-        avatar: newAvatarUrl,
-      });
+        ...profileData,
+        avatar: newAvatarUrl || user.avatar,
+      };
+      onSave(updatedUser);
       onClose();
     } catch (error: any) {
-      Alert.alert('Error', error.response?.data?.message || 'Failed to update profile');
+      console.log('[Profile Save Error]', error.response?.status, error.response?.data?.message || error.message);
+      Alert.alert('Error', error.response?.data?.message || error.message || 'Failed to update profile');
     } finally {
       setLoading(false);
     }
@@ -3937,7 +4097,7 @@ function EditProfileModal({ visible, user, onClose, onSave }: any) {
 }
 
 // My Profile Page (for logged-in users)
-function MyProfilePage({ user: initialUser, onLogout }: any) {
+function MyProfilePage({ user: initialUser, onLogout, onRefreshUser }: any) {
   const [user, setUser] = useState(initialUser);
   const [loadingUser, setLoadingUser] = useState(false);
   const initials = `${(user?.firstName || 'U')?.[0]}${(user?.lastName || 'S')?.[0]}`;
@@ -3996,11 +4156,11 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
       const usernameToFetch = savedUser?.username || initialUser?.username;
 
       if (usernameToFetch) {
-        console.log('Falling back to angler profile for:', usernameToFetch);
-        const fallbackResponse = await apiClient.get(`/api/anglers/${usernameToFetch}`);
+        console.log('Falling back to user profile for:', usernameToFetch);
+        const fallbackResponse = await apiClient.get(`/api/users/${usernameToFetch}`);
         if (fallbackResponse.data && fallbackResponse.data.username === usernameToFetch) {
           setUser(fallbackResponse.data);
-          console.log(`Successfully fetched user profile fallback from /api/anglers/${usernameToFetch}`);
+          console.log(`Successfully fetched user profile fallback from /api/users/${usernameToFetch}:`, fallbackResponse.data);
           return;
         }
       }
@@ -4564,9 +4724,17 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                   <TouchableOpacity 
                     key={p.id} 
                     style={styles.competitionRow}
-                    onPress={() => {
-                      if (p.competition) {
-                        setSelectedCompFromProfile(p.competition);
+                    onPress={async () => {
+                      if (p.competition?.id && onCompetitionSelect) {
+                        try {
+                          const res = await apiClient.get(`/api/competitions/${p.competition.id}`);
+                          if (res.data) {
+                            onCompetitionSelect(res.data);
+                          }
+                        } catch (error) {
+                          console.error('Error loading competition:', error);
+                          Alert.alert('Error', 'Could not load competition details');
+                        }
                       }
                     }}
                   >
@@ -4598,16 +4766,32 @@ function MyProfilePage({ user: initialUser, onLogout }: any) {
                 <Text style={styles.emptyTabText}>No upcoming competitions</Text>
               ) : (
                 participations.filter((p: any) => p && p.competition && ['upcoming', 'live'].includes(getCompetitionStatus(p.competition))).map((p: any) => (
-                  <View key={p.id} style={styles.competitionRow}>
+                  <TouchableOpacity 
+                    key={p.id} 
+                    style={styles.competitionRow}
+                    onPress={async () => {
+                      if (p.competition?.id && onCompetitionSelect) {
+                        try {
+                          const res = await apiClient.get(`/api/competitions/${p.competition.id}`);
+                          if (res.data) {
+                            onCompetitionSelect(res.data);
+                          }
+                        } catch (error) {
+                          console.error('Error loading competition:', error);
+                          Alert.alert('Error', 'Could not load competition details');
+                        }
+                      }
+                    }}
+                  >
                     <View style={styles.competitionRowTop}>
-                      <Text style={styles.competitionName}>{p.competition?.name || 'Unknown Competition'}</Text>
+                      <Text style={[styles.competitionName, { color: '#1B7342', textDecorationLine: 'underline' }]}>{p.competition?.name || 'Unknown Competition'}</Text>
                       <Text style={[styles.competitionBadge, getCompetitionStatus(p.competition) === 'live' && styles.competitionBadgeLive]}>
                         {(getCompetitionStatus(p.competition) || '').toUpperCase()}
                       </Text>
                     </View>
                     <Text style={styles.competitionDetail}>{p.competition?.date ? new Date(p.competition.date).toLocaleDateString('en-GB') : 'N/A'}</Text>
                     <Text style={styles.competitionDetail}>{p.competition?.venue || 'Unknown Venue'} • Peg {p.pegNumber}</Text>
-                  </View>
+                  </TouchableOpacity>
                 ))
               )}
             </View>
@@ -4884,6 +5068,20 @@ export default function App() {
     fetchAllData();
   }, []);
 
+  const refreshCurrentUser = async () => {
+    try {
+      const res = await apiClient.get('/api/user/me');
+      if (res.data) {
+        setCurrentUser(res.data);
+        await AsyncStorage.setItem('userToken', JSON.stringify(res.data));
+        return res.data;
+      }
+    } catch (error) {
+      console.error('Error refreshing user:', error);
+    }
+    return null;
+  };
+
   const checkUser = async () => {
     try {
       const token = await AsyncStorage.getItem('userToken');
@@ -4891,6 +5089,9 @@ export default function App() {
         const user = JSON.parse(token);
         setCurrentUser(user);
         setIsLoggedIn(true);
+        console.log('[App Init] User logged in from storage:', user.username);
+      } else {
+        console.log('[App Init] No user found in storage');
       }
     } catch (error) {
       console.error('Error checking user:', error);
@@ -5292,35 +5493,23 @@ export default function App() {
               }}
               user={currentUser}
               onLogin={() => setShowLoginModal(true)}
-              onAnglerClick={(anglerId: string) => {
-                // Find angler in the main anglers list
-                const angler = (anglers || []).find((a: any) => a.id === anglerId);
+              onAnglerClick={(identifier: string) => {
+                // Find angler by ID or username
+                const angler = (anglers || []).find((a: any) => a.id === identifier || a.username === identifier);
                 if (angler) {
                   setSelectedAngler(angler);
                 } else {
-                  // Fallback: search by ID or fetch from API if not found
+                  // Fallback: fetch from API
                   setAnglersLoading(true);
-                  apiClient.get(`/api/anglers/${anglerId}`)
+                  apiClient.get(`/api/users/${identifier}`)
                     .then(res => {
                       if (res.data) {
                         setSelectedAngler(res.data);
                       } else {
-                        Alert.alert('Error', 'Angler not found');
+                        Alert.alert('Error', 'User not found');
                       }
                     })
-                    .catch(() => {
-                      // Second fallback: try searching by participant name if we can find it
-                      const participant = (selectedCompetition.participants || []).find((p: any) => p.id === anglerId || p.anglerId === anglerId);
-                      if (participant && participant.username) {
-                        apiClient.get(`/api/anglers/${participant.username}`)
-                          .then(res => {
-                            if (res.data) setSelectedAngler(res.data);
-                          })
-                          .catch(() => Alert.alert('Error', 'Could not load angler details'));
-                      } else {
-                        Alert.alert('Error', 'Could not find angler information');
-                      }
-                    })
+                    .catch(() => Alert.alert('Error', 'Could not load angler details'))
                     .finally(() => setAnglersLoading(false));
                 }
               }}
@@ -5335,6 +5524,11 @@ export default function App() {
               angler={selectedAngler} 
               onClose={() => setSelectedAngler(null)} 
               currentUser={currentUser}
+              onCompetitionSelect={(comp: any) => {
+                setSelectedCompetition(comp);
+                setSelectedAngler(null);
+              }}
+              onProfileUpdated={(updatedAngler: any) => setSelectedAngler(updatedAngler)}
             />
           </SafeAreaView>
         </Modal>
@@ -5379,6 +5573,8 @@ export default function App() {
         {/* HOME PAGE */}
         {currentPage === 'home' && (
           <>
+            {/* Our Ambassadors - Only show if ambassadors exist */}
+            {ambassadors.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Our Ambassadors</Text>
@@ -5411,14 +5607,17 @@ export default function App() {
                 </View>
               </ScrollView>
             </View>
+            )}
 
+            {/* Featured Competitions - Only show if there are competitions */}
+            {competitions.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Featured Competitions</Text>
               </View>
               {dataLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" />
-              ) : competitions.length > 0 ? (
+              ) : (
                 <FlatList
                   data={competitions.slice(0, 3)}
                   renderItem={({ item }) => (
@@ -5427,7 +5626,6 @@ export default function App() {
                       onViewDetails={setSelectedCompetition}
                       onParticipantsClick={(comp: any) => {
                         setSelectedCompetition(comp);
-                        // We'll set the tab to participants after the state update
                         setTimeout(() => setActiveTab('participants'), 100);
                       }}
                     />
@@ -5435,10 +5633,9 @@ export default function App() {
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                 />
-              ) : (
-                <Text style={styles.emptyText}>No competitions available</Text>
               )}
             </View>
+            )}
 
             <LeaderboardPage 
               competitions={competitions} 
@@ -5466,23 +5663,24 @@ export default function App() {
               </View>
             )}
 
+            {/* Latest News - Only show if there is news */}
+            {news.length > 0 && (
             <View style={styles.section}>
               <View style={styles.sectionHeader}>
                 <Text style={styles.sectionTitle}>Latest News</Text>
               </View>
               {dataLoading ? (
                 <ActivityIndicator size="large" color="#1B7342" />
-              ) : news.length > 0 ? (
+              ) : (
                 <FlatList
                   data={news.slice(0, 3)}
                   renderItem={({ item }) => <NewsCard item={item} onPress={setSelectedNews} />}
                   keyExtractor={(item) => item.id}
                   scrollEnabled={false}
                 />
-              ) : (
-                <Text style={styles.emptyText}>No news available</Text>
               )}
             </View>
+            )}
 
             {/* Latest Videos (YouTube) Section */}
             {youtubeVideos.length > 0 && (
@@ -5930,7 +6128,7 @@ export default function App() {
 
         {/* MY PROFILE PAGE */}
         {currentPage === 'profile' && currentUser && (
-          <MyProfilePage user={currentUser} onLogout={handleLogout} />
+          <MyProfilePage user={currentUser} onLogout={handleLogout} onRefreshUser={refreshCurrentUser} />
         )}
 
         {/* CONTACT PAGE */}

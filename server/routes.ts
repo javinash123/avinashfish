@@ -1768,7 +1768,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
-  app.put("/api/user/profile", async (req, res) => {
+  // Support both PUT and PATCH for profile updates
+  const handleProfileUpdate = async (req: any, res: any) => {
     try {
       const userId = req.session?.userId;
 
@@ -1792,7 +1793,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       console.error("Update profile error:", error);
       res.status(500).json({ message: "Error updating profile: " + error.message });
     }
-  });
+  };
+
+  app.put("/api/user/profile", handleProfileUpdate);
+  app.patch("/api/user/profile", handleProfileUpdate);
 
   app.put("/api/user/password", async (req, res) => {
     try {

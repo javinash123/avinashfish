@@ -565,6 +565,8 @@ export type UpdateTestimonial = z.infer<typeof updateTestimonialSchema>;
 export type Testimonial = typeof testimonials.$inferSelect;
 
 export const updateUserProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   bio: z.string().optional(),
   club: z.string().optional(),
   location: z.string().optional(),
