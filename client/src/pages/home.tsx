@@ -251,6 +251,28 @@ export default function Home() {
         </div>
       </section>
 
+      <section className="py-12 container mx-auto px-4 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
+            <p className="text-muted-foreground">
+              Book your spot in the next big match
+            </p>
+          </div>
+          <Link href="/competitions">
+            <Button variant="outline" data-testid="button-view-all-competitions" className="w-full sm:w-auto">
+              View All
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {upcomingCompetitions.map((comp) => (
+            <CompetitionCard key={comp.id} {...comp} />
+          ))}
+        </div>
+      </section>
+
       {featuredNews.length > 0 && (
         <section className="py-12">
           <div className="container mx-auto px-4 lg:px-8">
@@ -321,16 +343,7 @@ export default function Home() {
                         variant="ghost" 
                         size="sm" 
                         onClick={() => {
-                          // Update meta tags for social sharing before navigation
-                          const articleUrl = `${window.location.origin}/news?article=${news.id}`;
-                          updateMetaTags({
-                            title: news.title,
-                            description: news.excerpt,
-                            image: getNewsImageUrl(news.image),
-                            url: articleUrl,
-                            type: 'article',
-                          });
-                          window.location.href = `/news?article=${news.id}`;
+                          window.location.href = `/news/${news.id}`;
                         }}
                         data-testid={`button-read-more-${news.id}`}
                       >
@@ -408,28 +421,6 @@ export default function Home() {
           </div>
         </section>
       )}
-
-      <section className="py-12 container mx-auto px-4 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
-            <p className="text-muted-foreground">
-              Book your spot in the next big match
-            </p>
-          </div>
-          <Link href="/competitions">
-            <Button variant="outline" data-testid="button-view-all-competitions" className="w-full sm:w-auto">
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {upcomingCompetitions.map((comp) => (
-            <CompetitionCard key={comp.id} {...comp} />
-          ))}
-        </div>
-      </section>
 
       <section className="py-12 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
@@ -589,9 +580,9 @@ export default function Home() {
                         <span className="text-sm font-semibold">{formatWeight(image.weight)}</span>
                       </div>
                     )}
-                    <Link href="/gallery" className="mt-3 block">
+                    <Link href={`/gallery?id=${image.id}`} className="mt-3 block">
                       <Button variant="ghost" size="sm" className="w-full" data-testid={`button-view-gallery-${image.id}`}>
-                        Read More
+                        View Photo
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>

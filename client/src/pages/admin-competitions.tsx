@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2 } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2, Bold, Italic, List, ListOrdered, Heading2, Heading3, AlignLeft, Minus } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -68,8 +68,56 @@ interface AdminUser {
   role?: "admin" | "manager" | "marshal";
 }
 
+function HtmlEditorToolbar({ textareaRef, value, onChange }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; onChange: (val: string) => void }) {
+  const insertTag = (openTag: string, closeTag: string) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.substring(start, end);
+    const newValue = value.substring(0, start) + openTag + selected + closeTag + value.substring(end);
+    onChange(newValue);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+    }, 0);
+  };
+
+  const tools = [
+    { icon: Bold, label: "Bold", open: "<strong>", close: "</strong>" },
+    { icon: Italic, label: "Italic", open: "<em>", close: "</em>" },
+    { icon: Heading2, label: "Heading 2", open: "<h2>", close: "</h2>" },
+    { icon: Heading3, label: "Heading 3", open: "<h3>", close: "</h3>" },
+    { icon: AlignLeft, label: "Paragraph", open: "<p>", close: "</p>" },
+    { icon: List, label: "Bullet List", open: "<ul>\n  <li>", close: "</li>\n</ul>" },
+    { icon: ListOrdered, label: "Numbered List", open: "<ol>\n  <li>", close: "</li>\n</ol>" },
+    { icon: Minus, label: "Line Break", open: "<br>", close: "" },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-1 p-2 border border-b-0 rounded-t-md bg-muted/50">
+      {tools.map(({ icon: Icon, label, open, close }) => (
+        <Button
+          key={label}
+          type="button"
+          variant="ghost"
+          size="sm"
+          title={label}
+          className="h-7 w-7 p-0"
+          onClick={() => insertTag(open, close)}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </Button>
+      ))}
+      <span className="text-xs text-muted-foreground self-center ml-2">HTML Editor</span>
+    </div>
+  );
+}
+
 export default function AdminCompetitions() {
   const { toast } = useToast();
+  const createDescRef = useRef<HTMLTextAreaElement>(null);
+  const editDescRef = useRef<HTMLTextAreaElement>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPegAssignmentOpen, setIsPegAssignmentOpen] = useState(false);
@@ -1441,15 +1489,31 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
+              <HtmlEditorToolbar
+                textareaRef={createDescRef}
+                value={formData.description}
+                onChange={(val) => setFormData({ ...formData, description: val })}
+              />
               <Textarea
+                ref={createDescRef}
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Competition details and rules..."
+                placeholder="Competition details and rules... (HTML supported)"
+                className="rounded-t-none min-h-[150px] font-mono text-sm"
                 data-testid="input-description"
               />
+              {formData.description && (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                  <div
+                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
+                    dangerouslySetInnerHTML={{ __html: formData.description }}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="image">Competition Image</Label>
@@ -1676,14 +1740,30 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
+              <HtmlEditorToolbar
+                textareaRef={editDescRef}
+                value={formData.description}
+                onChange={(val) => setFormData({ ...formData, description: val })}
+              />
               <Textarea
+                ref={editDescRef}
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                className="rounded-t-none min-h-[150px] font-mono text-sm"
                 data-testid="input-edit-description"
               />
+              {formData.description && (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                  <div
+                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
+                    dangerouslySetInnerHTML={{ __html: formData.description }}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-image">Competition Image</Label>

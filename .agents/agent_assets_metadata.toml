@@ -1,0 +1,8 @@
+uploads = []
+generated = []
+
+[[outputs]]
+id = "tGySmRmYNAO8ryxOvj5M4"
+uri = "file://peg-slam-build-latest.tar.gz"
+type = "unspecified"
+title = "PegSlam Latest Build"

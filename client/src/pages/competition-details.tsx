@@ -27,7 +27,10 @@ import {
   UserPlus,
   Copy,
   Check,
+  Share2,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { SiFacebook, SiX } from "react-icons/si";
 import { Link, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Competition } from "@shared/schema";
@@ -458,10 +461,36 @@ export default function CompetitionDetails() {
                   "Individual Competition"
                 )}
               </Badge>
+              <div className="flex items-center gap-1 ml-auto">
+                <Share2 className="h-4 w-4 text-muted-foreground mr-1" />
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  const url = window.location.href;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(competition.name + ' - ' + url)}`, '_blank');
+                }} data-testid="button-share-whatsapp">
+                  <FaWhatsapp className="h-4 w-4 text-green-500" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
+                }} data-testid="button-share-facebook">
+                  <SiFacebook className="h-4 w-4 text-blue-600" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(competition.name)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+                }} data-testid="button-share-x">
+                  <SiX className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({ title: "Link copied!", description: "Competition link copied to clipboard" });
+                }} data-testid="button-share-copy">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <p className="text-muted-foreground text-base sm:text-lg mb-6">
-              {competition.description}
-            </p>
+            <div
+              className="html-description text-base mb-6"
+              dangerouslySetInnerHTML={{ __html: competition.description }}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2 mb-6">
               <div className="flex items-center gap-3">

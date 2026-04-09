@@ -1,0 +1,237 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: ⚙️  load multiple .env files with { path: ['.env.local', '.env'] }[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: pk_test_51... ⚠️ TEST
+   Stripe Secret Key: sk_test_51... ⚠️ TEST
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+8:49:34 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+8:49:50 PM [express] GET /api/user/me 401 in 2ms :: {"message":"Not authenticated"}
+8:49:50 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"251a84e6-2d5d-4e63-8a5c-0e7297434ed…
+8:49:50 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"ec841ec2-fc28-4444-a2fd-8fd71b21af…
+8:49:50 PM [express] GET /api/ambassadors 200 in 0ms :: []
+8:49:50 PM [express] GET /api/competitions 200 in 2ms :: [{"id":"d0cc3f74-e3b5-4f41-aefb-8cc73e25b3b…
+8:49:50 PM [express] GET /api/news/featured 200 in 1ms :: []
+8:49:50 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+8:49:50 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+8:49:50 PM [express] GET /api/sponsors 200 in 3ms :: []
+8:49:50 PM [express] GET /api/testimonials 200 in 1ms :: []
+8:49:51 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:49:51 PM [express] GET /api/competitions/d0cc3f74-e3b5-4f41-aefb-8cc73e25b3ba/leaderboard 200 in 2…
+8:49:51 PM [express] GET /api/ambassadors 200 in 0ms :: []
+8:51:20 PM [express] GET /api/user/me 401 in 1ms :: {"message":"Not authenticated"}
+8:51:20 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+8:51:20 PM [express] GET /api/competitions 200 in 2ms :: [{"id":"d0cc3f74-e3b5-4f41-aefb-8cc73e25b3b…
+8:51:20 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+8:51:20 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"251a84e6-2d5d-4e63-8a5c-0e7297434ed…
+8:51:20 PM [express] GET /api/testimonials 200 in 0ms :: []
+8:51:20 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"ec841ec2-fc28-4444-a2fd-8fd71b21af…
+8:51:20 PM [express] GET /api/ambassadors 200 in 0ms :: []
+8:51:20 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:51:20 PM [express] GET /api/competitions/d0cc3f74-e3b5-4f41-aefb-8cc73e25b3ba/leaderboard 200 in 0…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:55:11 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/gallery.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:55:22 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/gallery.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:55:29 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/gallery.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m [33m(x3)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:55:45 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/gallery.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m [33m(x4)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:55:51 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/competition-details.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m8:56:07 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/competition-details.tsx, /src/index.css?v=QEVat_F1ygVSGqX3ec9_W[22m [33m(x2)[39m

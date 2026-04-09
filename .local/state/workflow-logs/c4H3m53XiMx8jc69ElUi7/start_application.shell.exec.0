@@ -1,0 +1,193 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: ⚙️  override existing env vars with { override: true }[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: pk_test_51... ⚠️ TEST
+   Stripe Secret Key: sk_test_51... ⚠️ TEST
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+9:11:45 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+9:12:00 PM [express] GET /api/news/featured 200 in 2ms :: []
+9:12:00 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"e1f0b4df-035b-4c72-b852-d07ee32ff58…
+9:12:00 PM [express] GET /api/ambassadors 200 in 1ms :: []
+9:12:00 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+9:12:00 PM [express] GET /api/competitions 200 in 3ms :: [{"id":"73d70169-288f-42f3-863d-074bdce5018…
+9:12:00 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"8dfac276-2959-4f72-b014-2a1a30cd01…
+9:12:01 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+9:12:01 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+9:12:01 PM [express] GET /api/sponsors 200 in 0ms :: []
+9:12:01 PM [express] GET /api/testimonials 200 in 1ms :: []
+9:12:01 PM [express] GET /api/competitions/73d70169-288f-42f3-863d-074bdce50189/leaderboard 200 in 1…
+9:12:01 PM [express] GET /api/ambassadors 200 in 0ms :: []
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:19:44 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/login.tsx, /src/index.css?v=7q6ytBvgz-C04Br7CFD4q[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:19:53 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/login.tsx, /src/index.css?v=7q6ytBvgz-C04Br7CFD4q[22m [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:20:00 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin-login.tsx, /src/index.css?v=7q6ytBvgz-C04Br7CFD4q[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:20:04 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin-login.tsx, /src/index.css?v=7q6ytBvgz-C04Br7CFD4q[22m [33m(x2)[39m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:20:13 PM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin-login.tsx, /src/index.css?v=7q6ytBvgz-C04Br7CFD4q[22m [33m(x3)[39m

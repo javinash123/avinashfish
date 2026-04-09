@@ -1,0 +1,72 @@
+================================================================================
+PEG SLAM - DEPLOYMENT INSTRUCTIONS (Updated Schema Fix)
+================================================================================
+
+BUILD GENERATED: March 17, 2026
+This build includes the updateUserProfileSchema fix with firstName and lastName support.
+
+FILES INCLUDED:
+- dist/             - Production build (frontend + backend)
+- node_modules/     - All dependencies
+- package.json & package-lock.json
+- drizzle.config.ts
+
+================================================================================
+DEPLOYMENT STEPS:
+================================================================================
+
+1. BACKUP YOUR CURRENT DEPLOYMENT
+   ssh user@your-ec2-instance
+   cp -r /path/to/current/build /path/to/backup/pegslam-backup-$(date +%s)
+
+2. EXTRACT THE BUILD ON YOUR EC2
+   cd /path/to/deployment/directory
+   tar -xzf peg-slam-build-latest.tar.gz
+
+3. VERIFY ENVIRONMENT VARIABLES
+   Ensure your .env file contains:
+   - DATABASE_URL (PostgreSQL connection)
+   - SESSION_SECRET
+   - MONGODB_URI (if using MongoDB for user data)
+   - NODE_ENV=production
+   - Any other custom env vars your setup uses
+
+4. RESTART YOUR APPLICATION
+   - If using PM2: pm2 restart app-name
+   - If using systemd: systemctl restart pegslam
+   - If using docker: docker-compose down && docker-compose up -d
+
+5. VERIFY THE DEPLOYMENT
+   - Frontend: Visit https://pegslam.com
+   - Test profile edit: Edit your profile and confirm changes save
+   - Check console logs for any errors
+
+================================================================================
+WHAT'S FIXED IN THIS BUILD:
+================================================================================
+
+✓ updateUserProfileSchema now includes firstName and lastName
+✓ Profile edit form properly prefills current data
+✓ Profile saves to database with all fields (firstName, lastName, bio, etc.)
+✓ Mobile app can now save and load profile data correctly
+
+================================================================================
+ROLLBACK INSTRUCTIONS (If needed):
+================================================================================
+
+If you need to rollback:
+   1. Stop the application
+   2. Restore from backup: cp -r /path/to/backup/pegslam-backup-xxxx /path/to/deployment
+   3. Restart the application
+
+================================================================================
+SUPPORT:
+================================================================================
+
+For issues with this build, check:
+- Application logs
+- Database connection
+- Environment variables are correctly set
+- Node.js version compatibility
+
+Build verified and ready for production deployment.

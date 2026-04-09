@@ -1,0 +1,138 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: 🔐 prevent committing .env to code: https://dotenvx.com/precommit[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: pk_test_51... ⚠️ TEST
+   Stripe Secret Key: sk_test_51... ⚠️ TEST
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+9:02:26 AM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+9:02:39 AM [express] GET /api/news/featured 200 in 3ms :: []
+9:02:39 AM [express] GET /api/ambassadors 200 in 1ms :: []
+9:02:39 AM [express] GET /api/user/me 401 in 2ms :: {"message":"Not authenticated"}
+9:02:39 AM [express] GET /api/site-settings 200 in 1ms :: {"id":"0e8b3cc8-899a-48de-aa60-0f446cf88db…
+9:02:39 AM [express] GET /api/gallery/featured 200 in 1ms :: []
+9:02:39 AM [express] GET /api/youtube-videos 200 in 0ms :: []
+9:02:39 AM [express] GET /api/competitions 200 in 2ms :: [{"id":"28c74169-3b98-4e85-a269-b1c2ec98e40…
+9:02:39 AM [express] GET /api/slider-images 200 in 0ms :: [{"id":"d52012e7-5de6-4bd9-ad7f-88cd057487…
+9:02:40 AM [express] GET /api/sponsors 200 in 1ms :: []
+9:02:40 AM [express] GET /api/testimonials 200 in 1ms :: []
+9:02:40 AM [express] GET /api/ambassadors 200 in 0ms :: []
+9:02:40 AM [express] GET /api/competitions/28c74169-3b98-4e85-a269-b1c2ec98e40a/leaderboard 200 in 1…
+9:02:40 AM [express] GET /api/ambassadors 200 in 1ms :: []
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:04:33 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/competition-details.tsx, /src/index.css?v=hiAj2BfWFYByLbekzfhA5[22m
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:04:45 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/pages/admin-competitions.tsx, /src/index.css?v=hiAj2BfWFYByLbekzfhA5[22m
+9:04:48 AM [express] GET /api/user/me 401 in 1ms :: {"message":"Not authenticated"}
+9:04:48 AM [express] GET /api/site-settings 200 in 1ms :: {"id":"0e8b3cc8-899a-48de-aa60-0f446cf88db…
+9:04:49 AM [express] GET /api/competitions 200 in 1ms :: [{"id":"28c74169-3b98-4e85-a269-b1c2ec98e40…
+9:04:49 AM [express] GET /api/gallery/featured 200 in 1ms :: []
+9:04:49 AM [express] GET /api/slider-images 200 in 1ms :: [{"id":"d52012e7-5de6-4bd9-ad7f-88cd057487…
+9:04:49 AM [express] GET /api/youtube-videos 200 in 1ms :: []
+9:04:49 AM [express] GET /api/ambassadors 200 in 1ms :: []
+9:04:49 AM [express] GET /api/testimonials 200 in 0ms :: []
+9:04:49 AM [express] GET /api/sponsors 200 in 1ms :: []
+9:04:49 AM [express] GET /api/competitions/28c74169-3b98-4e85-a269-b1c2ec98e40a/leaderboard 200 in 1…
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+[1;1H[0J[2m9:04:54 AM[22m [36m[1m[vite][22m[39m [32mhmr update [39m[2m/src/index.css?v=hiAj2BfWFYByLbekzfhA5[22m

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -6,18 +6,38 @@ import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Image, Trophy, Fish, Calendar, ChevronLeft, ChevronRight } from "lucide-react";
+import { Image, Trophy, Fish, Calendar, ChevronLeft, ChevronRight, Share2, Copy, Check } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { SiFacebook, SiX } from "react-icons/si";
 import type { GalleryImage } from "@shared/schema";
 import { formatWeight } from "@shared/weight-utils";
+import { useToast } from "@/hooks/use-toast";
 
 export default function Gallery() {
   const [selectedImage, setSelectedImage] = useState<GalleryImage | null>(null);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [copied, setCopied] = useState(false);
+  const { toast } = useToast();
   const [activeTab, setActiveTab] = useState<"all" | "event" | "catch">("all");
 
   const { data: galleryImages = [], isLoading } = useQuery<GalleryImage[]>({
     queryKey: ["/api/gallery"],
   });
+
+  // Auto-open specific image if ?id= is in the URL
+  useEffect(() => {
+    if (galleryImages.length > 0) {
+      const params = new URLSearchParams(window.location.search);
+      const imageId = params.get("id");
+      if (imageId) {
+        const found = galleryImages.find((img) => img.id === imageId);
+        if (found) {
+          setSelectedImage(found);
+          setCurrentImageIndex(0);
+        }
+      }
+    }
+  }, [galleryImages]);
 
   const filteredImages = galleryImages.filter((img) => {
     if (activeTab === "all") return true;
@@ -241,6 +261,53 @@ export default function Gallery() {
                       )}
                     </div>
                   )}
+                  <div className="flex items-center gap-2 pt-2 border-t">
+                    <Share2 className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm text-muted-foreground mr-1">Share:</span>
+                    <Button
+                      variant="outline" size="icon" className="hover-elevate"
+                      onClick={() => {
+                        const url = `${window.location.origin}/gallery?id=${selectedImage.id}`;
+                        window.open(`https://wa.me/?text=${encodeURIComponent(selectedImage.title + ' - ' + url)}`, '_blank');
+                      }}
+                      data-testid="button-share-whatsapp"
+                    >
+                      <FaWhatsapp className="h-4 w-4 text-green-500" />
+                    </Button>
+                    <Button
+                      variant="outline" size="icon" className="hover-elevate"
+                      onClick={() => {
+                        const url = `${window.location.origin}/gallery?id=${selectedImage.id}`;
+                        window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-facebook"
+                    >
+                      <SiFacebook className="h-4 w-4 text-blue-600" />
+                    </Button>
+                    <Button
+                      variant="outline" size="icon" className="hover-elevate"
+                      onClick={() => {
+                        const url = `${window.location.origin}/gallery?id=${selectedImage.id}`;
+                        window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(selectedImage.title)}&url=${encodeURIComponent(url)}`, '_blank');
+                      }}
+                      data-testid="button-share-x"
+                    >
+                      <SiX className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      variant="outline" size="icon" className="hover-elevate"
+                      onClick={() => {
+                        const url = `${window.location.origin}/gallery?id=${selectedImage.id}`;
+                        navigator.clipboard.writeText(url);
+                        setCopied(true);
+                        setTimeout(() => setCopied(false), 2000);
+                        toast({ title: "Link copied!", description: "Gallery link copied to clipboard" });
+                      }}
+                      data-testid="button-share-copy"
+                    >
+                      {copied ? <Check className="h-4 w-4 text-green-500" /> : <Copy className="h-4 w-4" />}
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>
