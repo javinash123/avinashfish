@@ -40,14 +40,54 @@ export default function Competitions() {
     thumbnailUrlLg: (comp as any).thumbnailUrlLg || undefined,
   }));
 
-  const filteredCompetitions = competitions.filter((comp) => {
-    const matchesSearch =
-      comp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      comp.venue.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus =
-      statusFilter === "all" || comp.status === statusFilter;
-    return matchesSearch && matchesStatus;
-  });
+  const filteredCompetitions = competitions
+    .filter((comp) => {
+      const matchesSearch =
+        comp.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        comp.venue.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus =
+        statusFilter === "all" || comp.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    })
+    .sort((a, b) => {
+      const statusOrder: Record<string, number> = {
+        live: 1,
+        upcoming: 2,
+        completed: 3,
+      };
+
+      if (statusOrder[a.status] !== statusOrder[b.status]) {
+        return statusOrder[a.status] - statusOrder[b.status];
+      }
+
+      // competition-card.tsx likely uses comp.date which is a formatted string "do MMMM yyyy"
+      // competitions.tsx uses comp.date from shared/schema.ts but it's formatted in line 29
+      // Let's use the actual date from the data if possible, but competitions.tsx formats it early.
+      // Wait, line 26-41 maps comp to competitions. 
+      // comp.date in schema is string (ISO date). 
+      // a.date is "do MMMM yyyy" which is hard to parse back.
+      // I should look at competitionsData if I want the original date.
+      
+      const originalA = competitionsData.find(c => c.id === a.id);
+      const originalB = competitionsData.find(c => c.id === b.id);
+      
+      const dateA = originalA ? new Date(originalA.date).getTime() : 0;
+      const dateB = originalB ? new Date(originalB.date).getTime() : 0;
+
+      if (a.status === "upcoming") {
+        return dateA - dateB; // Nearest date first
+      }
+
+      if (a.status === "completed") {
+        return dateB - dateA; // Latest completed first
+      }
+
+      if (a.status === "live") {
+        return dateB - dateA; // Latest live first (usually only one, but if multiple)
+      }
+
+      return dateB - dateA; // Default to latest first
+    });
 
   return (
     <div className="min-h-screen py-8">

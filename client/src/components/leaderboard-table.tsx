@@ -32,6 +32,8 @@ interface LeaderboardEntry {
   club?: string;
   teamId?: string;
   isTeam?: boolean;
+  fishCount?: number;
+  fishImageUrl?: string;
 }
 
 interface TeamMember {
@@ -57,6 +59,38 @@ interface LeaderboardTableProps {
 
 export function LeaderboardTable({ entries, isLive = false }: LeaderboardTableProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
+  
+  // Get all unique team IDs from entries
+  const teamIds = Array.from(new Set(entries
+    .filter(e => e.isTeam && e.teamId)
+    .map(e => e.teamId as string)));
+  
+  // Fetch all team details for displaying member avatars
+  const { data: allTeamsData } = useQuery<TeamDetailsType[]>({
+    queryKey: ['/api/teams/details', teamIds.join(',')],
+    queryFn: async () => {
+      if (teamIds.length === 0) return [];
+      const results = await Promise.all(
+        teamIds.map(async (teamId) => {
+          try {
+            const response = await fetch(`/api/team/${teamId}`);
+            if (response.ok) return response.json();
+            return null;
+          } catch {
+            return null;
+          }
+        })
+      );
+      return results.filter(Boolean);
+    },
+    enabled: teamIds.length > 0,
+  });
+  
+  // Create a map of teamId to team details for quick lookup
+  const teamDetailsMap = new Map<string, TeamDetailsType>();
+  allTeamsData?.forEach(team => {
+    if (team) teamDetailsMap.set(team.id, team);
+  });
   
   const { data: teamDetails } = useQuery<TeamDetailsType>({
     queryKey: [`/api/team/${selectedTeamId}`],
@@ -105,13 +139,14 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
 
   return (
     <>
-      <Card>
-        <Table>
+      <Card className="overflow-hidden">
+        <Table className="min-w-[600px] table-fixed">
         <TableHeader>
           <TableRow>
             <TableHead className="w-10 sm:w-16 px-1 sm:px-4">Pos</TableHead>
             <TableHead className="px-1 sm:px-4">Angler</TableHead>
             <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Peg</TableHead>
+            <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Fish</TableHead>
             <TableHead className="text-right w-16 sm:w-24 px-1 sm:px-4">Weight</TableHead>
           </TableRow>
         </TableHeader>
@@ -132,21 +167,48 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                 </TableCell>
                 <TableCell className="py-2 px-1 sm:px-4">
                   <div className="flex items-center gap-1.5 sm:gap-3">
-                    <Avatar className="h-10 w-10 sm:h-12 sm:w-12 shrink-0">
-                      <AvatarImage src={entry.anglerAvatar} className="object-cover" />
-                      <AvatarFallback className="text-xs sm:text-sm">
-                        {entry.anglerName.split(" ")
-                          .map((n) => n[0])
-                          .join("")}
-                      </AvatarFallback>
-                    </Avatar>
+                    {entry.isTeam && entry.teamId ? (
+                      // For team entries, show stacked team member avatars
+                      <div className="flex -space-x-2 shrink-0">
+                        {(() => {
+                          const team = teamDetailsMap.get(entry.teamId);
+                          if (team && team.members) {
+                            return team.members.slice(0, 4).map((member, idx) => (
+                              <Avatar key={member.userId} className="h-8 w-8 sm:h-10 sm:w-10 border-2 border-background" style={{ zIndex: 4 - idx }}>
+                                <AvatarImage src={member.avatar || undefined} className="object-cover" />
+                                <AvatarFallback className="text-[10px] sm:text-xs">
+                                  {member.name ? member.name.split(" ").map((n) => n[0]).join("") : "?"}
+                                </AvatarFallback>
+                              </Avatar>
+                            ));
+                          }
+                          // Fallback if team data not loaded yet
+                          return (
+                            <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
+                              <AvatarFallback className="text-[10px] sm:text-xs">
+                                <Users className="h-4 w-4" />
+                              </AvatarFallback>
+                            </Avatar>
+                          );
+                        })()}
+                      </div>
+                    ) : (
+                      <Avatar className="h-8 w-8 sm:h-10 sm:w-10 shrink-0">
+                        <AvatarImage src={entry.anglerAvatar} className="object-cover" />
+                        <AvatarFallback className="text-[10px] sm:text-xs">
+                          {entry.anglerName.split(" ")
+                            .map((n) => n[0])
+                            .join("")}
+                        </AvatarFallback>
+                      </Avatar>
+                    )}
                     <div className="min-w-0 flex-1">
                       {entry.isTeam ? (
                         <Button
                           variant="ghost"
                           size="sm"
                           onClick={() => setSelectedTeamId(entry.teamId || null)}
-                          className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none h-auto p-0"
+                          className="font-medium text-xs sm:text-base whitespace-normal break-words text-left h-auto p-0 line-clamp-2"
                           data-testid={`button-team-${entry.position}`}
                         >
                           <div className="flex items-center gap-1">
@@ -156,12 +218,12 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                         </Button>
                       ) : entry.username ? (
                         <Link href={`/profile/${entry.username}`}>
-                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
+                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
                           </div>
                         </Link>
                       ) : (
-                        <div className="font-medium text-xs sm:text-base truncate max-w-[80px] sm:max-w-none" data-testid={`text-angler-${entry.position}`}>
+                        <div className="font-medium text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
                           {entry.anglerName}
                         </div>
                       )}
@@ -175,6 +237,11 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                   <Badge variant="outline" className="font-mono text-[10px] sm:text-sm px-1.5 sm:px-2" data-testid={`badge-peg-${entry.position}`}>
                     {entry.pegNumber}
                   </Badge>
+                </TableCell>
+                <TableCell className="text-center py-2 px-1 sm:px-4">
+                  <span className="font-mono font-medium text-[10px] sm:text-sm" data-testid={`text-fish-${entry.position}`}>
+                    {entry.fishCount || 1}
+                  </span>
                 </TableCell>
                 <TableCell className="text-right py-2 px-1 sm:px-4">
                   <div className="hidden sm:flex flex-col items-end" data-testid={`text-weight-${entry.position}`}>

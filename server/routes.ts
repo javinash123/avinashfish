@@ -1,21 +1,24 @@
+import { formatWeight, parseWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import type { IStorage } from "./storage";
-import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema } from "@shared/schema";
-import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification } from "./email";
+import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema, insertTestimonialSchema, updateTestimonialSchema } from "@shared/schema";
+import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification, sendCompetitionBookingEmail } from "./email";
 import { generateCompetitionThumbnails } from "./thumbnail-generator";
+import { regenerateAllThumbnails, regenerateSingleThumbnail } from "./thumbnail-regenerator";
 import { randomBytes, createHash } from "crypto";
 import Stripe from "stripe";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
+import sharp from "sharp";
 import "./types"; // Import session types
 
 // Stripe integration for payment processing
 // Requires STRIPE_SECRET_KEY environment variable
 // Valid keys start with sk_test_ (test mode) or sk_live_ (production mode)
 const stripeKey = process.env.STRIPE_SECRET_KEY;
-const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-10-29.clover" }) : null;
+const stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" as any }) : null;
 
 // Validate Stripe key format to catch invalid/placeholder keys early
 if (stripe && stripeKey && !stripeKey.startsWith('sk_')) {
@@ -126,6 +129,169 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     next();
   };
 
+  // Staff login route
+  app.post("/api/admin/login", async (req, res) => {
+    try {
+      const result = staffLoginSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+
+      const { email, password } = result.data;
+      
+      // Try to find in staff table first
+      const staffMember = await storage.getStaffByEmail(email);
+      if (staffMember && staffMember.password === password && staffMember.isActive) {
+        req.session.staffId = staffMember.id;
+        return res.json({ 
+          id: staffMember.id,
+          email: staffMember.email,
+          firstName: staffMember.firstName,
+          lastName: staffMember.lastName,
+          role: staffMember.role,
+        });
+      }
+
+      // Fallback to legacy admin table
+      const admin = await storage.getAdminByEmail(email);
+      if (admin && admin.password === password) {
+        req.session.adminId = admin.id; // Support legacy session key
+        req.session.staffId = admin.id; // Support new session key
+        return res.json({ 
+          id: admin.id,
+          email: admin.email,
+          name: admin.name,
+          role: "admin",
+        });
+      }
+
+      res.status(401).json({ message: "Invalid email or password" });
+    } catch (error) {
+      console.error("Admin login error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Get current staff/admin session
+  app.get("/api/admin/me", async (req: any, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const staff = await storage.getStaff(staffId);
+      if (staff) {
+        return res.json(staff);
+      }
+
+      const admin = await storage.getAdmin(staffId);
+      if (admin) {
+        return res.json({
+          id: admin.id,
+          email: admin.email,
+          firstName: admin.name.split(' ')[0] || 'Admin',
+          lastName: admin.name.split(' ').slice(1).join(' ') || 'User',
+          role: 'admin',
+          isActive: true,
+          password: admin.password,
+          createdAt: new Date(),
+        });
+      }
+
+      return res.status(401).json({ message: "Not authenticated" });
+    } catch (error: any) {
+      console.error("Get admin session error:", error);
+      res.status(500).json({ message: "Failed to load admin session" });
+    }
+  });
+
+  // Admin logout
+  app.post("/api/admin/logout", (req, res) => {
+    req.session.staffId = undefined;
+    req.session.adminId = undefined;
+    req.session.destroy((err) => {
+      if (err) {
+        console.error("Admin logout error:", err);
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      res.clearCookie("connect.sid");
+      res.json({ message: "Logged out successfully" });
+    });
+  });
+
+  app.get("/api/ambassadors", async (req, res) => {
+    try {
+      const users = await storage.getAllUsers();
+      const ambassadors = users.filter(u => u.isAmbassador).map(u => ({
+        id: u.id,
+        firstName: u.firstName,
+        lastName: u.lastName,
+        username: u.username,
+        avatar: u.avatar,
+        club: u.club,
+        location: u.location,
+        favouriteMethod: u.favouriteMethod,
+        favouriteSpecies: u.favouriteSpecies,
+        memberSince: u.memberSince,
+      }));
+      res.json(ambassadors);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch ambassadors" });
+    }
+  });
+
+  // Testimonial routes
+  app.get("/api/testimonials", async (req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  app.post("/api/testimonials", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const result = insertTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+      const testimonial = await storage.createTestimonial(result.data);
+      res.json(testimonial);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to create testimonial" });
+    }
+  });
+
+  app.patch("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const result = updateTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid input", errors: result.error.errors });
+      }
+      const testimonial = await storage.updateTestimonial(req.params.id, result.data);
+      if (!testimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json(testimonial);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to update testimonial" });
+    }
+  });
+
+  app.delete("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const success = await storage.deleteTestimonial(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
   // File upload endpoint
   app.post("/api/upload", upload.single('image'), async (req, res) => {
     try {
@@ -162,6 +328,45 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       fs.renameSync(tempPath, targetPath);
       
       const fileUrl = `/attached-assets/uploads/${type}/${fileName}`;
+
+      // Process news images - generate thumbnails like competitions
+      if (type === 'news') {
+        try {
+          const thumbnails = await generateCompetitionThumbnails(targetPath, targetDir, fileName);
+          console.log('Generated news thumbnails:', thumbnails);
+          
+          // Also optimize the content image itself (the original for detail view)
+          const sharp = (await import('sharp')).default;
+          const ext = path.extname(fileName);
+          const nameWithoutExt = path.basename(fileName, ext);
+          const contentOptimizedName = `${nameWithoutExt}-content.webp`;
+          const contentOptimizedPath = path.join(targetDir, contentOptimizedName);
+          
+          await sharp(targetPath)
+            .resize(1200, null, { fit: 'inside', withoutEnlargement: true })
+            .webp({ quality: 75, effort: 6 })
+            .toFile(contentOptimizedPath);
+
+          res.json({ 
+            url: `/attached-assets/uploads/news/${contentOptimizedName}`,
+            filename: contentOptimizedName,
+            thumbnailUrl: thumbnails.thumbnailUrl,
+            thumbnailUrlMd: thumbnails.thumbnailUrlMd,
+            thumbnailUrlLg: thumbnails.thumbnailUrlLg,
+            message: "News image uploaded successfully with thumbnails and content optimization" 
+          });
+          return;
+        } catch (optimizeError) {
+          console.error("News image processing error:", optimizeError);
+          // Fall back to original if processing fails
+          res.json({ 
+            url: fileUrl,
+            filename: fileName,
+            message: "File uploaded successfully (processing failed)" 
+          });
+          return;
+        }
+      }
 
       // Generate thumbnails for competition images
       if (type === 'competitions') {
@@ -205,6 +410,9 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   // Stripe payment intent route for competition bookings
   app.post("/api/create-payment-intent", async (req, res) => {
+    var stripeKey = process.env.STRIPE_SECRET_KEY;
+    var stripe = stripeKey ? new Stripe(stripeKey, { apiVersion: "2025-09-30.clover" as any }) : null;
+
     if (!stripe) {
       return res.status(503).json({ 
         message: "Payment processing is not configured. Please set up Stripe API keys." 
@@ -486,13 +694,34 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           }
         }
 
-        // Increment pegsBooked based on assignment mode
-        const pegsToIncrement = pegAssignmentMode === "team" ? 1 : acceptedMembers.length;
-        await storage.updateCompetition(competitionId, {
-          pegsBooked: competition.pegsBooked + pegsToIncrement
-        });
+        // Note: pegsBooked is already incremented by joinCompetition for each member
+        // Do not double-count here. The joinCompetition method handles pegsBooked correctly.
 
-        console.log(`[TEAM BOOKING] Updated pegsBooked to ${competition.pegsBooked + pegsToIncrement}`);
+        // Send confirmation emails to ALL accepted team members
+        try {
+          const competition = await storage.getCompetition(competitionId);
+          if (competition) {
+            for (let i = 0; i < acceptedMembers.length; i++) {
+              const member = acceptedMembers[i];
+              const user = await storage.getUser(member.userId);
+              if (user) {
+                console.log(`[TEAM BOOKING] Sending confirmation email to member ${user.email} for competition ${competition.name}`);
+                const pegNumber = pegAssignmentMode === "team" ? (availablePegs[0]?.toString() || "TBA") : availablePegs[i].toString();
+                const emailResult = await sendCompetitionBookingEmail(user.email, {
+                  userName: `${user.firstName} ${user.lastName}`,
+                  competitionName: competition.name,
+                  date: competition.date,
+                  venue: competition.venue,
+                  pegNumber: pegNumber,
+                  entryFee: competition.entryFee
+                });
+                console.log(`[TEAM BOOKING] Email send result for ${user.email}:`, emailResult);
+              }
+            }
+          }
+        } catch (emailErr) {
+          console.error("Failed to send team booking emails:", emailErr);
+        }
 
         res.json({ 
           success: true,
@@ -509,12 +738,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
           return res.status(400).json({ message: "This payment was created for a team. Please provide teamId." });
         }
 
+        // Mark payment as succeeded
+        if (!isFreeCompetition && payment) {
+          await storage.updatePaymentStatus(payment.id, "succeeded");
+        }
+
         // Individual booking - Join the competition (pegNumber will be auto-assigned)
         const participant = await storage.joinCompetition({
           competitionId,
           userId: userId,
           // pegNumber is not passed, so it will be auto-assigned
         });
+
+        // Mark participant as paid
+        await storage.updateParticipantPaymentStatus(participant.id, "succeeded");
+
+        // Send confirmation email
+        try {
+          const user = await storage.getUser(userId);
+          const competition = await storage.getCompetition(competitionId);
+          if (user && competition) {
+            console.log(`[INDIVIDUAL BOOKING] Sending confirmation email to ${user.email} for competition ${competition.name}`);
+            const emailResult = await sendCompetitionBookingEmail(user.email, {
+              userName: `${user.firstName} ${user.lastName}`,
+              competitionName: competition.name,
+              date: competition.date,
+              venue: competition.venue,
+              pegNumber: participant.pegNumber || "Assigned on arrival",
+              entryFee: competition.entryFee
+            });
+            console.log(`[INDIVIDUAL BOOKING] Email result:`, emailResult);
+          }
+        } catch (emailErr) {
+          console.error("Failed to send individual booking email:", emailErr);
+        }
 
         res.json({ 
           success: true,
@@ -531,6 +788,47 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // Staff/Admin authentication routes
+  app.patch("/api/admin/teams/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const teamId = req.params.id;
+      const updates = updateTeamSchema.safeParse(req.body);
+      if (!updates.success) {
+        return res.status(400).json({ message: "Invalid updates", errors: updates.error.errors });
+      }
+      const updatedTeam = await storage.updateTeam(teamId, updates.data);
+      if (!updatedTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(updatedTeam);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  app.patch("/api/admin/teams/:teamId/members/:memberId", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const { teamId, memberId } = req.params;
+      const updates = req.body;
+      if (updates.role === 'captain') {
+        const members = await storage.getTeamMembers(teamId);
+        for (const member of members) {
+          if (member.role === 'captain' && member.id !== memberId) {
+            await storage.updateTeamMember(member.id, { role: 'member' });
+          }
+        }
+      }
+      const updatedMember = await storage.updateTeamMember(memberId, updates);
+      if (!updatedMember) {
+        return res.status(404).json({ message: "Member not found" });
+      }
+      res.json(updatedMember);
+    } catch (error: any) {
+      console.error("Error updating team member:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/admin/login", async (req, res) => {
     try {
       const result = staffLoginSchema.safeParse(req.body);
@@ -878,6 +1176,40 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Thumbnail regeneration endpoints
+  app.post("/api/admin/regenerate-thumbnails", requireStaffAuth, async (req, res) => {
+    try {
+      console.log("Starting thumbnail regeneration for all competitions...");
+      const result = await regenerateAllThumbnails(storage);
+      console.log(`Thumbnail regeneration complete: ${result.success} success, ${result.skipped} skipped, ${result.errors} errors`);
+      res.json(result);
+    } catch (error: any) {
+      console.error("Thumbnail regeneration error:", error);
+      res.status(500).json({ message: "Error regenerating thumbnails: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/regenerate-thumbnail/:id", requireStaffAuth, async (req, res) => {
+    try {
+      const { id } = req.params;
+      console.log(`Regenerating thumbnail for competition ${id}...`);
+      const result = await regenerateSingleThumbnail(storage, id);
+      console.log(`Thumbnail regeneration for ${id}: ${result.status}`);
+      
+      if (result.status === 'error') {
+        if (result.message === 'Competition not found') {
+          return res.status(404).json(result);
+        }
+        return res.status(500).json(result);
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Single thumbnail regeneration error:", error);
+      res.status(500).json({ message: "Error regenerating thumbnail: " + error.message });
+    }
+  });
+
   // User/Angler authentication routes
   app.post("/api/user/register", async (req, res) => {
     try {
@@ -984,11 +1316,12 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.post("/api/user/logout", async (req, res) => {
     req.session.userId = undefined;
-    req.session.save((err) => {
+    req.session.destroy((err) => {
       if (err) {
-        console.error("Session save error:", err);
+        console.error("Session destroy error:", err);
         return res.status(500).json({ message: "Failed to logout" });
       }
+      res.clearCookie("connect.sid");
       res.json({ message: "Logged out successfully" });
     });
   });
@@ -1265,30 +1598,65 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "User not found" });
       }
 
+      // Get ALL entries for this user across all competitions
       const leaderboardEntries = await storage.getUserLeaderboardEntries(user.id);
       
-      // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      console.log(`[STATS DEBUG] Public Profile for ${user.username} (${user.id}): Found ${leaderboardEntries.length} entries`);
       
-      // Calculate best catch (highest weight)
-      const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
+      // Calculate Total Weight: sum all weights in leaderboard_entries for this user
+      const weightsList = leaderboardEntries.map(e => {
+        const parsed = parseWeight(e.weight);
+        console.log(`[STATS DEBUG] Entry ${e.id} in comp ${e.competitionId}: Weight="${e.weight}" parsed=${parsed} oz`);
+        return parsed;
+      });
+
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
       
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
+      // Calculate Best Catch: find the maximum weight in all leaderboard_entries for this user
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      // Calculate Average Weight: Total Weight / Number of competitions where a weight was recorded
+      // Use unique competition count where weight > 0
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      
+      const compCount = weightRecordedCompIds.length;
+      const averageWeightOz = compCount > 0 
+        ? totalWeightOz / compCount 
         : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+      // Wins and podiums require checking full leaderboards
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId: string) => {
+        const fullLeaderboard = await storage.getLeaderboard(compId);
+        // Important: Position should be calculated based on the summarized weight for this competition,
+        // which matches how we sum weights in weightsList.
+        const userEntry = fullLeaderboard.find(e => e.userId === user.id);
+        if (userEntry && userEntry.position) {
+          return userEntry.position;
+        }
+        return null;
+      }));
+
+      const positions = compResults.filter((p: number | null): p is number => p !== null);
+      const wins = positions.filter((p: number) => p === 1).length;
+      const podiumFinishes = positions.filter((p: number) => p <= 3).length;
+
+      console.log(`[STATS DEBUG] Summary: TotalOz=${totalWeightOz}, BestOz=${bestCatchOz}, AvgOz=${averageWeightOz}, CompsWithWeight=${compCount}`);
 
       res.json({
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
-        totalCompetitions: leaderboardEntries.length,
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: formatWeight(bestCatchOz),
+        averageWeight: formatWeight(averageWeightOz),
+        totalWeight: formatWeight(totalWeightOz),
+        totalCompetitions: uniqueCompIds.length,
       });
     } catch (error: any) {
       console.error("Get user stats by username error:", error);
@@ -1380,28 +1748,59 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
       const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
       
-      // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
+      console.log(`[STATS DEBUG] Private Profile for ${userId}: Found ${leaderboardEntries.length} entries`);
       
-      // Calculate best catch (highest weight)
-      const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
+      // Calculate Total Weight
+      const weightsList = leaderboardEntries.map(e => {
+        const parsed = parseWeight(e.weight);
+        console.log(`[STATS DEBUG] Entry ${e.id} in comp ${e.competitionId}: Weight="${e.weight}" parsed=${parsed} oz`);
+        return parsed;
+      });
+
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
       
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
+      // Calculate Best Catch
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      // Calculate Average Weight
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      
+      const compCount = weightRecordedCompIds.length;
+      const averageWeightOz = compCount > 0 
+        ? totalWeightOz / compCount 
         : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+
+      // Calculate Wins and Podium Finishes
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
+      const compResults = await Promise.all(uniqueCompIds.map(async (compId: string) => {
+        const fullLeaderboard = await storage.getLeaderboard(compId);
+        const userEntry = fullLeaderboard.find(e => e.userId === userId);
+        if (userEntry && userEntry.position) {
+          return userEntry.position;
+        }
+        return null;
+      }));
+
+      const positions = compResults.filter((p): p is number => p !== null);
+      const wins = positions.filter(p => p === 1).length;
+      const podiumFinishes = positions.filter(p => p <= 3).length;
+
+      console.log(`[STATS DEBUG] Private Summary: TotalOz=${totalWeightOz}, BestOz=${bestCatchOz}, AvgOz=${averageWeightOz}, CompsWithWeight=${compCount}`);
 
       res.json({
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        averageWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
-        totalCompetitions: leaderboardEntries.length,
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: formatWeight(bestCatchOz),
+        averageWeight: formatWeight(averageWeightOz),
+        totalWeight: formatWeight(totalWeightOz),
+        totalCompetitions: uniqueCompIds.length,
       });
     } catch (error: any) {
       console.error("Get user stats error:", error);
@@ -1409,7 +1808,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
-  app.put("/api/user/profile", async (req, res) => {
+  // Support both PUT and PATCH for profile updates
+  const handleProfileUpdate = async (req: any, res: any) => {
     try {
       const userId = req.session?.userId;
 
@@ -1433,7 +1833,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       console.error("Update profile error:", error);
       res.status(500).json({ message: "Error updating profile: " + error.message });
     }
-  });
+  };
+
+  app.put("/api/user/profile", handleProfileUpdate);
+  app.patch("/api/user/profile", handleProfileUpdate);
 
   app.put("/api/user/password", async (req, res) => {
     try {
@@ -1647,31 +2050,38 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
 
       const userId = req.params.id;
-      const participations = await storage.getUserParticipations(userId);
       const leaderboardEntries = await storage.getUserLeaderboardEntries(userId);
+      const uniqueCompIds = Array.from(new Set(leaderboardEntries.map(e => e.competitionId)));
       
       // Calculate statistics
-      const wins = leaderboardEntries.filter(entry => entry.position === 1).length;
-      const podiumFinishes = leaderboardEntries.filter(entry => entry.position && entry.position <= 3).length;
-      
-      // Calculate best catch (highest weight)
-      const weights = leaderboardEntries
-        .map(entry => parseFloat(entry.weight))
-        .filter(weight => !isNaN(weight));
-      
-      const bestCatch = weights.length > 0 ? Math.max(...weights) : 0;
-      const averageWeight = weights.length > 0 
-        ? weights.reduce((sum, weight) => sum + weight, 0) / weights.length 
-        : 0;
-      const totalWeight = weights.reduce((sum, weight) => sum + weight, 0);
+      const weightsList = leaderboardEntries.map(e => parseWeight(e.weight));
+      const totalWeightOz = weightsList.reduce((sum, w) => sum + w, 0);
+      const bestCatchOz = weightsList.length > 0 ? Math.max(...weightsList) : 0;
+
+      const weightRecordedCompIds = Array.from(new Set(
+        leaderboardEntries
+          .filter(e => parseWeight(e.weight) > 0)
+          .map(e => e.competitionId)
+      ));
+      const compCountWithWeight = weightRecordedCompIds.length;
+      const averageWeightOz = compCountWithWeight > 0 ? totalWeightOz / compCountWithWeight : 0;
+
+      // Wins and Podium Finishes
+      const participations = await storage.getUserParticipations(userId);
+      const wins = participations.filter(p => p.position === 1).length;
+      const podiumFinishes = participations.filter(p => p.position !== null && p.position <= 3).length;
 
       res.json({
-        totalMatches: participations.length,
+        totalMatches: uniqueCompIds.length,
         wins,
         podiumFinishes,
-        bestCatch: bestCatch > 0 ? `${bestCatch.toFixed(2)} lbs` : "-",
-        avgWeight: averageWeight > 0 ? `${averageWeight.toFixed(2)} lbs` : "-",
-        totalWeight: totalWeight > 0 ? `${totalWeight.toFixed(2)} lbs` : "-",
+        bestCatchOz,
+        averageWeightOz,
+        totalWeightOz,
+        bestCatch: formatWeight(bestCatchOz),
+        avgWeight: formatWeight(averageWeightOz),
+        averageWeight: formatWeight(averageWeightOz),
+        totalWeight: formatWeight(totalWeightOz),
       });
     } catch (error: any) {
       console.error("Error fetching angler stats:", error);
@@ -1759,7 +2169,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const user = await storage.updateUser(req.params.id, req.body);
+      // Check if email is being changed and if it's already in use
+      if (req.body.email) {
+        const existingUser = await storage.getUserByEmail(req.body.email);
+        if (existingUser && existingUser.id !== req.params.id) {
+          return res.status(400).json({ message: "Email already in use by another user" });
+        }
+      }
+
+      // Check if username is being changed and if it's already in use
+      if (req.body.username) {
+        const existingUser = await storage.getUserByUsername(req.body.username);
+        if (existingUser && existingUser.id !== req.params.id) {
+          return res.status(400).json({ message: "Username already in use by another user" });
+        }
+      }
+
+      // If password is empty string, remove it from the update data
+      const updateData = { ...req.body };
+      if (updateData.password === '') {
+        delete updateData.password;
+      }
+
+      const user = await storage.updateUser(req.params.id, updateData);
       if (!user) {
         return res.status(404).json({ message: "Angler not found" });
       }
@@ -2043,7 +2475,17 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.get("/api/sponsors", async (req, res) => {
     try {
       const sponsors = await storage.getAllSponsors();
-      res.json(sponsors);
+      const orderedSponsors = [...sponsors].sort((a, b) => {
+        const aFeatured = a.featuredAboveFooter !== false;
+        const bFeatured = b.featuredAboveFooter !== false;
+        if (aFeatured !== bFeatured) return aFeatured ? -1 : 1;
+        if (aFeatured && bFeatured) {
+          const orderDiff = (a.featuredOrder ?? 0) - (b.featuredOrder ?? 0);
+          if (orderDiff !== 0) return orderDiff;
+        }
+        return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime();
+      });
+      res.json(orderedSponsors);
     } catch (error: any) {
       console.error("Error fetching sponsors:", error);
       res.status(500).json({ message: "Error fetching sponsors: " + error.message });
@@ -2117,8 +2559,13 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // News routes (public access for display)
   app.get("/api/news", async (req, res) => {
     try {
-      const news = await storage.getAllNews();
-      res.json(news);
+      const category = req.query.category as string | undefined;
+      const search = req.query.search as string | undefined;
+      const page = parseInt(req.query.page as string) || 1;
+      const limit = parseInt(req.query.limit as string) || 12;
+
+      const result = await storage.listNews({ category, search, page, limit });
+      res.json(result);
     } catch (error: any) {
       console.error("Error fetching news:", error);
       res.status(500).json({ message: "Error fetching news: " + error.message });
@@ -2128,7 +2575,19 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   app.get("/api/news/featured", async (req, res) => {
     try {
       const allNews = await storage.getAllNews();
-      const featuredNews = allNews.filter(item => item.featured === true);
+      // Return only essential fields for featured news on homepage
+      const featuredNews = allNews
+        .filter(item => item.featured === true)
+        .map(item => ({
+          id: item.id,
+          title: item.title,
+          excerpt: item.excerpt,
+          image: item.image,
+          category: item.category,
+          date: item.date,
+          readTime: item.readTime,
+          author: item.author,
+        }));
       res.json(featuredNews);
     } catch (error: any) {
       console.error("Error fetching featured news:", error);
@@ -2136,7 +2595,67 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Get single news article with full content
+  app.get("/api/news/:id", async (req, res) => {
+    const startTime = Date.now();
+    const cacheKey = `news_${req.params.id}`;
+    
+    try {
+      // 1. Instant Memory Cache (Shared across ALL users)
+      const cached = (global as any).newsCache?.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp < 3600000)) { // 1 hour internal cache (more frequent refresh)
+        res.setHeader('X-Cache', 'HIT');
+        res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+        return res.json(cached.data);
+      }
+
+      // 2. High-Priority Database Fetch for the "First Person"
+      // We use a lean projection to get the data as fast as humanly possible
+      const article = await storage.getNews(req.params.id);
+      if (!article) {
+        return res.status(404).json({ message: "Article not found" });
+      }
+
+      // 3. Pre-load cache for everyone else
+      if (!(global as any).newsCache) (global as any).newsCache = new Map();
+      (global as any).newsCache.set(cacheKey, { data: article, timestamp: Date.now() });
+
+      const duration = Date.now() - startTime;
+      res.setHeader('X-Response-Time', `${duration}ms`);
+      res.setHeader('X-Cache', 'MISS');
+      // 4. Aggressive Browser Caching
+      res.setHeader('Cache-Control', 'public, max-age=3600, stale-while-revalidate=86400');
+      res.json(article);
+    } catch (error: any) {
+      console.error("Error fetching news article:", error);
+      res.status(500).json({ message: "Error fetching news article: " + error.message });
+    }
+  });
+
   // Admin news management routes
+  // GET all news for admin panel (returns full array, not paginated)
+  app.get("/api/admin/news", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const allNews = await storage.getAllNews();
+      // Sort by date descending (newest first)
+      const sortedNews = allNews.sort((a, b) => {
+        const dateA = new Date(a.date || 0);
+        const dateB = new Date(b.date || 0);
+        return dateB.getTime() - dateA.getTime();
+      });
+      
+      res.json(sortedNews);
+    } catch (error: any) {
+      console.error("Error fetching admin news:", error);
+      res.status(500).json({ message: "Error fetching news: " + error.message });
+    }
+  });
+
   app.post("/api/admin/news", async (req, res) => {
     try {
       const adminId = req.session?.adminId;
@@ -2286,6 +2805,148 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // YouTube Video routes (public access for display)
+  app.get("/api/youtube-videos", async (req, res) => {
+    try {
+      const videos = await storage.getActiveYoutubeVideos();
+      res.json(videos);
+    } catch (error: any) {
+      console.error("Error fetching YouTube videos:", error);
+      res.status(500).json({ message: "Error fetching YouTube videos: " + error.message });
+    }
+  });
+
+  // Admin YouTube Video management routes
+  app.get("/api/admin/youtube-videos", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const videos = await storage.getAllYoutubeVideos();
+      res.json(videos);
+    } catch (error: any) {
+      console.error("Error fetching YouTube videos:", error);
+      res.status(500).json({ message: "Error fetching YouTube videos: " + error.message });
+    }
+  });
+
+  app.post("/api/admin/youtube-videos", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { title, videoId, description, displayOrder, active } = req.body;
+      
+      if (!title || typeof title !== 'string' || title.trim().length === 0) {
+        return res.status(400).json({ message: "Title is required and must be a non-empty string" });
+      }
+      
+      if (!videoId || typeof videoId !== 'string' || videoId.trim().length === 0) {
+        return res.status(400).json({ message: "Video ID is required and must be a non-empty string" });
+      }
+      
+      if (displayOrder !== undefined && (typeof displayOrder !== 'number' || displayOrder < 0)) {
+        return res.status(400).json({ message: "Display order must be a non-negative number" });
+      }
+      
+      if (active !== undefined && typeof active !== 'boolean') {
+        return res.status(400).json({ message: "Active must be a boolean" });
+      }
+
+      const video = await storage.createYoutubeVideo({
+        title: title.trim(),
+        videoId: videoId.trim(),
+        description: description?.trim() || null,
+        displayOrder: displayOrder ?? 0,
+        active: active !== false,
+      });
+
+      res.status(201).json(video);
+    } catch (error: any) {
+      console.error("Error creating YouTube video:", error);
+      res.status(500).json({ message: "Error creating YouTube video: " + error.message });
+    }
+  });
+
+  app.put("/api/admin/youtube-videos/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { title, videoId, description, displayOrder, active } = req.body;
+      
+      const updates: any = {};
+      
+      if (title !== undefined) {
+        if (typeof title !== 'string' || title.trim().length === 0) {
+          return res.status(400).json({ message: "Title must be a non-empty string" });
+        }
+        updates.title = title.trim();
+      }
+      
+      if (videoId !== undefined) {
+        if (typeof videoId !== 'string' || videoId.trim().length === 0) {
+          return res.status(400).json({ message: "Video ID must be a non-empty string" });
+        }
+        updates.videoId = videoId.trim();
+      }
+      
+      if (description !== undefined) {
+        updates.description = description?.trim() || null;
+      }
+      
+      if (displayOrder !== undefined) {
+        if (typeof displayOrder !== 'number' || displayOrder < 0) {
+          return res.status(400).json({ message: "Display order must be a non-negative number" });
+        }
+        updates.displayOrder = displayOrder;
+      }
+      
+      if (active !== undefined) {
+        if (typeof active !== 'boolean') {
+          return res.status(400).json({ message: "Active must be a boolean" });
+        }
+        updates.active = active;
+      }
+      
+      const video = await storage.updateYoutubeVideo(req.params.id, updates);
+      
+      if (!video) {
+        return res.status(404).json({ message: "YouTube video not found" });
+      }
+
+      res.json(video);
+    } catch (error: any) {
+      console.error("Error updating YouTube video:", error);
+      res.status(500).json({ message: "Error updating YouTube video: " + error.message });
+    }
+  });
+
+  app.delete("/api/admin/youtube-videos/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const success = await storage.deleteYoutubeVideo(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "YouTube video not found" });
+      }
+
+      res.json({ message: "YouTube video deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting YouTube video:", error);
+      res.status(500).json({ message: "Error deleting YouTube video: " + error.message });
+    }
+  });
+
   // Competition routes (public access for display)
   app.get("/api/competitions", async (req, res) => {
     try {
@@ -2363,6 +3024,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "Competition not found" });
       }
 
+      // If competition is marked as completed, update participant positions
+      if (result.data.status === "completed") {
+        try {
+          const leaderboard = await storage.getLeaderboard(req.params.id);
+          const participants = await storage.getCompetitionParticipants(req.params.id);
+          
+          await Promise.all(participants.map(async (p) => {
+            const entry = leaderboard.find(e => e.userId === p.userId);
+            if (entry && entry.position) {
+              await storage.updateParticipantPosition(p.id, entry.position);
+            }
+          }));
+        } catch (error) {
+          console.error("Error updating participant positions on competition completion:", error);
+        }
+      }
+
       res.json(competition);
     } catch (error: any) {
       console.error("Error updating competition:", error);
@@ -2377,7 +3055,24 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const success = await storage.deleteCompetition(req.params.id);
+      const competitionId = req.params.id;
+
+      // Check if any anglers or teams are assigned to this competition
+      const participants = await storage.getCompetitionParticipants(competitionId);
+      if (participants.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this competition. ${participants.length} angler(s) are currently assigned. Please remove all anglers first.` 
+        });
+      }
+
+      const teams = await storage.getTeamsByCompetition(competitionId);
+      if (teams.length > 0) {
+        return res.status(400).json({ 
+          message: `Cannot delete this competition. ${teams.length} team(s) are currently assigned. Please remove all teams first.` 
+        });
+      }
+
+      const success = await storage.deleteCompetition(competitionId);
       if (!success) {
         return res.status(404).json({ message: "Competition not found" });
       }
@@ -2475,6 +3170,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             club: user?.club || "",
             avatar: user?.avatar || "",
             joinedAt: participant.joinedAt,
+            paymentStatus: participant.paymentStatus,
             isTeam: false,
           };
         })
@@ -2535,6 +3231,29 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         userId,
         pegNumber: req.body.pegNumber || undefined,
       });
+
+      console.log(`[PARTICIPANT_JOIN] Participant join successful, triggering email for user ${userId}`);
+      
+      // Trigger confirmation email for individual booking
+      try {
+        const user = await storage.getUser(userId);
+        if (user) {
+          console.log(`[PARTICIPANT_JOIN] Sending confirmation email to: ${user.email}`);
+          const emailResult = await sendCompetitionBookingEmail(user.email, {
+            userName: `${user.firstName} ${user.lastName}`,
+            competitionName: competition.name,
+            date: competition.date,
+            venue: competition.venue,
+            pegNumber: participant.pegNumber || "TBA",
+            entryFee: competition.entryFee
+          });
+          console.log(`[PARTICIPANT_JOIN] Email send result:`, emailResult);
+        } else {
+          console.warn(`[PARTICIPANT_JOIN] User not found for email notification: ${userId}`);
+        }
+      } catch (emailErr) {
+        console.error("[PARTICIPANT_JOIN] Failed to send booking email:", emailErr);
+      }
 
       res.json(participant);
     } catch (error: any) {
@@ -2637,13 +3356,37 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(400).json({ message: "User is already in this competition" });
       }
 
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      // Check if peg is available
+      if (pegNumber) {
+        const participants = await storage.getCompetitionParticipants(competitionId);
+        const isPegTaken = participants.some(p => p.pegNumber === pegNumber);
+        if (isPegTaken) {
+          return res.status(400).json({ message: "Peg is already taken" });
+        }
+      }
+
+      // Check if competition is full
+      const participants = await storage.getCompetitionParticipants(competitionId);
+      if (participants.length >= competition.pegsTotal) {
+        return res.status(400).json({ message: "Competition is full" });
+      }
+
       const participant = await storage.joinCompetition({
         competitionId,
         userId,
         pegNumber: pegNumber || undefined,
       });
 
-      res.json(participant);
+      // Mark manually-added participants as "not paid" (admin override)
+      await storage.updateParticipantPaymentStatus(participant.id, "not_paid");
+      const updatedParticipant = await storage.getParticipantById(participant.id);
+
+      res.json(updatedParticipant || participant);
     } catch (error: any) {
       console.error("Error adding participant:", error);
       res.status(500).json({ message: error.message || "Error adding participant" });
@@ -2657,9 +3400,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
+      // Get participant details before deletion to find competition
+      const allParticipants = await storage.getAllParticipants();
+      const participantData = allParticipants.find(p => p.id === req.params.id);
+      
       const success = await storage.deleteParticipant(req.params.id);
       if (!success) {
         return res.status(404).json({ message: "Participant not found" });
+      }
+
+      // Decrement competition pegsBooked counter
+      if (participantData?.competitionId) {
+        const competition = await storage.getCompetition(participantData.competitionId);
+        if (competition && competition.pegsBooked > 0) {
+          await storage.updateCompetition(participantData.competitionId, {
+            pegsBooked: competition.pegsBooked - 1
+          });
+        }
       }
 
       res.json({ message: "Participant removed successfully" });
@@ -3103,6 +3860,277 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
+  // Admin: Get teams for a competition
+  app.get("/api/admin/competitions/:id/teams", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const teams = await storage.getTeamsByCompetition(req.params.id);
+      
+      const enrichedTeams = await Promise.all(
+        teams.map(async (team) => {
+          const members = await storage.getTeamMembers(team.id);
+          const acceptedMembers = members.filter(m => m.status === "accepted");
+          
+          const enrichedMembers = await Promise.all(
+            acceptedMembers.map(async (member) => {
+              const user = await storage.getUser(member.userId);
+              return {
+                id: member.id,
+                userId: member.userId,
+                name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+                username: user?.username || "",
+                avatar: user?.avatar || null,
+                club: user?.club || "",
+                role: member.role,
+                status: member.status,
+                isCaptain: member.userId === team.createdBy,
+              };
+            })
+          );
+          
+          return {
+            id: team.id,
+            name: team.name,
+            competitionId: team.competitionId,
+            inviteCode: team.inviteCode,
+            createdBy: team.createdBy,
+            paymentStatus: team.paymentStatus,
+            pegNumber: team.pegNumber,
+            createdAt: team.createdAt,
+            memberCount: acceptedMembers.length,
+            members: enrichedMembers,
+          };
+        })
+      );
+      
+      res.json(enrichedTeams);
+    } catch (error: any) {
+      console.error("Error fetching teams:", error);
+      res.status(500).json({ message: "Error fetching teams: " + error.message });
+    }
+  });
+
+  // Admin: Create a team for a competition
+  app.patch("/api/admin/teams/:id", requireStaffAuth, async (req, res) => {
+    try {
+      const result = updateTeamSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid team update data", errors: result.error.errors });
+      }
+
+      console.log(`[ADMIN] Updating team ${req.params.id}:`, result.data);
+      const updatedTeam = await storage.updateTeam(req.params.id, result.data);
+      if (!updatedTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+      res.json(updatedTeam);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Failed to update team" });
+    }
+  });
+
+  app.post("/api/admin/teams", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { competitionId, name, captainUserId } = req.body;
+      
+      if (!competitionId || !name) {
+        return res.status(400).json({ message: "Competition ID and team name are required" });
+      }
+
+      const competition = await storage.getCompetition(competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      if (competition.competitionMode !== "team") {
+        return res.status(400).json({ message: "This competition is not a team competition" });
+      }
+
+      const inviteCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      const team = await storage.createTeam({
+        competitionId,
+        name,
+        inviteCode,
+        createdBy: captainUserId || staffId,
+        paymentStatus: "pending",
+        pegNumber: null,
+      });
+
+      if (captainUserId) {
+        await storage.addTeamMember({
+          teamId: team.id,
+          userId: captainUserId,
+          role: "captain",
+          status: "accepted",
+        });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error creating team:", error);
+      res.status(500).json({ message: "Error creating team: " + error.message });
+    }
+  });
+
+  // Admin: Update team details
+  app.put("/api/admin/teams/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { name, paymentStatus } = req.body;
+      
+      const team = await storage.updateTeam(req.params.id, { name, paymentStatus });
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json(team);
+    } catch (error: any) {
+      console.error("Error updating team:", error);
+      res.status(500).json({ message: "Error updating team: " + error.message });
+    }
+  });
+
+  // Admin: Delete a team
+  app.delete("/api/admin/teams/:id", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const members = await storage.getTeamMembers(req.params.id);
+      for (const member of members) {
+        await storage.removeTeamMember(member.id);
+      }
+
+      const success = await storage.deleteTeam(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      res.json({ message: "Team deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting team:", error);
+      res.status(500).json({ message: "Error deleting team: " + error.message });
+    }
+  });
+
+  // Admin: Add an angler to a team
+  app.post("/api/admin/teams/:id/members", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { userId, role = "member" } = req.body;
+      
+      if (!userId) {
+        return res.status(400).json({ message: "User ID is required" });
+      }
+
+      const team = await storage.getTeam(req.params.id);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const competition = await storage.getCompetition(team.competitionId);
+      if (!competition) {
+        return res.status(404).json({ message: "Competition not found" });
+      }
+
+      const user = await storage.getUser(userId);
+      if (!user) {
+        return res.status(404).json({ message: "User not found" });
+      }
+
+      const isInTeam = await storage.isUserInTeam(team.id, userId);
+      if (isInTeam) {
+        return res.status(400).json({ message: "User is already a member of this team" });
+      }
+
+      const allTeams = await storage.getTeamsByCompetition(team.competitionId);
+      for (const t of allTeams) {
+        const isInOtherTeam = await storage.isUserInTeam(t.id, userId);
+        if (isInOtherTeam) {
+          return res.status(400).json({ message: "User is already in another team for this competition" });
+        }
+      }
+
+      const currentMembers = await storage.getTeamMembers(team.id);
+      const acceptedMembers = currentMembers.filter(m => m.status === "accepted");
+      if (competition.maxTeamMembers && acceptedMembers.length >= competition.maxTeamMembers) {
+        return res.status(400).json({ message: `Team is full (max ${competition.maxTeamMembers} members)` });
+      }
+
+      const member = await storage.addTeamMember({
+        teamId: team.id,
+        userId,
+        role,
+        status: "accepted",
+      });
+
+      const enrichedMember = {
+        id: member.id,
+        userId: member.userId,
+        name: `${user.firstName} ${user.lastName}`,
+        username: user.username,
+        avatar: user.avatar,
+        club: user.club,
+        role: member.role,
+        status: member.status,
+        isCaptain: member.userId === team.createdBy,
+      };
+
+      res.json(enrichedMember);
+    } catch (error: any) {
+      console.error("Error adding team member:", error);
+      res.status(500).json({ message: "Error adding team member: " + error.message });
+    }
+  });
+
+  // Admin: Remove an angler from a team
+  app.delete("/api/admin/teams/:teamId/members/:memberId", async (req, res) => {
+    try {
+      const staffId = req.session?.staffId || req.session?.adminId;
+      if (!staffId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { teamId, memberId } = req.params;
+      
+      const team = await storage.getTeam(teamId);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      const success = await storage.removeTeamMember(memberId);
+      if (!success) {
+        return res.status(404).json({ message: "Team member not found" });
+      }
+
+      res.json({ message: "Member removed successfully" });
+    } catch (error: any) {
+      console.error("Error removing team member:", error);
+      res.status(500).json({ message: "Error removing team member: " + error.message });
+    }
+  });
+
   // Leaderboard routes
   app.get("/api/competitions/:id/leaderboard", async (req, res) => {
     try {
@@ -3111,10 +4139,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       
       // Enrich leaderboard with user/team data based on competition type
       const enrichedEntries = await Promise.all(
-        entries.map(async (entry) => {
+        entries.map(async (entry: any) => {
           let anglerName = "Unknown";
           let username = "";
           let club = "";
+          let anglerAvatar = "";
           let teamId = "";
           let isTeam = false;
           
@@ -3124,11 +4153,14 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             anglerName = team?.name || "Unknown Team";
             teamId = entry.teamId;
             isTeam = true;
+            // Use team profile image if available
+            anglerAvatar = team?.image || "";
           } else if (entry.userId) {
             const user = await storage.getUser(entry.userId);
             anglerName = user ? `${user.firstName} ${user.lastName}` : "Unknown";
             username = user?.username || "";
             club = user?.club || "";
+            anglerAvatar = user?.avatar || "";
           }
           
           return {
@@ -3138,8 +4170,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             pegNumber: entry.pegNumber,
             weight: entry.weight,
             club,
+            anglerAvatar,
             teamId,
             isTeam,
+            fishCount: entry.fishCount || 1,
+            fishImageUrl: entry.fishImageUrl,
           };
         })
       );
@@ -3203,14 +4238,21 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const result = insertLeaderboardEntrySchema.safeParse(req.body);
+      const payload = req.body;
+      const result = insertLeaderboardEntrySchema.safeParse(payload);
       if (!result.success) {
         console.log("[BACKEND WEIGHT] VALIDATION ERROR:", result.error.errors);
         return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
       }
 
-      console.log("[BACKEND WEIGHT] Creating leaderboard entry with:", result.data);
-      const entry = await storage.createLeaderboardEntry(result.data);
+      // Pass through fishPhotoUrl as fishImageUrl if provided
+      const entryData = { ...result.data };
+      if (payload.fishPhotoUrl) {
+        (entryData as any).fishImageUrl = payload.fishPhotoUrl;
+      }
+
+      console.log("[BACKEND WEIGHT] Creating leaderboard entry with:", entryData);
+      const entry = await storage.createLeaderboardEntry(entryData);
       console.log("[BACKEND WEIGHT] Entry created successfully:", entry);
       res.json(entry);
     } catch (error: any) {
@@ -3226,12 +4268,18 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const result = updateLeaderboardEntrySchema.safeParse(req.body);
+      const payload = req.body;
+      const result = updateLeaderboardEntrySchema.safeParse(payload);
       if (!result.success) {
         return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
       }
 
-      const entry = await storage.updateLeaderboardEntry(req.params.id, result.data);
+      const updateData = { ...result.data };
+      if (payload.fishPhotoUrl !== undefined) {
+        (updateData as any).fishImageUrl = payload.fishPhotoUrl || null;
+      }
+
+      const entry = await storage.updateLeaderboardEntry(req.params.id, updateData);
       if (!entry) {
         return res.status(404).json({ message: "Leaderboard entry not found" });
       }
@@ -3369,6 +4417,136 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Error running diagnostics:", error);
       res.status(500).json({ message: "Error running diagnostics: " + error.message });
+    }
+  });
+
+  // Runtime configuration endpoint - returns live environment variables
+  // This allows frontend to use current Stripe keys without requiring a rebuild
+  app.get("/api/runtime-config", (req, res) => {
+    res.json({
+      VITE_STRIPE_PUBLIC_KEY: process.env.VITE_STRIPE_PUBLIC_KEY || ''
+    });
+  });
+
+  // Testimonial routes
+  app.get("/api/testimonials", async (_req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error) {
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  app.post("/api/testimonials", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const testimonial = insertTestimonialSchema.parse(req.body);
+      const created = await storage.createTestimonial(testimonial);
+      res.status(201).json(created);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const updates = updateTestimonialSchema.parse(req.body);
+      const updated = await storage.updateTestimonial(req.params.id, updates);
+      if (!updated) return res.status(404).json({ message: "Testimonial not found" });
+      res.json(updated);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete("/api/testimonials/:id", requireStaffAuth, requireAdminRole, async (req, res) => {
+    try {
+      const success = await storage.deleteTestimonial(req.params.id);
+      if (!success) return res.status(404).json({ message: "Testimonial not found" });
+      res.status(204).end();
+    } catch (error) {
+      res.status(500).json({ message: "Failed to delete testimonial" });
+    }
+  });
+
+  app.get("/api/testimonials", async (req, res) => {
+    try {
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      console.error("Error fetching testimonials:", error);
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  // Admin testimonial routes (admin only)
+  app.get("/api/admin/testimonials", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const testimonials = await storage.getAllTestimonials();
+      res.json(testimonials);
+    } catch (error: any) {
+      console.error("Error fetching testimonials for admin:", error);
+      res.status(500).json({ message: "Failed to fetch testimonials" });
+    }
+  });
+
+  app.post("/api/admin/testimonials", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const result = insertTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      const testimonial = await storage.createTestimonial(result.data);
+      res.json(testimonial);
+    } catch (error: any) {
+      console.error("Error creating testimonial:", error);
+      res.status(500).json({ message: "Failed to create testimonial" });
+    }
+  });
+
+  app.patch("/api/admin/testimonials/:id", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const result = updateTestimonialSchema.safeParse(req.body);
+      if (!result.success) {
+        return res.status(400).json({ message: "Invalid data", errors: result.error.errors });
+      }
+      const testimonial = await storage.updateTestimonial(req.params.id, result.data);
+      if (!testimonial) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json(testimonial);
+    } catch (error: any) {
+      console.error("Error updating testimonial:", error);
+      res.status(500).json({ message: "Failed to update testimonial" });
+    }
+  });
+
+  app.delete("/api/admin/testimonials/:id", async (req, res) => {
+    try {
+      const adminId = req.session?.adminId;
+      if (!adminId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+      const success = await storage.deleteTestimonial(req.params.id);
+      if (!success) {
+        return res.status(404).json({ message: "Testimonial not found" });
+      }
+      res.json({ message: "Testimonial deleted successfully" });
+    } catch (error: any) {
+      console.error("Error deleting testimonial:", error);
+      res.status(500).json({ message: "Failed to delete testimonial" });
     }
   });
 

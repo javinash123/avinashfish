@@ -7,6 +7,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Footer } from "@/components/footer";
+import { SponsorLogoSlider } from "@/components/sponsor-logo-slider";
 import Home from "@/pages/home";
 import Competitions from "@/pages/competitions";
 import Leaderboard from "@/pages/leaderboard";
@@ -20,13 +21,16 @@ import VerifyEmail from "@/pages/verify-email";
 import CompetitionDetails from "@/pages/competition-details";
 import AdminDashboard from "@/pages/admin-dashboard";
 import AdminLogin from "@/pages/admin-login";
+import AdminTestimonials from "@/pages/admin-testimonials";
 import Gallery from "@/pages/gallery";
 import News from "@/pages/news";
+import NewsDetail from "@/pages/news-detail";
 import Sponsors from "@/pages/sponsors";
 import Profile from "@/pages/profile";
 import TeamProfile from "@/pages/team-profile";
 import Booking from "@/pages/booking";
 import AnglerDirectory from "@/pages/angler-directory";
+import Ambassadors from "@/pages/ambassadors";
 import PrivacyPolicy from "@/pages/privacy-policy";
 import TermsConditions from "@/pages/terms-conditions";
 import CookiePolicy from "@/pages/cookie-policy";
@@ -59,8 +63,10 @@ function Router() {
           <Route path="/competition/:id" component={CompetitionDetails} />
           <Route path="/leaderboard" component={Leaderboard} />
           <Route path="/angler-directory" component={AnglerDirectory} />
+          <Route path="/ambassadors" component={Ambassadors} />
           <Route path="/gallery" component={Gallery} />
           <Route path="/news" component={News} />
+          <Route path="/news/:id" component={NewsDetail} />
           <Route path="/sponsors" component={Sponsors} />
           <Route path="/about" component={About} />
           <Route path="/contact" component={Contact} />
@@ -78,9 +84,11 @@ function Router() {
           <Route path="/cookie-policy" component={CookiePolicy} />
           <Route path="/admin/login" component={AdminLogin} />
           <Route path="/admin" component={AdminDashboard} />
+          <Route path="/admin/testimonials" component={AdminTestimonials} />
           <Route component={NotFound} />
         </Switch>
       </div>
+      {!isAdminRoute && !isAuthRoute && <SponsorLogoSlider />}
       {!isAdminRoute && !isAuthRoute && <Footer />}
     </div>
   );

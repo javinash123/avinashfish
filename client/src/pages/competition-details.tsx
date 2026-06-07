@@ -1,6 +1,6 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PegMap } from "@/components/peg-map";
 import { LeaderboardTable } from "@/components/leaderboard-table";
@@ -27,7 +27,10 @@ import {
   UserPlus,
   Copy,
   Check,
+  Share2,
 } from "lucide-react";
+import { FaWhatsapp } from "react-icons/fa";
+import { SiFacebook, SiX } from "react-icons/si";
 import { Link, useParams } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { type Competition } from "@shared/schema";
@@ -71,6 +74,7 @@ export default function CompetitionDetails() {
     enabled: competition?.competitionMode === "team",
   });
 
+  const [activeTab, setActiveTab] = useState("participants");
   const [isCreateTeamOpen, setIsCreateTeamOpen] = useState(false);
   const [isManageTeamOpen, setIsManageTeamOpen] = useState(false);
   const [isJoinTeamOpen, setIsJoinTeamOpen] = useState(false);
@@ -404,12 +408,12 @@ export default function CompetitionDetails() {
 
         <div className="grid gap-6 lg:grid-cols-3 mb-8">
           <div className="lg:col-span-2">
-            <div className="relative h-48 sm:h-64 bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
+            <div className="relative w-full aspect-[16/9] max-h-[420px] bg-gradient-to-br from-primary/20 to-chart-2/20 rounded-lg mb-6 overflow-hidden">
               {competition.imageUrl ? (
                 <img
                   src={competition.imageUrl}
                   alt={competition.name}
-                  className="w-full h-full object-contain"
+                  className="w-full h-full object-cover object-center"
                 />
               ) : (
                 <div className="absolute inset-0 flex items-center justify-center">
@@ -457,10 +461,36 @@ export default function CompetitionDetails() {
                   "Individual Competition"
                 )}
               </Badge>
+              <div className="flex items-center gap-1 ml-auto">
+                <Share2 className="h-4 w-4 text-muted-foreground mr-1" />
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  const url = window.location.href;
+                  window.open(`https://wa.me/?text=${encodeURIComponent(competition.name + ' - ' + url)}`, '_blank');
+                }} data-testid="button-share-whatsapp">
+                  <FaWhatsapp className="h-4 w-4 text-green-500" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(window.location.href)}`, '_blank');
+                }} data-testid="button-share-facebook">
+                  <SiFacebook className="h-4 w-4 text-blue-600" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(competition.name)}&url=${encodeURIComponent(window.location.href)}`, '_blank');
+                }} data-testid="button-share-x">
+                  <SiX className="h-4 w-4" />
+                </Button>
+                <Button variant="outline" size="icon" className="hover-elevate h-8 w-8" onClick={() => {
+                  navigator.clipboard.writeText(window.location.href);
+                  toast({ title: "Link copied!", description: "Competition link copied to clipboard" });
+                }} data-testid="button-share-copy">
+                  <Copy className="h-4 w-4" />
+                </Button>
+              </div>
             </div>
-            <p className="text-muted-foreground text-base sm:text-lg mb-6">
-              {competition.description}
-            </p>
+            <div
+              className="html-description text-base mb-6"
+              dangerouslySetInnerHTML={{ __html: competition.description }}
+            />
 
             <div className="grid gap-4 sm:grid-cols-2 mb-6">
               <div className="flex items-center gap-3">
@@ -571,25 +601,42 @@ export default function CompetitionDetails() {
                             </p>
                           </div>
                           {userTeam.isCaptain ? (
-                            <Button 
-                              className="w-full" 
-                              size="lg" 
-                              onClick={handleBookPeg}
-                              disabled={competition.pegsBooked >= competition.pegsTotal || userTeam.paymentStatus === "succeeded"}
-                              data-testid="button-book-team-peg"
-                            >
-                              {userTeam.paymentStatus === "succeeded" ? (
-                                <>
-                                  <Check className="mr-2 h-5 w-5" />
-                                  Peg Booked
-                                </>
-                              ) : (
-                                <>
-                                  <Coins className="mr-2 h-5 w-5" />
-                                  Book Team Peg
-                                </>
-                              )}
-                            </Button>
+                            userTeam.paymentStatus === "succeeded" ? (
+                              <Button 
+                                className="w-full" 
+                                size="lg" 
+                                disabled
+                                data-testid="button-book-team-peg"
+                              >
+                                <Check className="mr-2 h-5 w-5" />
+                                Peg Booked
+                              </Button>
+                            ) : competition.pegsBooked >= competition.pegsTotal ? (
+                              <div className="space-y-3">
+                                <Button 
+                                  className="w-full" 
+                                  size="lg" 
+                                  variant="secondary"
+                                  disabled
+                                  data-testid="button-sold-out"
+                                >
+                                  Sold Out
+                                </Button>
+                                <p className="text-sm text-muted-foreground text-center">
+                                  All pegs have been booked for this competition.
+                                </p>
+                              </div>
+                            ) : (
+                              <Button 
+                                className="w-full" 
+                                size="lg" 
+                                onClick={handleBookPeg}
+                                data-testid="button-book-team-peg"
+                              >
+                                <Coins className="mr-2 h-5 w-5" />
+                                Book Team Peg
+                              </Button>
+                            )
                           ) : (
                             <div className="text-center text-sm text-muted-foreground p-4 bg-muted/50 rounded-md">
                               Only the team captain can book a peg for the team.
@@ -626,12 +673,27 @@ export default function CompetitionDetails() {
                             "Leave Competition"
                           )}
                         </Button>
+                      ) : competition.pegsBooked >= competition.pegsTotal ? (
+                        <div className="space-y-3">
+                          <Button 
+                            className="w-full" 
+                            size="lg" 
+                            variant="secondary"
+                            disabled
+                            data-testid="button-sold-out"
+                          >
+                            Sold Out
+                          </Button>
+                          <p className="text-sm text-muted-foreground text-center">
+                            All pegs have been booked for this competition.
+                          </p>
+                        </div>
                       ) : (
                         <Button 
                           className="w-full" 
                           size="lg" 
                           onClick={handleBookPeg}
-                          disabled={joinMutation.isPending || competition.pegsBooked >= competition.pegsTotal}
+                          disabled={joinMutation.isPending}
                           data-testid="button-book-peg"
                         >
                           {joinMutation.isPending ? (
@@ -665,7 +727,7 @@ export default function CompetitionDetails() {
           </div>
         </div>
 
-        <Tabs defaultValue={competition.competitionMode === "team" ? "teams" : "participants"} className="w-full">
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className={`grid w-full ${competition.competitionMode === "team" ? "grid-cols-3" : "grid-cols-2"} h-auto`} data-testid="tabs-competition">
             {competition.competitionMode === "team" && (
               <TabsTrigger value="teams" className="text-xs sm:text-sm px-2 sm:px-4">Teams</TabsTrigger>
@@ -738,6 +800,12 @@ export default function CompetitionDetails() {
           {competition.competitionMode === "team" && (
             <TabsContent value="teams" className="mt-6">
               <Card>
+                <CardHeader>
+                  <CardTitle className="text-xl flex items-center gap-2">
+                    <Users className="h-5 w-5 text-primary" />
+                    Participating Teams
+                  </CardTitle>
+                </CardHeader>
                 <CardContent className="p-6">
                   {user && !userTeam ? (
                     <div className="mb-6 flex gap-3 flex-wrap">
@@ -774,12 +842,12 @@ export default function CompetitionDetails() {
                         >
                           <div className="flex items-start justify-between mb-3">
                             <div className="flex-1">
-                              <h3 className="font-semibold text-lg">{team.name}</h3>
+                              <h3 className="font-semibold text-lg">{team.name || team.teamName}</h3>
                               <Badge 
                                 variant="outline"
                                 className="mt-1 text-xs"
                               >
-                                {team.memberCount || 0} / {competition.maxTeamMembers || 'N/A'} members
+                                {team.members?.length || team.memberCount || 0} / {competition.maxTeamMembers || 4} members
                               </Badge>
                             </div>
                             {team.pegNumber && (
@@ -792,23 +860,25 @@ export default function CompetitionDetails() {
                           {team.members && team.members.length > 0 && (
                             <div className="space-y-2">
                               <div className="text-xs text-muted-foreground">Team Members:</div>
-                              {team.members.slice(0, 3).map((member: any, idx: number) => (
-                                <div key={idx} className="flex items-center gap-2 text-sm">
-                                  <Avatar className="h-6 w-6">
-                                    <AvatarImage src={member.avatar} />
-                                    <AvatarFallback className="text-xs">
-                                      {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
-                                    </AvatarFallback>
-                                  </Avatar>
-                                  <span className="truncate">{member.name}</span>
-                                  {member.role === "captain" && (
-                                    <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
-                                  )}
-                                </div>
+                              {team.members.slice(0, 4).map((member: any, idx: number) => (
+                                <Link key={idx} href={`/profile/${member.username}`}>
+                                  <div className="flex items-center gap-2 text-sm hover:bg-muted p-1 rounded transition-colors cursor-pointer">
+                                    <Avatar className="h-6 w-6">
+                                      <AvatarImage src={member.avatar} />
+                                      <AvatarFallback className="text-xs">
+                                        {member.name?.split(" ").map((n: string) => n[0]).join("") || "?"}
+                                      </AvatarFallback>
+                                    </Avatar>
+                                    <span className="truncate">{member.name || member.username}</span>
+                                    {member.role === "captain" && (
+                                      <Badge variant="secondary" className="text-xs px-1 py-0">Captain</Badge>
+                                    )}
+                                  </div>
+                                </Link>
                               ))}
-                              {team.members.length > 3 && (
+                              {team.members.length > 4 && (
                                 <div className="text-xs text-muted-foreground">
-                                  +{team.members.length - 3} more
+                                  +{team.members.length - 4} more
                                 </div>
                               )}
                             </div>

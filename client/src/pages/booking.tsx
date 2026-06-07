@@ -19,6 +19,11 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { type Competition } from "@shared/schema";
 
+function stripHtmlTags(value: string) {
+  if (!value) return "";
+  return value.replace(/<[^>]*>/g, "").replace(/\s+/g, " ").trim();
+}
+
 declare global {
   interface Window {
     RUNTIME_CONFIG?: {
@@ -27,18 +32,45 @@ declare global {
   }
 }
 
-// Lazy load Stripe - keys might be injected later via window.RUNTIME_CONFIG
+// Lazy load Stripe - fetch keys from runtime config endpoint for live updates
 let stripePromise: ReturnType<typeof loadStripe> | null = null;
 let stripePromiseLoaded = false;
 
-function getStripePromise() {
+async function getStripePublicKey(): Promise<string> {
+  try {
+    // Fetch from runtime config endpoint - this returns live environment variables
+    const response = await fetch('/api/runtime-config');
+    if (response.ok) {
+      const config = await response.json();
+      const key = config.VITE_STRIPE_PUBLIC_KEY;
+      if (key) {
+        console.log('[Booking] Loaded Stripe public key from runtime config');
+        return key;
+      }
+    }
+  } catch (error) {
+    console.warn('[Booking] Failed to fetch runtime config:', error);
+  }
+  
+  // Fallback to build-time environment variable if runtime config fails
+  const fallbackKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+  if (fallbackKey) {
+    console.log('[Booking] Using fallback Stripe public key from build-time env');
+    return fallbackKey;
+  }
+  
+  console.warn('[Booking] Stripe public key not found');
+  return '';
+}
+
+async function getStripePromise() {
   if (!stripePromiseLoaded) {
-    const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
+    const stripePublicKey = await getStripePublicKey();
     if (stripePublicKey) {
       console.log('[Booking] Loading Stripe with public key');
       stripePromise = loadStripe(stripePublicKey);
     } else {
-      console.warn('[Booking] Stripe public key not found in RUNTIME_CONFIG or environment');
+      console.warn('[Booking] Stripe public key not found - Stripe payment will not work');
     }
     stripePromiseLoaded = true;
   }
@@ -61,11 +93,26 @@ function PaymentForm({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasProcessed, setHasProcessed] = useState(false);
+  const [isStripeReady, setIsStripeReady] = useState(false);
+
+  // Check when Stripe and elements are ready
+  useEffect(() => {
+    if (stripe && elements) {
+      setIsStripeReady(true);
+    }
+  }, [stripe, elements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements || isProcessing || hasProcessed) {
+    if (!stripe || !elements || !isStripeReady || isProcessing || hasProcessed) {
+      console.warn('[PaymentForm] Form submission blocked:', { 
+        hasStripe: !!stripe, 
+        hasElements: !!elements, 
+        isStripeReady,
+        isProcessing,
+        hasProcessed 
+      });
       return;
     }
 
@@ -173,12 +220,17 @@ function PaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      {!isStripeReady && (
+        <div className="text-sm text-muted-foreground">
+          Loading payment processor...
+        </div>
+      )}
       <PaymentElement />
       <Button 
         type="submit"
         className="w-full" 
         size="lg"
-        disabled={!stripe || isProcessing}
+        disabled={!stripe || !isStripeReady || isProcessing}
         data-testid="button-submit-payment"
       >
         {isProcessing ? (
@@ -486,7 +538,7 @@ export default function Booking() {
                     <h3 className="text-xl font-semibold mb-3" data-testid="text-competition-name">
                       {competition.name}
                     </h3>
-                    <p className="text-muted-foreground mb-4">{competition.description}</p>
+                    <p className="text-muted-foreground mb-4">{stripHtmlTags(competition.description)}</p>
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

@@ -20,6 +20,11 @@ export function convertFromOunces(totalOunces: number): WeightDisplay {
 }
 
 export function formatWeight(totalOunces: number | string): string {
+  // If it's already a formatted weight string, return it as is
+  if (typeof totalOunces === 'string' && totalOunces.includes('lb')) {
+    return totalOunces;
+  }
+
   const ounces = typeof totalOunces === 'string' ? parseFloat(totalOunces) : totalOunces;
   
   if (isNaN(ounces) || ounces === 0) {
@@ -31,6 +36,8 @@ export function formatWeight(totalOunces: number | string): string {
 }
 
 export function parseWeight(weightString: string): number {
+  if (!weightString) return 0;
+  
   const match = weightString.match(/(\d+)\s*lb\s*(\d+)\s*oz/i);
   if (match) {
     const pounds = parseInt(match[1], 10);
@@ -38,11 +45,9 @@ export function parseWeight(weightString: string): number {
     return convertToOunces(pounds, ounces);
   }
   
+  // If it's just a number string, treat as total ounces
   const numericValue = parseFloat(weightString);
   if (!isNaN(numericValue)) {
-    if (weightString.includes('.')) {
-      return Math.round(numericValue * 16);
-    }
     return Math.round(numericValue);
   }
   

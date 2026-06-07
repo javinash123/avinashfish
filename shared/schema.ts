@@ -16,7 +16,10 @@ export const users = pgTable("users", {
   favouriteMethod: text("favourite_method"),
   favouriteSpecies: text("favourite_species"),
   location: text("location"),
+  mobileNumber: text("mobile_number"),
+  dateOfBirth: text("date_of_birth"),
   youtubeUrl: text("youtube_url"),
+  youtubeVideoUrl: text("youtube_video_url"),
   facebookUrl: text("facebook_url"),
   twitterUrl: text("twitter_url"),
   instagramUrl: text("instagram_url"),
@@ -29,6 +32,7 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   verificationToken: text("verification_token"),
   verificationTokenExpiry: timestamp("verification_token_expiry"),
+  isAmbassador: boolean("is_ambassador").notNull().default(false),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
@@ -36,6 +40,8 @@ export const insertUserSchema = createInsertSchema(users).omit({
   status: true,
   memberSince: true,
   createdAt: true,
+}).extend({
+  isAmbassador: z.boolean().optional(),
 });
 
 export const registerUserSchema = insertUserSchema.pick({
@@ -46,6 +52,7 @@ export const registerUserSchema = insertUserSchema.pick({
   club: true,
 }).extend({
   username: z.string().min(3).max(20).regex(/^[a-zA-Z0-9_]+$/, "Username can only contain letters, numbers, and underscores"),
+  mobileNumber: z.string().min(1, "Mobile number is required"),
 });
 
 export const loginUserSchema = z.object({
@@ -101,7 +108,7 @@ export const anglerDirectoryQuerySchema = z.object({
 export type AnglerDirectoryQuery = z.infer<typeof anglerDirectoryQuerySchema>;
 
 // Staff roles enum
-export const staffRoles = ['admin', 'manager'] as const;
+export const staffRoles = ['admin', 'manager', 'marshal'] as const;
 export type StaffRole = typeof staffRoles[number];
 
 export const staff = pgTable("staff", {
@@ -119,7 +126,7 @@ export const insertStaffSchema = createInsertSchema(staff).omit({
   id: true,
   createdAt: true,
 }).extend({
-  role: z.enum(['admin', 'manager']),
+  role: z.enum(['admin', 'manager', 'marshal']),
 });
 
 export const updateStaffSchema = createInsertSchema(staff).omit({
@@ -127,7 +134,7 @@ export const updateStaffSchema = createInsertSchema(staff).omit({
   createdAt: true,
   password: true,
 }).extend({
-  role: z.enum(['admin', 'manager']).optional(),
+  role: z.enum(['admin', 'manager', 'marshal']).optional(),
 }).partial();
 
 export const updateStaffPasswordSchema = z.object({
@@ -225,7 +232,9 @@ export const sponsors = pgTable("sponsors", {
   website: text("website"),
   shortDescription: text("short_description").notNull(),
   description: text("description").notNull(),
-  social: json("social").$type<{ facebook?: string; twitter?: string; instagram?: string; }>(),
+  social: json("social").$type<{ facebook?: string; twitter?: string; instagram?: string; tiktok?: string; }>(),
+  featuredAboveFooter: boolean("featured_above_footer").notNull().default(true),
+  featuredOrder: integer("featured_order").notNull().default(0),
   createdAt: timestamp("created_at").notNull().defaultNow(),
 });
 
@@ -299,6 +308,30 @@ export const updateGalleryImageSchema = createInsertSchema(galleryImages).omit({
 export type InsertGalleryImage = z.infer<typeof insertGalleryImageSchema>;
 export type UpdateGalleryImage = z.infer<typeof updateGalleryImageSchema>;
 export type GalleryImage = typeof galleryImages.$inferSelect;
+
+export const youtubeVideos = pgTable("youtube_videos", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  title: text("title").notNull(),
+  videoId: text("video_id").notNull(),
+  description: text("description"),
+  displayOrder: integer("display_order").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertYoutubeVideoSchema = createInsertSchema(youtubeVideos).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateYoutubeVideoSchema = createInsertSchema(youtubeVideos).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertYoutubeVideo = z.infer<typeof insertYoutubeVideoSchema>;
+export type UpdateYoutubeVideo = z.infer<typeof updateYoutubeVideoSchema>;
+export type YoutubeVideo = typeof youtubeVideos.$inferSelect;
 
 export const competitions = pgTable("competitions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -377,6 +410,8 @@ export const competitionParticipants = pgTable("competition_participants", {
   competitionId: varchar("competition_id").notNull(),
   userId: varchar("user_id").notNull(),
   pegNumber: integer("peg_number"),
+  position: integer("position"),
+  paymentStatus: text("payment_status").notNull().default("pending"),
   joinedAt: timestamp("joined_at").notNull().defaultNow(),
 });
 
@@ -392,6 +427,7 @@ export const teams = pgTable("teams", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   competitionId: varchar("competition_id").notNull(),
   name: text("name").notNull(),
+  image: text("image"),
   inviteCode: text("invite_code").notNull(),
   createdBy: varchar("created_by").notNull(),
   paymentStatus: text("payment_status").notNull().default("pending"),
@@ -407,6 +443,8 @@ export const insertTeamSchema = createInsertSchema(teams).omit({
 export const updateTeamSchema = createInsertSchema(teams).omit({
   id: true,
   createdAt: true,
+}).extend({
+  image: z.string().optional().nullable(),
 }).partial();
 
 export type InsertTeam = z.infer<typeof insertTeamSchema>;
@@ -458,6 +496,7 @@ export const leaderboardEntries = pgTable("leaderboard_entries", {
   pegNumber: integer("peg_number").notNull(),
   weight: text("weight").notNull(),
   position: integer("position"),
+  fishImageUrl: text("fish_image_url"),
   createdAt: timestamp("created_at").notNull().defaultNow(),
   updatedAt: timestamp("updated_at").notNull().defaultNow(),
 });
@@ -503,14 +542,45 @@ export type InsertUserGalleryPhoto = z.infer<typeof insertUserGalleryPhotoSchema
 export type UpdateUserGalleryPhoto = z.infer<typeof updateUserGalleryPhotoSchema>;
 export type UserGalleryPhoto = typeof userGalleryPhotos.$inferSelect;
 
+export const testimonials = pgTable("testimonials", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: text("name").notNull(),
+  role: text("role"),
+  content: text("content").notNull(),
+  avatar: text("avatar"),
+  rating: integer("rating").notNull().default(5),
+  isActive: boolean("is_active").notNull().default(true),
+  order: integer("order").notNull().default(0),
+  createdAt: timestamp("created_at").notNull().defaultNow(),
+});
+
+export const insertTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const updateTestimonialSchema = createInsertSchema(testimonials).omit({
+  id: true,
+  createdAt: true,
+}).partial();
+
+export type InsertTestimonial = z.infer<typeof insertTestimonialSchema>;
+export type UpdateTestimonial = z.infer<typeof updateTestimonialSchema>;
+export type Testimonial = typeof testimonials.$inferSelect;
+
 export const updateUserProfileSchema = z.object({
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
   bio: z.string().optional(),
   club: z.string().optional(),
   location: z.string().optional(),
   favouriteMethod: z.string().optional(),
   favouriteSpecies: z.string().optional(),
   avatar: z.string().optional(),
+  mobileNumber: z.string().optional(),
+  dateOfBirth: z.string().optional(),
   youtubeUrl: z.string().optional(),
+  youtubeVideoUrl: z.string().optional(),
   facebookUrl: z.string().optional(),
   twitterUrl: z.string().optional(),
   instagramUrl: z.string().optional(),

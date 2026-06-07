@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,7 +43,15 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2, Bold, Italic, List, ListOrdered, Heading2, Heading3, AlignLeft, Minus } from "lucide-react";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -51,8 +59,65 @@ import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { convertToOunces, formatWeight, convertFromOunces } from "@shared/weight-utils";
 
+interface AdminUser {
+  id: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+  role?: "admin" | "manager" | "marshal";
+}
+
+function HtmlEditorToolbar({ textareaRef, value, onChange }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; onChange: (val: string) => void }) {
+  const insertTag = (openTag: string, closeTag: string) => {
+    const el = textareaRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = value.substring(start, end);
+    const newValue = value.substring(0, start) + openTag + selected + closeTag + value.substring(end);
+    onChange(newValue);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+    }, 0);
+  };
+
+  const tools = [
+    { icon: Bold, label: "Bold", open: "<strong>", close: "</strong>" },
+    { icon: Italic, label: "Italic", open: "<em>", close: "</em>" },
+    { icon: Heading2, label: "Heading 2", open: "<h2>", close: "</h2>" },
+    { icon: Heading3, label: "Heading 3", open: "<h3>", close: "</h3>" },
+    { icon: AlignLeft, label: "Paragraph", open: "<p>", close: "</p>" },
+    { icon: List, label: "Bullet List", open: "<ul>\n  <li>", close: "</li>\n</ul>" },
+    { icon: ListOrdered, label: "Numbered List", open: "<ol>\n  <li>", close: "</li>\n</ol>" },
+    { icon: Minus, label: "Line Break", open: "<br>", close: "" },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-1 p-2 border border-b-0 rounded-t-md bg-muted/50">
+      {tools.map(({ icon: Icon, label, open, close }) => (
+        <Button
+          key={label}
+          type="button"
+          variant="ghost"
+          size="sm"
+          title={label}
+          className="h-7 w-7 p-0"
+          onClick={() => insertTag(open, close)}
+        >
+          <Icon className="h-3.5 w-3.5" />
+        </Button>
+      ))}
+      <span className="text-xs text-muted-foreground self-center ml-2">HTML Editor</span>
+    </div>
+  );
+}
+
 export default function AdminCompetitions() {
   const { toast } = useToast();
+  const createDescRef = useRef<HTMLTextAreaElement>(null);
+  const editDescRef = useRef<HTMLTextAreaElement>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPegAssignmentOpen, setIsPegAssignmentOpen] = useState(false);
@@ -62,6 +127,15 @@ export default function AdminCompetitions() {
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [competitionToDelete, setCompetitionToDelete] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
+
+  // Get admin role for permission checks
+  const { data: admin } = useQuery<AdminUser>({
+    queryKey: ["/api/admin/me"],
+  });
+
+  // Role-based permission helpers
+  const canModify = admin?.role === "admin" || admin?.role === "manager";
+  const canViewPayments = admin?.role === "admin";
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [entryToDelete, setEntryToDelete] = useState<{ id: string; weight: string } | null>(null);
   
@@ -72,6 +146,8 @@ export default function AdminCompetitions() {
   const [editingEntryId, setEditingEntryId] = useState<string | null>(null);
   const [editPounds, setEditPounds] = useState("");
   const [editOunces, setEditOunces] = useState("");
+  const [fishPhotoFile, setFishPhotoFile] = useState<File | null>(null);
+  const [fishPhotoPreview, setFishPhotoPreview] = useState("");
   const [editingPegTeamId, setEditingPegTeamId] = useState<string | null>(null);
   const [editingPegParticipantId, setEditingPegParticipantId] = useState<string | null>(null);
   const [editPegNumber, setEditPegNumber] = useState("");
@@ -89,6 +165,7 @@ export default function AdminCompetitions() {
     club: string;
     avatar: string;
     joinedAt: string;
+    paymentStatus?: string;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition?.id}/participants`],
     enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
@@ -98,7 +175,7 @@ export default function AdminCompetitions() {
   const { data: teams = [] } = useQuery<Array<{
     id: string;
     teamName: string;
-    pegNumber: number;
+    pegNumber: number | null;
     memberCount: number;
     members: Array<{
       userId: string;
@@ -330,7 +407,7 @@ export default function AdminCompetitions() {
   });
 
   const submitWeightMutation = useMutation({
-    mutationFn: async (data: { competitionId: string; userId?: string; teamId?: string; pegNumber: number; weight: string }) => {
+    mutationFn: async (data: { competitionId: string; userId?: string; teamId?: string; pegNumber: number; weight: string; fishPhotoUrl?: string | null }) => {
       console.log("[WEIGHT SUBMISSION] Sending to backend:", data);
       const response = await apiRequest("POST", "/api/admin/leaderboard", data);
       console.log("[WEIGHT SUBMISSION] Backend response:", response);
@@ -381,8 +458,8 @@ export default function AdminCompetitions() {
   });
 
   const updateWeightMutation = useMutation({
-    mutationFn: async ({ entryId, weight }: { entryId: string; weight: string }) => {
-      return await apiRequest("PUT", `/api/admin/leaderboard/${entryId}`, { weight });
+    mutationFn: async ({ entryId, weight, fishPhotoUrl }: { entryId: string; weight: string; fishPhotoUrl?: string | null }) => {
+      return await apiRequest("PUT", `/api/admin/leaderboard/${entryId}`, { weight, fishPhotoUrl });
     },
     onSuccess: () => {
       if (selectedCompetition) {
@@ -501,6 +578,13 @@ export default function AdminCompetitions() {
       if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
         queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+        // Update local state so pegsBooked counter reflects deletion without page refresh
+        if (selectedCompetition.pegsBooked > 0) {
+          setSelectedCompetition({
+            ...selectedCompetition,
+            pegsBooked: selectedCompetition.pegsBooked - 1,
+          });
+        }
       }
       toast({
         title: "Participant removed",
@@ -511,6 +595,26 @@ export default function AdminCompetitions() {
       toast({
         title: "Error",
         description: "Failed to remove participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const regenerateThumbnailsMutation = useMutation({
+    mutationFn: async () => {
+      return await apiRequest("POST", "/api/admin/regenerate-thumbnails");
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      toast({
+        title: "Thumbnails Regenerated",
+        description: `Processed ${data.processed} competitions: ${data.success} succeeded, ${data.skipped} skipped, ${data.errors} errors`,
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to regenerate thumbnails",
         variant: "destructive",
       });
     },
@@ -565,6 +669,21 @@ export default function AdminCompetitions() {
     };
   };
 
+  const uploadFishPhoto = async (file: File): Promise<string> => {
+    const formDataToSend = new FormData();
+    formDataToSend.append("image", file);
+    formDataToSend.append("type", "gallery");
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formDataToSend,
+    });
+    if (!response.ok) {
+      throw new Error("Fish photo upload failed");
+    }
+    const data = await response.json();
+    return data.url;
+  };
+
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
@@ -598,6 +717,8 @@ export default function AdminCompetitions() {
     });
     setImageFile(null);
     setImagePreview("");
+    setFishPhotoFile(null);
+    setFishPhotoPreview("");
   };
 
   const handleCreate = async () => {
@@ -719,6 +840,20 @@ export default function AdminCompetitions() {
     setIsEditOpen(false);
     setSelectedCompetition(null);
     resetForm();
+  };
+
+  const handleFishPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setFishPhotoFile(file);
+    const reader = new FileReader();
+    reader.onloadend = () => setFishPhotoPreview(reader.result as string);
+    reader.readAsDataURL(file);
+  };
+
+  const uploadFishPhotoIfNeeded = async () => {
+    if (!fishPhotoFile) return null;
+    return await uploadFishPhoto(fishPhotoFile);
   };
 
   const handleDelete = (competition: Competition) => {
@@ -856,7 +991,7 @@ export default function AdminCompetitions() {
     });
   };
 
-  const handleSubmitWeight = () => {
+  const handleSubmitWeight = async () => {
     if (!selectedCompetition || !weighInForm.pegNumber || !weighInForm.pounds || !weighInForm.ounces) {
       toast({
         title: "Error",
@@ -893,6 +1028,20 @@ export default function AdminCompetitions() {
     // Convert to total ounces for storage
     const totalOunces = convertToOunces(pounds, ounces);
     
+    // Upload fish photo if present
+    let fishPhotoUrl: string | null = null;
+    if (fishPhotoFile) {
+      try {
+        fishPhotoUrl = await uploadFishPhoto(fishPhotoFile);
+      } catch (err) {
+        toast({
+          title: "Photo upload failed",
+          description: "Weight will be submitted without the photo.",
+          variant: "destructive",
+        });
+      }
+    }
+    
     // Handle team competitions with "Assign to Team" mode (shared peg)
     if (selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "team") {
       // Find team assigned to this peg
@@ -913,6 +1062,7 @@ export default function AdminCompetitions() {
         teamId: team.id,
         pegNumber: pegNumber,
         weight: totalOunces.toString(),
+        fishPhotoUrl,
       });
     } else if (selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "members") {
       // Team competitions with "Assign to Members" mode - find participant and their team
@@ -938,6 +1088,7 @@ export default function AdminCompetitions() {
         userId: participant.userId,
         pegNumber: pegNumber,
         weight: totalOunces.toString(),
+        fishPhotoUrl,
       };
       
       // Include teamId if found to enable team-based grouping in leaderboard
@@ -965,8 +1116,13 @@ export default function AdminCompetitions() {
         userId: participant.userId,
         pegNumber: pegNumber,
         weight: totalOunces.toString(),
+        fishPhotoUrl,
       });
     }
+    
+    // Clear fish photo after submission
+    setFishPhotoFile(null);
+    setFishPhotoPreview("");
   };
 
   const filteredCompetitions = competitions.filter(
@@ -995,10 +1151,29 @@ export default function AdminCompetitions() {
             Create and manage fishing competitions
           </p>
         </div>
-        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
-          <Plus className="h-4 w-4 mr-2" />
-          Create Competition
-        </Button>
+        <div className="flex gap-2">
+          {canModify && (
+            <>
+              <Button 
+                variant="outline" 
+                onClick={() => regenerateThumbnailsMutation.mutate()}
+                disabled={regenerateThumbnailsMutation.isPending}
+                data-testid="button-regenerate-thumbnails"
+              >
+                {regenerateThumbnailsMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                ) : (
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                )}
+                {regenerateThumbnailsMutation.isPending ? "Regenerating..." : "Fix Images"}
+              </Button>
+              <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Competition
+              </Button>
+            </>
+          )}
+        </div>
       </div>
 
       <div className="flex gap-2">
@@ -1045,7 +1220,7 @@ export default function AdminCompetitions() {
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Lake</TableHead>
                 <TableHead>Pegs</TableHead>
-                <TableHead>Entry Fee</TableHead>
+                {canViewPayments && <TableHead>Entry Fee</TableHead>}
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -1092,71 +1267,78 @@ export default function AdminCompetitions() {
                       </Badge>
                     </div>
                   </TableCell>
-                  <TableCell>£{competition.entryFee}</TableCell>
+                  {canViewPayments && <TableCell>£{competition.entryFee}</TableCell>}
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(getCompetitionStatus(competition))}>
                       {getCompetitionStatus(competition)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <div className="flex justify-end gap-2">
-                      {getCompetitionStatus(competition) === "upcoming" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openPegAssignment(competition)}
-                          data-testid={`button-assign-pegs-${competition.id}`}
-                        >
-                          <MapPin className="h-3 w-3 mr-1" />
-                          Pegs
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <Button variant="ghost" size="sm" data-testid={`button-actions-${competition.id}`}>
+                          <MoreVertical className="h-4 w-4" />
                         </Button>
-                      )}
-                      {getCompetitionStatus(competition) === "live" && (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openWeighIn(competition)}
-                          data-testid={`button-weigh-in-${competition.id}`}
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                        <DropdownMenuSeparator />
+                        {getCompetitionStatus(competition) === "upcoming" && (
+                          <DropdownMenuItem 
+                            onClick={() => openPegAssignment(competition)}
+                            data-testid={`action-assign-pegs-${competition.id}`}
+                          >
+                            <MapPin className="h-4 w-4 mr-2" />
+                            Assign Pegs
+                          </DropdownMenuItem>
+                        )}
+                        {getCompetitionStatus(competition) === "live" && (
+                          <DropdownMenuItem 
+                            onClick={() => openWeighIn(competition)}
+                            data-testid={`action-weigh-in-${competition.id}`}
+                          >
+                            <Trophy className="h-4 w-4 mr-2" />
+                            Weigh-in
+                          </DropdownMenuItem>
+                        )}
+                        <DropdownMenuItem 
+                          onClick={() => openAnglersDialog(competition)}
+                          data-testid={`action-anglers-${competition.id}`}
                         >
-                          <Trophy className="h-3 w-3 mr-1" />
-                          Weigh-in
-                        </Button>
-                      )}
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openAnglersDialog(competition)}
-                        data-testid={`button-anglers-${competition.id}`}
-                      >
-                        <Users className="h-3 w-3 mr-1" />
-                        Anglers
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openPaymentsDialog(competition)}
-                        data-testid={`button-payments-${competition.id}`}
-                      >
-                        <CreditCard className="h-3 w-3 mr-1" />
-                        Payments
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openEditDialog(competition)}
-                        data-testid={`button-edit-${competition.id}`}
-                      >
-                        <Pencil className="h-3 w-3" />
-                      </Button>
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDelete(competition)}
-                        data-testid={`button-delete-${competition.id}`}
-                      >
-                        <Trash2 className="h-3 w-3" />
-                      </Button>
-                    </div>
+                          <Users className="h-4 w-4 mr-2" />
+                          Anglers
+                        </DropdownMenuItem>
+                        {canViewPayments && (
+                          <DropdownMenuItem 
+                            onClick={() => openPaymentsDialog(competition)}
+                            data-testid={`action-payments-${competition.id}`}
+                          >
+                            <CreditCard className="h-4 w-4 mr-2" />
+                            Payments
+                          </DropdownMenuItem>
+                        )}
+                        {canModify && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem 
+                              onClick={() => openEditDialog(competition)}
+                              data-testid={`action-edit-${competition.id}`}
+                            >
+                              <Pencil className="h-4 w-4 mr-2" />
+                              Edit
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDelete(competition)}
+                              data-testid={`action-delete-${competition.id}`}
+                              className="text-destructive"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </TableCell>
                 </TableRow>
                 ))
@@ -1369,15 +1551,31 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
+              <HtmlEditorToolbar
+                textareaRef={createDescRef}
+                value={formData.description}
+                onChange={(val) => setFormData({ ...formData, description: val })}
+              />
               <Textarea
+                ref={createDescRef}
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Competition details and rules..."
+                placeholder="Competition details and rules... (HTML supported)"
+                className="rounded-t-none min-h-[150px] font-mono text-sm"
                 data-testid="input-description"
               />
+              {formData.description && (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                  <div
+                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
+                    dangerouslySetInnerHTML={{ __html: formData.description }}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="image">Competition Image</Label>
@@ -1604,14 +1802,30 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
+              <HtmlEditorToolbar
+                textareaRef={editDescRef}
+                value={formData.description}
+                onChange={(val) => setFormData({ ...formData, description: val })}
+              />
               <Textarea
+                ref={editDescRef}
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
+                className="rounded-t-none min-h-[150px] font-mono text-sm"
                 data-testid="input-edit-description"
               />
+              {formData.description && (
+                <div className="mt-1">
+                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
+                  <div
+                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
+                    dangerouslySetInnerHTML={{ __html: formData.description }}
+                  />
+                </div>
+              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-image">Competition Image</Label>
@@ -1677,15 +1891,15 @@ export default function AdminCompetitions() {
             {selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "team" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Current Team Assignments</CardTitle>
+                  <CardTitle>Team Peg Assignments</CardTitle>
                   <CardDescription>
-                    {teams.filter(t => t.pegNumber > 0).length} / {teams.length} teams assigned
+                    {teams.filter(t => t.pegNumber && t.pegNumber > 0).length} / {teams.length} teams assigned
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {teams.filter(t => t.pegNumber > 0).length === 0 ? (
+                  {teams.length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p>No teams assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
+                      <p>No teams registered for this competition yet.</p>
                     </div>
                   ) : (
                     <Table>
@@ -1699,8 +1913,13 @@ export default function AdminCompetitions() {
                       </TableHeader>
                       <TableBody>
                         {teams
-                          .filter(t => t.pegNumber > 0)
-                          .sort((a, b) => a.pegNumber - b.pegNumber)
+                          .sort((a, b) => {
+                            // Sort: assigned pegs first (by number), then unassigned
+                            if (a.pegNumber && b.pegNumber) return a.pegNumber - b.pegNumber;
+                            if (a.pegNumber) return -1;
+                            if (b.pegNumber) return 1;
+                            return 0;
+                          })
                           .map((team) => (
                             <TableRow key={team.id}>
                             <TableCell>
@@ -1774,7 +1993,7 @@ export default function AdminCompetitions() {
                                 </div>
                               ) : (
                                 <Badge variant="outline" className="font-mono">
-                                  {team.pegNumber}
+                                  {team.pegNumber ? team.pegNumber : "Not assigned"}
                                 </Badge>
                               )}
                             </TableCell>
@@ -1791,7 +2010,7 @@ export default function AdminCompetitions() {
                                   variant="ghost"
                                   onClick={() => {
                                     setEditingPegTeamId(team.id);
-                                    setEditPegNumber(team.pegNumber.toString());
+                                    setEditPegNumber(team.pegNumber ? team.pegNumber.toString() : "");
                                   }}
                                   data-testid={`button-edit-team-peg-${team.id}`}
                                 >
@@ -1953,7 +2172,7 @@ export default function AdminCompetitions() {
             </DialogDescription>
           </DialogHeader>
           <div className="py-4 space-y-4">
-            <div className="grid grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
               <div className="grid gap-2">
                 <Label htmlFor="peg-number">Peg Number</Label>
                 <Input
@@ -2002,11 +2221,42 @@ export default function AdminCompetitions() {
                 </Select>
               </div>
               <div className="grid gap-2">
-                <Label>&nbsp;</Label>
-                <Button className="w-full" onClick={handleSubmitWeight} data-testid="button-submit-weight">
-                  Submit Weight
-                </Button>
+                <Label htmlFor="fish-photo">Fish Photo</Label>
+                <Input
+                  id="fish-photo"
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0] || null;
+                    setFishPhotoFile(file);
+                    if (file) {
+                      const reader = new FileReader();
+                      reader.onloadend = () => setFishPhotoPreview(reader.result as string);
+                      reader.readAsDataURL(file);
+                    } else {
+                      setFishPhotoPreview("");
+                    }
+                  }}
+                  data-testid="input-fish-photo"
+                />
               </div>
+            </div>
+            {fishPhotoPreview && (
+              <div className="relative w-32 h-32">
+                <img src={fishPhotoPreview} alt="Fish preview" className="w-full h-full object-cover rounded-md" />
+                <button
+                  type="button"
+                  onClick={() => { setFishPhotoFile(null); setFishPhotoPreview(""); }}
+                  className="absolute top-1 right-1 bg-destructive text-white rounded-full w-6 h-6 flex items-center justify-center text-xs"
+                >
+                  ×
+                </button>
+              </div>
+            )}
+            <div className="flex justify-end">
+              <Button className="w-full sm:w-auto" onClick={handleSubmitWeight} data-testid="button-submit-weight">
+                Submit Weight
+              </Button>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Card>
@@ -2028,7 +2278,7 @@ export default function AdminCompetitions() {
                         id="view-peg"
                         className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring [&>option]:bg-background [&>option]:text-foreground"
                         value={selectedPegForView || ""}
-                        onChange={(e) => setSelectedPegForView(e.target.value ? parseInt(e.target.value) : null)}
+                        onChange={(e) => setSelectedPegForView(e.target.value ? parseInt(e.target.value) : 0)}
                         data-testid="select-view-peg"
                       >
                         <option value="">-- Select Peg --</option>
@@ -2143,6 +2393,11 @@ export default function AdminCompetitions() {
                                   ) : (
                                     <div className="flex items-center gap-2">
                                       <span className="font-semibold">{formatWeight(entry.weight)}</span>
+                                      {(entry as any).fishImageUrl && (
+                                        <a href={(entry as any).fishImageUrl} target="_blank" rel="noreferrer" className="text-xs text-primary underline">
+                                          Photo
+                                        </a>
+                                      )}
                                       <Button
                                         size="sm"
                                         variant="ghost"
@@ -2290,6 +2545,7 @@ export default function AdminCompetitions() {
                         <TableHead>Club</TableHead>
                         <TableHead>Peg</TableHead>
                         <TableHead>Joined</TableHead>
+                        <TableHead>Payment</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
                       </TableRow>
                     </TableHeader>
@@ -2310,9 +2566,17 @@ export default function AdminCompetitions() {
                             )}
                           </TableCell>
                           <TableCell>
-                            {new Date(participant.joinedAt).toLocaleDateString('en-GB', { 
-                              timeZone: 'Europe/London' 
+                            {new Date(participant.joinedAt).toLocaleDateString('en-GB', {
+                              timeZone: 'Europe/London'
                             })}
+                          </TableCell>
+                          <TableCell>
+                            <Badge
+                              variant={participant.paymentStatus === "succeeded" ? "default" : "secondary"}
+                              data-testid={`badge-payment-status-${participant.id}`}
+                            >
+                              {participant.paymentStatus === "succeeded" ? "Paid" : (participant.paymentStatus || "Not Paid")}
+                            </Badge>
                           </TableCell>
                           <TableCell className="text-right">
                             <Button

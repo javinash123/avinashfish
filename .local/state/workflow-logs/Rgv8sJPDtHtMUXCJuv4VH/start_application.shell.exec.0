@@ -1,0 +1,29 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: NOT SET
+   Stripe Secret Key: NOT SET
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+8:06:00 AM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+8:06:14 AM [express] GET /api/user/me 401 in 4ms :: {"message":"Not authenticated"}
+8:06:14 AM [express] GET /api/site-settings 200 in 1ms :: {"id":"18abbd5d-d1aa-4bf8-bfcc-c8cf637f78d…
+8:06:14 AM [express] GET /api/ambassadors 200 in 2ms :: []
+8:06:14 AM [express] GET /api/slider-images 200 in 2ms :: [{"id":"3eab677c-b9c6-433d-a32f-2953b4030e…
+8:06:14 AM [express] GET /api/news/featured 200 in 1ms :: []
+8:06:14 AM [express] GET /api/competitions 200 in 4ms :: [{"id":"b346cc6d-9e77-4a92-94b2-4c2b51fe256…
+8:06:14 AM [express] GET /api/gallery/featured 200 in 1ms :: []
+8:06:14 AM [express] GET /api/sponsors 200 in 3ms :: []
+8:06:14 AM [express] GET /api/testimonials 200 in 3ms :: []
+8:06:14 AM [express] GET /api/youtube-videos 200 in 1ms :: []
+8:06:14 AM [express] GET /api/ambassadors 200 in 1ms :: []
+8:06:14 AM [express] GET /api/competitions/b346cc6d-9e77-4a92-94b2-4c2b51fe256f/leaderboard 200 in 1…
+8:06:15 AM [express] GET /api/ambassadors 200 in 0ms :: []

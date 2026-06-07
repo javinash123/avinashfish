@@ -12,7 +12,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { ExternalLink, Star, Award, Handshake, Mail } from "lucide-react";
-import { SiInstagram, SiFacebook, SiX } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiTiktok } from "react-icons/si";
 import type { Sponsor } from "@shared/schema";
 
 export default function Sponsors() {
@@ -59,7 +59,7 @@ export default function Sponsors() {
               Our Sponsors & Partners
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl">
-              We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+              We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
         </div>
@@ -100,7 +100,7 @@ export default function Sponsors() {
               Our Sponsors & Partners
             </h1>
             <p className="text-xl text-muted-foreground max-w-3xl">
-              We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+              We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
             </p>
           </div>
         </div>
@@ -250,7 +250,7 @@ export default function Sponsors() {
             Our Sponsors & Partners
           </h1>
           <p className="text-xl text-muted-foreground max-w-3xl">
-            We're proud to work with the best brands and organizations in UK fishing. Their support makes Peg Slam competitions possible.
+            We're proud to work with the best brands and organisations in UK fishing. Their support makes Peg Slam competitions possible.
           </p>
         </div>
       </div>
@@ -304,7 +304,7 @@ export default function Sponsors() {
                         </Button>
                         {sponsor.website && (
                           <Button asChild data-testid={`button-sponsor-website-${sponsor.id}`}>
-                            <a href={sponsor.website} target="_blank" rel="noopener noreferrer">
+                            <a href={sponsor.website.startsWith('http') ? sponsor.website : `https://${sponsor.website}`} target="_blank" rel="noopener noreferrer">
                               Visit Website
                               <ExternalLink className="ml-2 h-4 w-4" />
                             </a>
@@ -319,10 +319,10 @@ export default function Sponsors() {
                                 </a>
                               </Button>
                             )}
-                            {sponsor.social.twitter && (
+                            {sponsor.social.tiktok && (
                               <Button variant="outline" size="icon" asChild>
-                                <a href={sponsor.social.twitter} target="_blank" rel="noopener noreferrer" data-testid={`button-sponsor-twitter-${sponsor.id}`}>
-                                  <SiX className="h-4 w-4" />
+                                <a href={sponsor.social.tiktok} target="_blank" rel="noopener noreferrer" data-testid={`button-sponsor-tiktok-${sponsor.id}`}>
+                                  <SiTiktok className="h-4 w-4" />
                                 </a>
                               </Button>
                             )}

@@ -10,7 +10,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ExternalLink, Star, Award, Handshake } from "lucide-react";
-import { SiInstagram, SiFacebook, SiX } from "react-icons/si";
+import { SiInstagram, SiFacebook, SiTiktok } from "react-icons/si";
 import type { Sponsor } from "@shared/schema";
 
 export function SponsorLogoSlider() {
@@ -133,7 +133,7 @@ export function SponsorLogoSlider() {
               <div className="flex flex-wrap items-center gap-3 mt-6">
                 {selectedSponsor.website && (
                   <Button asChild data-testid="button-sponsor-dialog-website">
-                    <a href={selectedSponsor.website} target="_blank" rel="noopener noreferrer">
+                    <a href={selectedSponsor.website.startsWith('http') ? selectedSponsor.website : `https://${selectedSponsor.website}`} target="_blank" rel="noopener noreferrer">
                       Visit Website
                       <ExternalLink className="ml-2 h-4 w-4" />
                     </a>
@@ -149,10 +149,10 @@ export function SponsorLogoSlider() {
                         </a>
                       </Button>
                     )}
-                    {selectedSponsor.social.twitter && (
-                      <Button variant="outline" size="icon" asChild data-testid="button-sponsor-dialog-twitter">
-                        <a href={selectedSponsor.social.twitter} target="_blank" rel="noopener noreferrer">
-                          <SiX className="h-4 w-4" />
+                    {selectedSponsor.social.tiktok && (
+                      <Button variant="outline" size="icon" asChild data-testid="button-sponsor-dialog-tiktok">
+                        <a href={selectedSponsor.social.tiktok} target="_blank" rel="noopener noreferrer">
+                          <SiTiktok className="h-4 w-4" />
                         </a>
                       </Button>
                     )}

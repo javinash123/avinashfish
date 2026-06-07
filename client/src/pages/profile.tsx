@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { 
   User as UserIcon, Trophy, Calendar, MapPin, Fish, TrendingUp, 
-  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera, Share2
+  Settings, Edit, Award, Target, Loader2, Upload, Trash2, Image as ImageIcon, Camera, Share2, Play
 } from "lucide-react";
 import { SiFacebook, SiX, SiInstagram, SiYoutube, SiTiktok } from "react-icons/si";
 import { FaWhatsapp } from "react-icons/fa";
@@ -27,8 +27,28 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import type { User, Competition, CompetitionParticipant, UserGalleryPhoto } from "@shared/schema";
 import { EditProfileDialog } from "@/components/edit-profile-dialog";
+import { Skeleton } from "@/components/ui/skeleton";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
+function renderBioHtml(bio: string) {
+  return { __html: bio };
+}
+
+function extractYouTubeVideoId(url: string): string | null {
+  if (!url) return null;
+  
+  const patterns = [
+    /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/|youtube\.com\/v\/)([a-zA-Z0-9_-]{11})/,
+    /youtube\.com\/shorts\/([a-zA-Z0-9_-]{11})/,
+  ];
+  
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) return match[1];
+  }
+  
+  return null;
+}
 
 export default function Profile() {
   const [, params] = useRoute("/profile/:username");
@@ -62,6 +82,17 @@ export default function Profile() {
     queryKey: isOwnProfile ? ["/api/user/participations"] : [`/api/users/${viewingUsername}/participations`],
     enabled: isOwnProfile ? isAuthenticated : !!viewingUsername,
   });
+
+  const competitionHistory = participations.map(p => ({
+    id: p.competition.id,
+    name: p.competition.name,
+    date: p.competition.date,
+    venue: p.competition.venue,
+    pegNumber: p.pegNumber,
+    weight: "",
+    position: p.position,
+    status: getCompetitionStatus(p.competition)
+  }));
 
   const { data: stats } = useQuery<{
     wins: number;
@@ -235,6 +266,15 @@ export default function Profile() {
   const handleAddPhoto = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    if (!isOwnProfile) {
+      toast({
+        title: "Error",
+        description: "You can only upload photos to your own gallery",
+        variant: "destructive",
+      });
+      return;
+    }
+
     if (!selectedFile) {
       toast({
         title: "Error",
@@ -425,7 +465,7 @@ export default function Profile() {
               </div>
 
               <div className="flex-1">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-4">
+                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-2">
                   <div>
                     <h1 className="text-3xl font-bold mb-1" data-testid="text-profile-name">
                       {displayUser.firstName} {displayUser.lastName}
@@ -444,18 +484,69 @@ export default function Profile() {
                   )}
                 </div>
 
-                {displayUser.bio && <p className="text-muted-foreground mb-4">{displayUser.bio}</p>}
+                {(displayUser.youtubeUrl || displayUser.facebookUrl || displayUser.twitterUrl || displayUser.instagramUrl || displayUser.tiktokUrl) && (
+                  <div className="flex items-center gap-3 mb-4">
+                    <div className="flex gap-2">
+                      {displayUser.youtubeUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.youtubeUrl && window.open(displayUser.youtubeUrl, '_blank')}
+                          data-testid="button-youtube"
+                        >
+                          <SiYoutube className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.facebookUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.facebookUrl && window.open(displayUser.facebookUrl, '_blank')}
+                          data-testid="button-facebook"
+                        >
+                          <SiFacebook className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.twitterUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.twitterUrl && window.open(displayUser.twitterUrl, '_blank')}
+                          data-testid="button-twitter"
+                        >
+                          <SiX className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.instagramUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
+                          data-testid="button-instagram"
+                          className="text-primary border-primary/20 hover:border-primary"
+                        >
+                          <SiInstagram className="h-4 w-4" />
+                        </Button>
+                      )}
+                      {displayUser.tiktokUrl && (
+                        <Button
+                          variant="outline"
+                          size="icon"
+                          onClick={() => displayUser.tiktokUrl && window.open(displayUser.tiktokUrl, '_blank')}
+                          data-testid="button-tiktok"
+                        >
+                          <SiTiktok className="h-4 w-4" />
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {displayUser.bio && (
+                  <div className="prose prose-sm max-w-none text-muted-foreground mb-4" dangerouslySetInnerHTML={renderBioHtml(displayUser.bio)} data-testid="text-bio" />
+                )}
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
-                  {displayUser.club && (
-                    <div className="flex items-start gap-2 text-sm">
-                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Club</p>
-                        <span data-testid="text-club">{displayUser.club}</span>
-                      </div>
-                    </div>
-                  )}
                   {displayUser.location && (
                     <div className="flex items-start gap-2 text-sm">
                       <MapPin className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
@@ -483,72 +574,30 @@ export default function Profile() {
                       </div>
                     </div>
                   )}
+                  {isOwnProfile && displayUser.mobileNumber && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Mobile Number</p>
+                        <span data-testid="text-mobile">{displayUser.mobileNumber}</span>
+                      </div>
+                    </div>
+                  )}
+                  {isOwnProfile && displayUser.dateOfBirth && (
+                    <div className="flex items-start gap-2 text-sm">
+                      <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
+                      <div className="flex-1">
+                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Date of Birth</p>
+                        <span data-testid="text-dob">{new Date(displayUser.dateOfBirth).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' })}</span>
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
                   <Calendar className="h-4 w-4" />
                   <span>Member since {new Date(displayUser.createdAt).toLocaleDateString('en-GB', { month: 'long', year: 'numeric', timeZone: 'Europe/London' })}</span>
                 </div>
-
-                {(displayUser.youtubeUrl || displayUser.facebookUrl || displayUser.twitterUrl || displayUser.instagramUrl || displayUser.tiktokUrl) && (
-                  <div className="border-t pt-4 mb-4">
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm font-semibold">Social Media:</span>
-                      <div className="flex gap-2">
-                        {displayUser.youtubeUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.youtubeUrl && window.open(displayUser.youtubeUrl, '_blank')}
-                            data-testid="button-youtube"
-                          >
-                            <SiYoutube className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.facebookUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.facebookUrl && window.open(displayUser.facebookUrl, '_blank')}
-                            data-testid="button-facebook"
-                          >
-                            <SiFacebook className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.twitterUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.twitterUrl && window.open(displayUser.twitterUrl, '_blank')}
-                            data-testid="button-twitter"
-                          >
-                            <SiX className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.instagramUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.instagramUrl && window.open(displayUser.instagramUrl, '_blank')}
-                            data-testid="button-instagram"
-                          >
-                            <SiInstagram className="h-4 w-4" />
-                          </Button>
-                        )}
-                        {displayUser.tiktokUrl && (
-                          <Button
-                            variant="outline"
-                            size="icon"
-                            onClick={() => displayUser.tiktokUrl && window.open(displayUser.tiktokUrl, '_blank')}
-                            data-testid="button-tiktok"
-                          >
-                            <SiTiktok className="h-4 w-4" />
-                          </Button>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                )}
 
                 <div className="border-t pt-4">
                   <div className="flex items-center gap-2">
@@ -631,10 +680,10 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold text-primary" data-testid="text-stat-wins">
-                {stats ? stats.wins : 0}
+                {stats?.wins || 0}
               </div>
               <p className="text-xs text-muted-foreground">
-                {stats ? stats.podiumFinishes : 0} podium finishes
+                {stats?.podiumFinishes || 0} podium finishes
               </p>
             </CardContent>
           </Card>
@@ -646,7 +695,7 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-best-catch">
-                {stats ? formatWeight(stats.bestCatch) : "-"}
+                {stats?.bestCatch || "0 lb 0 oz"}
               </div>
             </CardContent>
           </Card>
@@ -658,14 +707,62 @@ export default function Profile() {
             </CardHeader>
             <CardContent>
               <div className="text-2xl font-bold" data-testid="text-stat-average">
-                {stats ? formatWeight(stats.averageWeight) : "-"}
+                {stats?.averageWeight || "0 lb 0 oz"}
               </div>
               <p className="text-xs text-muted-foreground">
-                Total: {stats ? formatWeight(stats.totalWeight) : "-"}
+                Total: {stats?.totalWeight || "0 lb 0 oz"}
               </p>
             </CardContent>
           </Card>
         </div>
+
+        {displayUser.youtubeVideoUrl && extractYouTubeVideoId(displayUser.youtubeVideoUrl) && (
+          <Card className="mb-8" data-testid="card-youtube-video">
+            <CardHeader>
+              <div className="flex items-center gap-2">
+                <SiYoutube className="h-5 w-5 text-red-600" />
+                <CardTitle>Featured Video</CardTitle>
+              </div>
+              <CardDescription>
+                {isOwnProfile ? "Your featured YouTube video" : `${displayUser.firstName}'s featured video`}
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="relative w-full overflow-hidden rounded-lg" style={{ paddingBottom: '56.25%' }}>
+                <iframe
+                  className="absolute top-0 left-0 w-full h-full"
+                  src={`https://www.youtube.com/embed/${extractYouTubeVideoId(displayUser.youtubeVideoUrl)}`}
+                  title="YouTube video"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowFullScreen
+                  data-testid="iframe-youtube"
+                />
+              </div>
+              <div className="mt-4 flex items-center justify-between">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => window.open(displayUser.youtubeVideoUrl!, '_blank')}
+                  data-testid="button-watch-youtube"
+                >
+                  <Play className="h-4 w-4 mr-2" />
+                  Watch on YouTube
+                </Button>
+                {isOwnProfile && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setEditProfileOpen(true)}
+                    data-testid="button-change-video"
+                  >
+                    <Edit className="h-4 w-4 mr-2" />
+                    Change Video
+                  </Button>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        )}
 
         <Tabs defaultValue="gallery" className="space-y-4">
           <TabsList data-testid="tabs-profile">
@@ -686,72 +783,48 @@ export default function Profile() {
           <TabsContent value="history" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Competition History</CardTitle>
+                <CardTitle className="text-xl flex items-center gap-2">
+                  <Trophy className="h-5 w-5 text-primary" />
+                  Competition History
+                </CardTitle>
                 <CardDescription>
-                  Completed competitions
+                  Past and upcoming competitions
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {participationsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  <div className="space-y-4">
+                    {[1, 2, 3].map((i) => (
+                      <Skeleton key={i} className="h-20 w-full" />
+                    ))}
                   </div>
-                ) : participations.filter(p => getCompetitionStatus(p.competition) === "completed").length === 0 ? (
-                  <div className="text-center py-8">
-                    <Trophy className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">
-                      No competition history yet
-                    </p>
-                    {isOwnProfile && (
-                      <Link href="/competitions">
-                        <Button data-testid="button-browse-competitions">
-                          Browse Competitions
-                        </Button>
+                ) : participations.length > 0 ? (
+                  <div className="space-y-4">
+                    {participations.map((p) => (
+                      <Link key={p.id} href={`/competition/${p.competitionId}`}>
+                        <div className="flex items-center justify-between p-4 border rounded-lg hover-elevate cursor-pointer">
+                          <div className="flex items-center gap-4">
+                            <div className="h-12 w-12 rounded bg-primary/10 flex items-center justify-center text-primary font-bold">
+                              {p.competition.name[0]}
+                            </div>
+                            <div>
+                              <h4 className="font-semibold">{p.competition.name}</h4>
+                              <p className="text-sm text-muted-foreground">{p.competition.date}</p>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">Peg {p.pegNumber}</Badge>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {getCompetitionStatus(p.competition)}
+                            </p>
+                          </div>
+                        </div>
                       </Link>
-                    )}
+                    ))}
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {participations.filter(p => getCompetitionStatus(p.competition) === "completed").map((participation) => (
-                      <Card key={participation.id} className="hover-elevate" data-testid={`card-participation-${participation.id}`}>
-                        <CardContent className="p-4">
-                          <div className="flex items-center justify-between gap-4">
-                            <div className="flex-1">
-                              <div className="flex items-center gap-2 mb-1">
-                                <h3 className="font-semibold">{participation.competition.name}</h3>
-                                <Badge variant="secondary">
-                                  {getCompetitionStatus(participation.competition)}
-                                </Badge>
-                              </div>
-                              <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-1">
-                                  <Calendar className="h-3 w-3" />
-                                  <span>{new Date(participation.competition.date).toLocaleDateString('en-GB', {
-                                    day: 'numeric',
-                                    month: 'short',
-                                    year: 'numeric',
-                                    timeZone: 'Europe/London'
-                                  })}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <MapPin className="h-3 w-3" />
-                                  <span>{participation.competition.venue}</span>
-                                </div>
-                                <div className="flex items-center gap-1">
-                                  <Target className="h-3 w-3" />
-                                  <span>Peg {participation.pegNumber}</span>
-                                </div>
-                              </div>
-                            </div>
-                            <Link href={`/competition/${participation.competition.id}`}>
-                              <Button variant="outline" size="sm">
-                                View Details
-                              </Button>
-                            </Link>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    ))}
+                  <div className="text-center py-8 text-muted-foreground">
+                    No competitions joined yet.
                   </div>
                 )}
               </CardContent>

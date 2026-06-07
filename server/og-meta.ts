@@ -34,11 +34,13 @@ export function generateOGMetaTags(meta: OGMetaData): string {
   const type = escapeHtml(meta.type || "article");
   const url = escapeHtml(meta.url);
   const image = escapeHtml(meta.image || "");
+  const imageAlt = escapeHtml(meta.title || DEFAULT_META.title);
+  const truncatedDescription = description.length > 180 ? `${description.slice(0, 177)}...` : description;
 
   let tags = `
     <!-- Open Graph Meta Tags -->
     <meta property="og:title" content="${title}" />
-    <meta property="og:description" content="${description}" />
+    <meta property="og:description" content="${truncatedDescription}" />
     <meta property="og:type" content="${type}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:site_name" content="${siteName}" />`;
@@ -47,14 +49,15 @@ export function generateOGMetaTags(meta: OGMetaData): string {
     tags += `
     <meta property="og:image" content="${image}" />
     <meta property="og:image:width" content="1200" />
-    <meta property="og:image:height" content="630" />`;
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="${imageAlt}" />`;
   }
 
   tags += `
     <!-- Twitter Card Meta Tags -->
     <meta name="twitter:card" content="${image ? "summary_large_image" : "summary"}" />
     <meta name="twitter:title" content="${title}" />
-    <meta name="twitter:description" content="${description}" />`;
+    <meta name="twitter:description" content="${truncatedDescription}" />`;
 
   if (image) {
     tags += `

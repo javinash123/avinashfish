@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useRef } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { Loader2 } from "lucide-react";
+import { Bold, Italic, Link2, Loader2 } from "lucide-react";
 import type { User } from "@shared/schema";
 
 interface EditProfileDialogProps {
@@ -21,24 +21,42 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
   const [username, setUsername] = useState(user.username || "");
   const [email, setEmail] = useState(user.email || "");
   const [bio, setBio] = useState(user.bio || "");
-  const [club, setClub] = useState(user.club || "");
   const [location, setLocation] = useState(user.location || "");
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || "");
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || "");
+  const [mobileNumber, setMobileNumber] = useState(user.mobileNumber || "");
+  const [dateOfBirth, setDateOfBirth] = useState(user.dateOfBirth || "");
   const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || "");
+  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || "");
   const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || "");
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || "");
   const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || "");
   const [tiktokUrl, setTiktokUrl] = useState(user.tiktokUrl || "");
+  const bioRef = useRef<HTMLTextAreaElement>(null);
+  const insertBioTag = (openTag: string, closeTag: string) => {
+    const el = bioRef.current;
+    if (!el) return;
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    const selected = bio.substring(start, end);
+    const next = bio.slice(0, start) + openTag + selected + closeTag + bio.slice(end);
+    setBio(next);
+    setTimeout(() => {
+      el.focus();
+      el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
+    }, 0);
+  };
 
   const updateProfileMutation = useMutation({
     mutationFn: async (data: {
       bio?: string;
-      club?: string;
       location?: string;
       favouriteMethod?: string;
       favouriteSpecies?: string;
+      mobileNumber?: string;
+      dateOfBirth?: string;
       youtubeUrl?: string;
+      youtubeVideoUrl?: string;
       facebookUrl?: string;
       twitterUrl?: string;
       instagramUrl?: string;
@@ -104,11 +122,13 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       // Update other profile fields
       updateProfileMutation.mutate({
         bio,
-        club,
         location,
         favouriteMethod,
         favouriteSpecies,
+        mobileNumber,
+        dateOfBirth,
         youtubeUrl,
+        youtubeVideoUrl,
         facebookUrl,
         twitterUrl,
         instagramUrl,
@@ -159,23 +179,25 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
           </div>
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
+            <div className="flex gap-1 rounded-md border border-b-0 bg-muted/50 p-2">
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => insertBioTag("<strong>", "</strong>")} data-testid="button-bio-bold">
+                <Bold className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => insertBioTag("<em>", "</em>")} data-testid="button-bio-italic">
+                <Italic className="h-3.5 w-3.5" />
+              </Button>
+              <Button type="button" variant="ghost" size="icon" className="h-7 w-7" onClick={() => insertBioTag('<a href="">', "</a>")} data-testid="button-bio-link">
+                <Link2 className="h-3.5 w-3.5" />
+              </Button>
+            </div>
             <Textarea
               id="bio"
               placeholder="Tell us about yourself..."
               value={bio}
               onChange={(e) => setBio(e.target.value)}
               rows={4}
+              ref={bioRef}
               data-testid="input-bio"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="club">Club</Label>
-            <Input
-              id="club"
-              placeholder="Your fishing club"
-              value={club}
-              onChange={(e) => setClub(e.target.value)}
-              data-testid="input-club"
             />
           </div>
           <div className="space-y-2">
@@ -209,18 +231,52 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
             />
           </div>
           <div className="space-y-2">
+            <Label htmlFor="mobileNumber">Mobile Number <span className="text-destructive">*</span></Label>
+            <Input
+              id="mobileNumber"
+              type="tel"
+              placeholder="e.g., 07123456789"
+              value={mobileNumber}
+              onChange={(e) => setMobileNumber(e.target.value)}
+              required
+              data-testid="input-mobile"
+            />
+            <p className="text-xs text-muted-foreground">This is kept private and only visible to admins.</p>
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+            <Input
+              id="dateOfBirth"
+              type="date"
+              value={dateOfBirth}
+              onChange={(e) => setDateOfBirth(e.target.value)}
+              data-testid="input-dob"
+            />
+          </div>
+          <div className="space-y-2">
             <Label className="text-lg font-semibold">Social Media</Label>
             <p className="text-sm text-muted-foreground">Add your social media profiles (optional)</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="youtubeUrl">YouTube URL</Label>
+            <Label htmlFor="youtubeUrl">YouTube Channel URL</Label>
             <Input
               id="youtubeUrl"
-              placeholder="https://youtube.com/@username"
+              placeholder="https://youtube.com/@yourchannel"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               data-testid="input-youtube"
             />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="youtubeVideoUrl">Featured YouTube Video</Label>
+            <Input
+              id="youtubeVideoUrl"
+              placeholder="https://youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID"
+              value={youtubeVideoUrl}
+              onChange={(e) => setYoutubeVideoUrl(e.target.value)}
+              data-testid="input-youtube-video"
+            />
+            <p className="text-xs text-muted-foreground">Paste a YouTube video link to showcase on your profile</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="facebookUrl">Facebook URL</Label>

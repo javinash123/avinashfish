@@ -54,7 +54,7 @@ interface StaffMember {
   email: string;
   firstName: string;
   lastName: string;
-  role: "admin" | "manager";
+  role: "admin" | "manager" | "marshal";
   isActive: boolean;
   createdAt: string;
 }
@@ -64,7 +64,7 @@ const staffFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
   password: z.string().min(6, "Password must be at least 6 characters"),
-  role: z.enum(["admin", "manager"]),
+  role: z.enum(["admin", "manager", "marshal"]),
   isActive: z.boolean().default(true),
 });
 
@@ -72,7 +72,7 @@ const updateStaffFormSchema = z.object({
   email: z.string().email("Invalid email address"),
   firstName: z.string().min(1, "First name is required"),
   lastName: z.string().min(1, "Last name is required"),
-  role: z.enum(["admin", "manager"]),
+  role: z.enum(["admin", "manager", "marshal"]),
   isActive: z.boolean(),
 });
 
@@ -82,7 +82,7 @@ type UpdateStaffFormData = z.infer<typeof updateStaffFormSchema>;
 export default function AdminStaff() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
-  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "manager">("all");
+  const [roleFilter, setRoleFilter] = useState<"all" | "admin" | "manager" | "marshal">("all");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [staffToEdit, setStaffToEdit] = useState<StaffMember | null>(null);
@@ -263,9 +263,11 @@ export default function AdminStaff() {
       <Alert>
         <AlertCircle className="h-4 w-4" />
         <AlertDescription>
-          <strong>Admin</strong> - Full access to all features including staff management.
+          <strong>Admin</strong> - Full access to all features including staff management and payments.
           <br />
-          <strong>Manager</strong> - Access to competitions, anglers, content, but cannot manage staff.
+          <strong>Manager</strong> - Access to competitions, anglers, content, but cannot manage staff or view payments.
+          <br />
+          <strong>Marshal</strong> - View-only access to competitions (cannot add, edit, delete, or view payments).
         </AlertDescription>
       </Alert>
 
@@ -296,6 +298,7 @@ export default function AdminStaff() {
                 <SelectItem value="all">All Roles</SelectItem>
                 <SelectItem value="admin">Admin</SelectItem>
                 <SelectItem value="manager">Manager</SelectItem>
+                <SelectItem value="marshal">Marshal</SelectItem>
               </SelectContent>
             </Select>
           </div>
@@ -457,6 +460,7 @@ export default function AdminStaff() {
                       <SelectContent>
                         <SelectItem value="admin">Admin - Full access</SelectItem>
                         <SelectItem value="manager">Manager - Limited access</SelectItem>
+                        <SelectItem value="marshal">Marshal - View competitions only</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />
@@ -542,6 +546,7 @@ export default function AdminStaff() {
                       <SelectContent>
                         <SelectItem value="admin">Admin - Full access</SelectItem>
                         <SelectItem value="manager">Manager - Limited access</SelectItem>
+                        <SelectItem value="marshal">Marshal - View competitions only</SelectItem>
                       </SelectContent>
                     </Select>
                     <FormMessage />

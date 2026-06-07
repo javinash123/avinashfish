@@ -46,6 +46,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
 import { Plus, Pencil, Trash2, ExternalLink, Image as ImageIcon, Upload } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 
@@ -66,6 +67,8 @@ export default function AdminSponsors() {
     website: "",
     shortDescription: "",
     description: "",
+    featuredAboveFooter: true,
+    featuredOrder: 0,
     facebook: "",
     twitter: "",
     instagram: "",
@@ -173,6 +176,8 @@ export default function AdminSponsors() {
         website: formData.website || undefined,
         shortDescription: formData.shortDescription,
         description: formData.description,
+        featuredAboveFooter: formData.featuredAboveFooter,
+        featuredOrder: formData.featuredOrder,
         social: {
           facebook: formData.facebook || undefined,
           twitter: formData.twitter || undefined,
@@ -212,6 +217,8 @@ export default function AdminSponsors() {
         website: formData.website || undefined,
         shortDescription: formData.shortDescription,
         description: formData.description,
+        featuredAboveFooter: formData.featuredAboveFooter,
+        featuredOrder: formData.featuredOrder,
         social: {
           facebook: formData.facebook || undefined,
           twitter: formData.twitter || undefined,
@@ -246,6 +253,8 @@ export default function AdminSponsors() {
       website: sponsor.website || "",
       shortDescription: sponsor.shortDescription || "",
       description: sponsor.description,
+      featuredAboveFooter: sponsor.featuredAboveFooter ?? true,
+      featuredOrder: sponsor.featuredOrder ?? 0,
       facebook: sponsor.social?.facebook || "",
       twitter: sponsor.social?.twitter || "",
       instagram: sponsor.social?.instagram || "",
@@ -261,6 +270,8 @@ export default function AdminSponsors() {
       website: "",
       shortDescription: "",
       description: "",
+      featuredAboveFooter: true,
+      featuredOrder: 0,
       facebook: "",
       twitter: "",
       instagram: "",
@@ -339,10 +350,21 @@ export default function AdminSponsors() {
                   </div>
                   <div>
                     <CardTitle className="text-lg">{sponsor.name}</CardTitle>
-                    <Badge variant={getTierBadgeVariant(sponsor.tier)} className="mt-1">
-                      <div className={`w-2 h-2 rounded-full ${getTierColor(sponsor.tier)} mr-1`} />
-                      {sponsor.tier}
-                    </Badge>
+                    <div className="flex items-center gap-2 mt-1">
+                      <Badge variant={getTierBadgeVariant(sponsor.tier)}>
+                        <div className={`w-2 h-2 rounded-full ${getTierColor(sponsor.tier)} mr-1`} />
+                        {sponsor.tier}
+                      </Badge>
+                      {sponsor.featuredAboveFooter !== false ? (
+                        <Badge variant="outline" className="text-[10px] uppercase border-primary/20 bg-primary/5 text-primary">
+                          Featured in Footer
+                        </Badge>
+                      ) : (
+                        <Badge variant="outline" className="text-[10px] uppercase text-muted-foreground">
+                          Not Featured
+                        </Badge>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
@@ -481,6 +503,29 @@ export default function AdminSponsors() {
                 data-testid="input-logo"
               />
             </div>
+            <div className="flex items-center space-x-2 py-2">
+              <Switch
+                id="featuredAboveFooter"
+                checked={formData.featuredAboveFooter}
+                onCheckedChange={(checked) => setFormData({ ...formData, featuredAboveFooter: checked })}
+              />
+              <Label htmlFor="featuredAboveFooter" className="cursor-pointer">
+                Feature above footer (Show logo in footer section)
+              </Label>
+            </div>
+            {formData.featuredAboveFooter && (
+              <div className="grid gap-2">
+                <Label htmlFor="featuredOrder">Footer Logo Order</Label>
+                <Input
+                  id="featuredOrder"
+                  type="number"
+                  min={0}
+                  value={formData.featuredOrder}
+                  onChange={(e) => setFormData({ ...formData, featuredOrder: Number(e.target.value) })}
+                  data-testid="input-featured-order"
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="shortDescription">Short Description</Label>
               <Textarea
@@ -517,10 +562,10 @@ export default function AdminSponsors() {
                   data-testid="input-facebook"
                 />
                 <Input
-                  placeholder="Twitter"
+                  placeholder="TikTok"
                   value={formData.twitter}
                   onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
-                  data-testid="input-twitter"
+                  data-testid="input-tiktok"
                 />
                 <Input
                   placeholder="Instagram"
@@ -599,6 +644,29 @@ export default function AdminSponsors() {
                 data-testid="input-edit-logo"
               />
             </div>
+            <div className="flex items-center space-x-2 py-2">
+              <Switch
+                id="edit-featuredAboveFooter"
+                checked={formData.featuredAboveFooter}
+                onCheckedChange={(checked) => setFormData({ ...formData, featuredAboveFooter: checked })}
+              />
+              <Label htmlFor="edit-featuredAboveFooter" className="cursor-pointer">
+                Feature above footer (Show logo in footer section)
+              </Label>
+            </div>
+            {formData.featuredAboveFooter && (
+              <div className="grid gap-2">
+                <Label htmlFor="edit-featuredOrder">Footer Logo Order</Label>
+                <Input
+                  id="edit-featuredOrder"
+                  type="number"
+                  min={0}
+                  value={formData.featuredOrder}
+                  onChange={(e) => setFormData({ ...formData, featuredOrder: Number(e.target.value) })}
+                  data-testid="input-edit-featured-order"
+                />
+              </div>
+            )}
             <div className="grid gap-2">
               <Label htmlFor="edit-shortDescription">Short Description</Label>
               <Textarea
@@ -633,10 +701,10 @@ export default function AdminSponsors() {
                   data-testid="input-edit-facebook"
                 />
                 <Input
-                  placeholder="Twitter"
+                  placeholder="TikTok"
                   value={formData.twitter}
                   onChange={(e) => setFormData({ ...formData, twitter: e.target.value })}
-                  data-testid="input-edit-twitter"
+                  data-testid="input-edit-tiktok"
                 />
                 <Input
                   placeholder="Instagram"

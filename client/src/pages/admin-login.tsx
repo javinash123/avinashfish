@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -11,15 +11,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
-import { Lock, Mail } from "lucide-react";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { Lock, Mail, Eye, EyeOff } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 
 export default function AdminLogin() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+
+  // Check if already logged in
+  const { data: admin } = useQuery({
+    queryKey: ["/api/admin/me"],
+    retry: false,
+  });
+
+  useEffect(() => {
+    if (admin) {
+      setLocation("/admin");
+    }
+  }, [admin, setLocation]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -41,25 +55,26 @@ export default function AdminLogin() {
         password 
       });
 
+      // apiRequest already handles error status codes if configured, 
+      // but let's check what it returns. If it throws, it goes to catch.
       const data = await response.json();
 
-      if (response.ok) {
-        toast({
-          title: "Login successful",
-          description: `Welcome back, ${data.firstName} ${data.lastName}!`,
-        });
-        setLocation("/admin");
-      } else {
-        toast({
-          title: "Login failed",
-          description: data.message || "Invalid credentials",
-          variant: "destructive",
-        });
-      }
-    } catch (error: any) {
+      // If we got here, it means response.ok was likely true based on apiRequest implementation
       toast({
-        title: "Error",
-        description: error.message || "Failed to login",
+        title: "Login successful",
+        description: `Welcome back!`,
+      });
+      
+      // Invalidate queries to update UI
+      await queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+      
+      setLocation("/admin");
+    } catch (error: any) {
+      const errorMessage = error.message || "Invalid credentials";
+      console.error("Login error:", error);
+      toast({
+        title: "Login failed",
+        description: errorMessage,
         variant: "destructive",
       });
     } finally {
@@ -105,14 +120,22 @@ export default function AdminLogin() {
                 <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="pl-10"
+                  className="pl-10 pr-10"
                   data-testid="input-password"
                   required
                 />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                  data-testid="button-toggle-password"
+                >
+                  {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                </button>
               </div>
             </div>
             <Button

@@ -8,10 +8,11 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useState, useEffect } from "react";
-import { Trophy } from "lucide-react";
+import { Trophy, Loader2 } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
+import { format } from "date-fns";
 
 export default function Leaderboard() {
   const { data: competitionsData = [] } = useQuery<Competition[]>({
@@ -26,6 +27,9 @@ export default function Leaderboard() {
         name: comp.name,
         status: status,
         date: new Date(comp.date),
+        venue: comp.venue,
+        time: comp.time,
+        prizePool: comp.prizePool,
       };
     })
     .filter((comp) => comp.status === "live" || comp.status === "completed")
@@ -41,15 +45,18 @@ export default function Leaderboard() {
     }
   }, [competitions, selectedCompetition]);
 
-  const { data: rawLeaderboardData = [] } = useQuery<Array<{
+  const { data: rawLeaderboardData = [], isLoading: isLoadingLeaderboard } = useQuery<Array<{
     position: number | null;
     anglerName: string;
     username: string;
     pegNumber: number;
     weight: string;
     club: string;
+    anglerAvatar?: string;
     isTeam?: boolean;
     teamId?: string;
+    fishCount?: number;
+    fishImageUrl?: string;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition}/leaderboard`],
     enabled: !!selectedCompetition,
@@ -59,12 +66,23 @@ export default function Leaderboard() {
     position: entry.position ?? index + 1,
     anglerName: entry.anglerName,
     username: entry.username,
+    anglerAvatar: entry.anglerAvatar,
     pegNumber: entry.pegNumber,
     weight: entry.weight,
     club: entry.club,
     isTeam: entry.isTeam,
     teamId: entry.teamId,
+    fishCount: entry.fishCount,
+    fishImageUrl: (entry as any).fishImageUrl,
   }));
+
+  if (isLoadingLeaderboard) {
+    return (
+      <div className="min-h-screen py-8 flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   const selectedComp = competitions.find(c => c.id === selectedCompetition);
   const isLive = selectedComp?.status === "live";
@@ -111,15 +129,41 @@ export default function Leaderboard() {
             <SelectContent>
               {competitions.map((comp) => (
                 <SelectItem key={comp.id} value={comp.id}>
-                  <div className="flex items-center justify-between w-full">
-                    <span>{comp.name}</span>
-                    {getStatusBadge(comp.status)}
+                  <div className="flex flex-col w-full">
+                    <div className="flex items-center justify-between gap-3">
+                      <span>{comp.name}</span>
+                      {getStatusBadge(comp.status)}
+                    </div>
+                    <span className="text-xs text-muted-foreground">
+                      {format(comp.date, "dd MMM yyyy")} • {comp.venue}
+                    </span>
                   </div>
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
+
+        {selectedComp && (
+          <div className="mb-6 grid gap-3 rounded-lg border bg-card p-4 md:grid-cols-4">
+            <div>
+              <div className="text-xs text-muted-foreground">Competition</div>
+              <div className="font-semibold">{selectedComp.name}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Date</div>
+              <div className="font-semibold">{format(selectedComp.date, "dd MMM yyyy")}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Venue</div>
+              <div className="font-semibold">{selectedComp.venue}</div>
+            </div>
+            <div>
+              <div className="text-xs text-muted-foreground">Time / Prize</div>
+              <div className="font-semibold">{selectedComp.time} • £{selectedComp.prizePool}</div>
+            </div>
+          </div>
+        )}
 
         <LeaderboardTable
           entries={leaderboardData}

@@ -1,0 +1,86 @@
+
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: ⚙️  specify custom .env file path with { path: '/custom/path/.env' }[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: NOT SET
+   Stripe Secret Key: NOT SET
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+9:54:33 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+9:54:40 PM [express] GET /api/user/me 401 in 4ms :: {"message":"Not authenticated"}
+9:54:40 PM [express] GET /api/site-settings 200 in 3ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+9:54:40 PM [express] GET /api/slider-images 200 in 3ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+9:54:40 PM [express] GET /api/ambassadors 200 in 3ms :: []
+9:54:40 PM [express] GET /api/news/featured 200 in 2ms :: []
+9:54:40 PM [express] GET /api/competitions 200 in 3ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+9:54:40 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+9:54:40 PM [express] GET /api/youtube-videos 200 in 2ms :: []
+9:54:40 PM [express] GET /api/testimonials 200 in 1ms :: []
+9:54:40 PM [express] GET /api/sponsors 200 in 2ms :: []
+9:54:41 PM [express] GET /api/ambassadors 200 in 0ms :: []
+9:54:41 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 1…
+9:54:41 PM [express] GET /api/ambassadors 200 in 0ms :: []
+9:54:51 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+9:54:51 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+9:54:51 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+9:54:51 PM [express] GET /api/ambassadors 200 in 0ms :: []
+9:54:51 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+9:54:51 PM [express] GET /api/news/featured 200 in 1ms :: []
+9:54:51 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+9:54:52 PM [express] GET /api/testimonials 200 in 1ms :: []
+9:54:52 PM [express] GET /api/youtube-videos 200 in 0ms :: []
+9:54:52 PM [express] GET /api/sponsors 200 in 0ms :: []
+9:54:52 PM [express] GET /api/ambassadors 200 in 2ms :: []
+9:54:52 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 0…
+9:54:53 PM [express] GET /api/ambassadors 200 in 0ms :: []
+10:27:30 PM [express] GET /api/user/me 401 in 1ms :: {"message":"Not authenticated"}
+10:27:30 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+10:27:30 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+10:27:30 PM [express] GET /api/news/featured 200 in 1ms :: []
+10:27:30 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+10:27:30 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+10:27:30 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+10:27:30 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 1…
+10:27:30 PM [express] GET /api/testimonials 200 in 1ms :: []
+10:27:30 PM [express] GET /api/sponsors 200 in 0ms :: []
+10:27:30 PM [express] GET /api/ambassadors 200 in 0ms :: []
+10:29:23 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+10:29:23 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+10:29:23 PM [express] GET /api/competitions 200 in 2ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+10:29:23 PM [express] GET /api/ambassadors 200 in 1ms :: []
+10:29:23 PM [express] GET /api/news/featured 200 in 0ms :: []
+10:29:23 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+10:29:23 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+10:29:23 PM [express] GET /api/youtube-videos 200 in 0ms :: []
+10:29:23 PM [express] GET /api/testimonials 200 in 0ms :: []
+10:29:23 PM [express] GET /api/sponsors 200 in 0ms :: []
+10:29:24 PM [express] GET /api/ambassadors 200 in 1ms :: []
+10:29:24 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 1…
+10:29:24 PM [express] GET /api/ambassadors 200 in 0ms :: []
+10:30:03 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+10:30:03 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+10:30:03 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+10:30:03 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+10:30:03 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+10:30:03 PM [express] GET /api/testimonials 200 in 0ms :: []
+10:30:03 PM [express] GET /api/sponsors 200 in 1ms :: []
+10:30:03 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+10:30:03 PM [express] GET /api/ambassadors 200 in 1ms :: []
+10:30:03 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 1…
+10:30:18 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+10:30:18 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"da0cddb3-901d-42ed-9f39-c6627950a77…
+10:30:18 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"2014a332-701a-4fce-8c16-f479731b859…
+10:30:18 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+10:30:18 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+10:30:18 PM [express] GET /api/testimonials 200 in 0ms :: []
+10:30:19 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"3133ba5d-a20e-4a22-93f5-adc5f32097…
+10:30:19 PM [express] GET /api/ambassadors 200 in 1ms :: []
+10:30:19 PM [express] GET /api/sponsors 200 in 1ms :: []
+10:30:19 PM [express] GET /api/competitions/2014a332-701a-4fce-8c16-f479731b859a/leaderboard 200 in 1…
