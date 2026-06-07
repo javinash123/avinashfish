@@ -1,13 +1,13 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { CompetitionCard } from "@/components/competition-card";
 import { LeaderboardTable } from "@/components/leaderboard-table";
 import { HeroSlider } from "@/components/hero-slider";
-import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish, Youtube, Play, Star } from "lucide-react";
+import { ArrowRight, Trophy, Users, Calendar, Newspaper, Image as ImageIcon, Clock, Fish } from "lucide-react";
 import { Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
-import type { Competition, News, GalleryImage, YoutubeVideo } from "@shared/schema";
+import type { Competition, News, GalleryImage } from "@shared/schema";
 import { format } from "date-fns";
 import {
   Select,
@@ -20,55 +20,18 @@ import { Card, CardContent, CardHeader, CardFooter } from "@/components/ui/card"
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { formatWeight } from "@shared/weight-utils";
 import { updateMetaTags } from "@/lib/meta-tags";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { 
-  Carousel, 
-  CarouselContent, 
-  CarouselItem, 
-  CarouselNext, 
-  CarouselPrevious 
-} from "@/components/ui/carousel";
 
 export default function Home() {
-  const getNewsImageUrl = (image: string | any) => {
-    if (!image) return "/attached-assets/placeholder-news.jpg";
-    
-    // Handle object if passed (for news articles with thumbnails)
-    if (typeof image === 'object') {
-      const thumb = image.thumbnailUrlMd || image.thumbnailUrl || image.image;
-      if (!thumb) return "/attached-assets/placeholder-news.jpg";
-      if (thumb.startsWith('http') || thumb.startsWith('data:') || thumb.startsWith('/')) {
-        return thumb;
-      }
-      return `/attached-assets/uploads/news/${thumb}`;
-    }
-
-    if (image.startsWith('http') || image.startsWith('data:') || image.startsWith('/')) {
-      return image;
-    }
-    return `/attached-assets/uploads/news/${image}`;
-  };
-
   const { data: competitionsData = [] } = useQuery<Competition[]>({
     queryKey: ["/api/competitions"],
   });
 
   const { data: featuredNews = [] } = useQuery<News[]>({
     queryKey: ["/api/news/featured"],
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
   });
 
   const { data: featuredGallery = [] } = useQuery<GalleryImage[]>({
     queryKey: ["/api/gallery/featured"],
-  });
-
-  const { data: youtubeVideos = [] } = useQuery<YoutubeVideo[]>({
-    queryKey: ["/api/youtube-videos"],
-  });
-
-  const { data: testimonials = [] } = useQuery<Testimonial[]>({
-    queryKey: ["/api/testimonials"],
   });
 
   // State for randomly selected featured news by category
@@ -170,50 +133,6 @@ export default function Home() {
     club: entry.club,
   }));
 
-  function AmbassadorSection() {
-    const { data: ambassadors = [], isLoading } = useQuery<any[]>({
-      queryKey: ["/api/ambassadors"],
-    });
-
-    if (isLoading || ambassadors.length === 0) return null;
-
-    return (
-      <section className="py-12 bg-background">
-        <div className="container mx-auto px-4 lg:px-8">
-          <div className="flex items-center justify-between mb-8">
-            <h2 className="text-2xl sm:text-3xl font-bold">Our Ambassadors</h2>
-            <Link href="/ambassadors">
-              <Button variant="outline" data-testid="button-view-all-ambassadors">
-                View All
-                <ArrowRight className="ml-2 h-4 w-4" />
-              </Button>
-            </Link>
-          </div>
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {ambassadors.slice(0, 5).map((ambassador) => (
-              <Link key={ambassador.id} href={`/profile/${ambassador.username}`}>
-                <Card className="hover-elevate cursor-pointer border-none bg-transparent shadow-none">
-                  <CardContent className="p-0 flex flex-col items-center">
-                    <Avatar className="h-24 w-24 sm:h-32 sm:w-32 mb-4 border-4 border-primary/10">
-                      <AvatarImage src={ambassador.avatar || undefined} alt={`${ambassador.firstName} ${ambassador.lastName}`} className="object-cover" />
-                      <AvatarFallback className="text-2xl">
-                        {ambassador.firstName[0]}{ambassador.lastName[0]}
-                      </AvatarFallback>
-                    </Avatar>
-                    <h3 className="font-semibold text-center line-clamp-1">
-                      {ambassador.firstName} {ambassador.lastName}
-                    </h3>
-                    <p className="text-sm text-muted-foreground">@{ambassador.username}</p>
-                  </CardContent>
-                </Card>
-              </Link>
-            ))}
-          </div>
-        </div>
-      </section>
-    );
-  }
-
   return (
     <div className="min-h-screen">
       <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
@@ -251,30 +170,8 @@ export default function Home() {
         </div>
       </section>
 
-      <section className="py-12 container mx-auto px-4 lg:px-8">
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
-          <div>
-            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
-            <p className="text-muted-foreground">
-              Book your spot in the next big match
-            </p>
-          </div>
-          <Link href="/competitions">
-            <Button variant="outline" data-testid="button-view-all-competitions" className="w-full sm:w-auto">
-              View All
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Button>
-          </Link>
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {upcomingCompetitions.map((comp) => (
-            <CompetitionCard key={comp.id} {...comp} />
-          ))}
-        </div>
-      </section>
-
       {featuredNews.length > 0 && (
-        <section className="py-12">
+        <section className="py-16">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
               <h2 className="text-2xl sm:text-3xl font-bold">Pegslam News</h2>
@@ -307,11 +204,11 @@ export default function Home() {
                 
                 return (
                   <Card key={news.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${news.id}`}>
-                    <div className="relative w-full overflow-hidden bg-muted">
+                    <div className="relative aspect-video overflow-hidden bg-muted">
                       <img
-                        src={getNewsImageUrl(news)}
+                        src={news.image}
                         alt={news.title}
-                        className="w-full h-auto object-cover"
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -326,7 +223,7 @@ export default function Home() {
                       </h3>
                     </CardHeader>
                     <CardContent className="flex-1">
-                      <p className="text-muted-foreground">{news.excerpt}</p>
+                      <p className="text-muted-foreground line-clamp-3">{news.excerpt}</p>
                     </CardContent>
                     <CardFooter className="flex flex-wrap items-center justify-between gap-4 pt-0">
                       <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
@@ -343,7 +240,16 @@ export default function Home() {
                         variant="ghost" 
                         size="sm" 
                         onClick={() => {
-                          window.location.href = `/news/${news.id}`;
+                          // Update meta tags for social sharing before navigation
+                          const articleUrl = `${window.location.origin}/news?article=${news.id}`;
+                          updateMetaTags({
+                            title: news.title,
+                            description: news.excerpt,
+                            image: news.image,
+                            url: articleUrl,
+                            type: 'article',
+                          });
+                          window.location.href = `/news?article=${news.id}`;
                         }}
                         data-testid={`button-read-more-${news.id}`}
                       >
@@ -359,70 +265,29 @@ export default function Home() {
         </section>
       )}
 
-      {testimonials.length > 0 && (
-        <section className="py-16 bg-primary/5">
-          <div className="container mx-auto px-4 lg:px-8 text-center">
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">What Our Anglers Say</h2>
-            <p className="text-muted-foreground mb-12 max-w-2xl mx-auto">
-              Read about the experiences of our community members and competition participants.
+      <section className="py-16 container mx-auto px-4 lg:px-8">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
+          <div>
+            <h2 className="text-2xl sm:text-3xl font-bold mb-2">Upcoming Competitions</h2>
+            <p className="text-muted-foreground">
+              Book your spot in the next big match
             </p>
-            
-            <Carousel
-              opts={{
-                align: "start",
-                loop: true,
-              }}
-              className="w-full max-w-6xl mx-auto px-12"
-            >
-              <CarouselContent>
-                {testimonials.filter(t => t.isActive).map((testimonial) => (
-                  <CarouselItem key={testimonial.id} className="md:basis-1/2 lg:basis-1/3 h-full">
-                    <Card className="h-full border-none bg-background/50 backdrop-blur-sm shadow-md hover-elevate transition-all duration-300">
-                      <CardContent className="p-8 flex flex-col h-full text-left">
-                        <div className="flex gap-1 mb-6">
-                          {Array.from({ length: 5 }).map((_, i) => (
-                            <Star key={i} className={`h-4 w-4 ${i < testimonial.rating ? "fill-primary text-primary" : "text-muted"}`} />
-                          ))}
-                        </div>
-                        
-                        <blockquote className="flex-1 italic text-lg text-muted-foreground leading-relaxed mb-8">
-                          "{testimonial.content}"
-                        </blockquote>
-                        
-                        <div className="flex items-center gap-4 mt-auto">
-                          <div className="h-14 w-14 rounded-full bg-primary/10 overflow-hidden flex-shrink-0 border-2 border-primary/20">
-                            {testimonial.avatar ? (
-                              <img 
-                                src={testimonial.avatar} 
-                                alt={testimonial.name} 
-                                className="h-full w-full object-cover"
-                              />
-                            ) : (
-                              <div className="h-full w-full flex items-center justify-center text-xl font-bold text-primary">
-                                {testimonial.name.charAt(0)}
-                              </div>
-                            )}
-                          </div>
-                          <div>
-                            <div className="font-bold text-lg">{testimonial.name}</div>
-                            {testimonial.role && (
-                              <div className="text-sm text-primary font-medium">{testimonial.role}</div>
-                            )}
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </CarouselItem>
-                ))}
-              </CarouselContent>
-              <CarouselPrevious className="-left-4 lg:-left-12 h-12 w-12 border-primary/20 hover:bg-primary hover:text-white transition-colors" />
-              <CarouselNext className="-right-4 lg:-right-12 h-12 w-12 border-primary/20 hover:bg-primary hover:text-white transition-colors" />
-            </Carousel>
           </div>
-        </section>
-      )}
+          <Link href="/competitions">
+            <Button variant="outline" data-testid="button-view-all-competitions" className="w-full sm:w-auto">
+              View All
+              <ArrowRight className="ml-2 h-4 w-4" />
+            </Button>
+          </Link>
+        </div>
+        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+          {upcomingCompetitions.map((comp) => (
+            <CompetitionCard key={comp.id} {...comp} />
+          ))}
+        </div>
+      </section>
 
-      <section className="py-12 bg-muted/30">
+      <section className="py-16 bg-muted/30">
         <div className="container mx-auto px-4 lg:px-8">
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8">
             <div>
@@ -469,65 +334,14 @@ export default function Home() {
         </div>
       </section>
 
-      {youtubeVideos.length > 0 && (
-        <section className="py-12">
-          <div className="container mx-auto px-4 lg:px-8">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold">Latest Videos</h2>
-            </div>
-            <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-              {youtubeVideos.slice(0, 6).map((video) => (
-                <Card key={video.id} className="overflow-hidden hover-elevate active-elevate-2" data-testid={`card-youtube-${video.id}`}>
-                  <a
-                    href={`https://www.youtube.com/watch?v=${video.videoId}`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="block"
-                    data-testid={`link-youtube-${video.id}`}
-                  >
-                    <div className="relative aspect-video bg-muted">
-                      <img
-                        src={`https://img.youtube.com/vi/${video.videoId}/hqdefault.jpg`}
-                        alt={video.title}
-                        className="w-full h-full object-cover"
-                      />
-                      <div className="absolute inset-0 flex items-center justify-center">
-                        <div className="bg-red-600 rounded-full p-4 shadow-lg transition-transform hover:scale-110">
-                          <Play className="h-6 w-6 text-white fill-white" />
-                        </div>
-                      </div>
-                      <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/60 to-transparent p-4">
-                        <Badge variant="secondary" className="bg-black/50 text-white">
-                          <Youtube className="h-3 w-3 mr-1" />
-                          YouTube
-                        </Badge>
-                      </div>
-                    </div>
-                    <CardContent className="p-4">
-                      <h3 className="font-semibold line-clamp-2" data-testid={`text-youtube-title-${video.id}`}>
-                        {video.title}
-                      </h3>
-                      {video.description && (
-                        <p className="text-sm text-muted-foreground line-clamp-2 mt-2">
-                          {video.description}
-                        </p>
-                      )}
-                    </CardContent>
-                  </a>
-                </Card>
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
-
-      <AmbassadorSection />
-
       {featuredGallery.length > 0 && (
-        <section className="py-12 bg-muted/30">
+        <section className="py-16 bg-muted/30">
           <div className="container mx-auto px-4 lg:px-8">
             <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
+              <div className="flex items-center gap-2">
+                <ImageIcon className="h-6 w-6 text-primary" />
+                <h2 className="text-2xl sm:text-3xl font-bold">Featured Gallery</h2>
+              </div>
               <Link href="/gallery">
                 <Button variant="outline" data-testid="button-view-all-gallery">
                   View All
@@ -538,11 +352,11 @@ export default function Home() {
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
               {featuredGallery.slice(0, 4).map((image) => (
                 <Card key={image.id} className="group overflow-hidden hover-elevate active-elevate-2" data-testid={`card-gallery-${image.id}`}>
-                  <div className="relative w-full h-48 overflow-hidden">
+                  <div className="relative aspect-[4/3] overflow-hidden">
                     <img
-                      src={image.urls[0].replace('-optimized.webp', '')}
+                      src={image.urls[0]}
                       alt={image.title}
-                      className="w-full h-full object-contain"
+                      className="w-full h-full object-cover"
                     />
                     {image.urls.length > 1 && (
                       <div className="absolute bottom-2 left-2">
@@ -580,9 +394,9 @@ export default function Home() {
                         <span className="text-sm font-semibold">{formatWeight(image.weight)}</span>
                       </div>
                     )}
-                    <Link href={`/gallery?id=${image.id}`} className="mt-3 block">
+                    <Link href="/gallery" className="mt-3 block">
                       <Button variant="ghost" size="sm" className="w-full" data-testid={`button-view-gallery-${image.id}`}>
-                        View Photo
+                        Read More
                         <ArrowRight className="ml-2 h-4 w-4" />
                       </Button>
                     </Link>

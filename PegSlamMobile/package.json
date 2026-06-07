@@ -7,7 +7,6 @@
     "start": "expo start",
     "build": "expo export --platform web",
     "web": "expo start --web --clear",
-    "web:5000": "npx expo start --web --clear --port 5000",
     "web:export": "expo export --platform web",
     "web:server": "npx http-server dist -p 5000 -c-1 -g"
   },
@@ -16,8 +15,6 @@
     "@react-native-async-storage/async-storage": "1.21.0",
     "axios": "1.6.2",
     "expo": "~50.0.0",
-    "expo-av": "~13.10.5",
-    "expo-image-picker": "~14.7.1",
     "expo-status-bar": "~1.11.1",
     "react": "18.2.0",
     "react-dom": "18.2.0",

@@ -25,10 +25,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
   const [location, setLocation] = useState(user.location || "");
   const [favouriteMethod, setFavouriteMethod] = useState(user.favouriteMethod || "");
   const [favouriteSpecies, setFavouriteSpecies] = useState(user.favouriteSpecies || "");
-  const [mobileNumber, setMobileNumber] = useState(user.mobileNumber || "");
-  const [dateOfBirth, setDateOfBirth] = useState(user.dateOfBirth || "");
   const [youtubeUrl, setYoutubeUrl] = useState(user.youtubeUrl || "");
-  const [youtubeVideoUrl, setYoutubeVideoUrl] = useState(user.youtubeVideoUrl || "");
   const [facebookUrl, setFacebookUrl] = useState(user.facebookUrl || "");
   const [twitterUrl, setTwitterUrl] = useState(user.twitterUrl || "");
   const [instagramUrl, setInstagramUrl] = useState(user.instagramUrl || "");
@@ -41,10 +38,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
       location?: string;
       favouriteMethod?: string;
       favouriteSpecies?: string;
-      mobileNumber?: string;
-      dateOfBirth?: string;
       youtubeUrl?: string;
-      youtubeVideoUrl?: string;
       facebookUrl?: string;
       twitterUrl?: string;
       instagramUrl?: string;
@@ -114,10 +108,7 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
         location,
         favouriteMethod,
         favouriteSpecies,
-        mobileNumber,
-        dateOfBirth,
         youtubeUrl,
-        youtubeVideoUrl,
         facebookUrl,
         twitterUrl,
         instagramUrl,
@@ -218,50 +209,18 @@ export function EditProfileDialog({ open, onOpenChange, user }: EditProfileDialo
             />
           </div>
           <div className="space-y-2">
-            <Label htmlFor="mobileNumber">Mobile Number</Label>
-            <Input
-              id="mobileNumber"
-              type="tel"
-              placeholder="e.g., 07123456789"
-              value={mobileNumber}
-              onChange={(e) => setMobileNumber(e.target.value)}
-              data-testid="input-mobile"
-            />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
-            <Input
-              id="dateOfBirth"
-              type="date"
-              value={dateOfBirth}
-              onChange={(e) => setDateOfBirth(e.target.value)}
-              data-testid="input-dob"
-            />
-          </div>
-          <div className="space-y-2">
             <Label className="text-lg font-semibold">Social Media</Label>
             <p className="text-sm text-muted-foreground">Add your social media profiles (optional)</p>
           </div>
           <div className="space-y-2">
-            <Label htmlFor="youtubeUrl">YouTube Channel URL</Label>
+            <Label htmlFor="youtubeUrl">YouTube URL</Label>
             <Input
               id="youtubeUrl"
-              placeholder="https://youtube.com/@yourchannel"
+              placeholder="https://youtube.com/@username"
               value={youtubeUrl}
               onChange={(e) => setYoutubeUrl(e.target.value)}
               data-testid="input-youtube"
             />
-          </div>
-          <div className="space-y-2">
-            <Label htmlFor="youtubeVideoUrl">Featured YouTube Video</Label>
-            <Input
-              id="youtubeVideoUrl"
-              placeholder="https://youtube.com/watch?v=VIDEO_ID or https://youtu.be/VIDEO_ID"
-              value={youtubeVideoUrl}
-              onChange={(e) => setYoutubeVideoUrl(e.target.value)}
-              data-testid="input-youtube-video"
-            />
-            <p className="text-xs text-muted-foreground">Paste a YouTube video link to showcase on your profile</p>
           </div>
           <div className="space-y-2">
             <Label htmlFor="facebookUrl">Facebook URL</Label>

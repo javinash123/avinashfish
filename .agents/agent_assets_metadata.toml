@@ -6,3 +6,9 @@ id = "tGySmRmYNAO8ryxOvj5M4"
 uri = "file://peg-slam-build-latest.tar.gz"
 type = "unspecified"
 title = "PegSlam Latest Build"
+
+[[outputs]]
+id = "vwakbJDGlBGBHXT6nMkRp"
+uri = "file://dist.zip"
+type = "unspecified"
+title = "PegSlam Production Build (dist.zip) - 400 KB"

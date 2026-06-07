@@ -1,5 +1,5 @@
 import { MongoClient, Db, Collection, ObjectId } from "mongodb";
-import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type YoutubeVideo, type InsertYoutubeVideo, type UpdateYoutubeVideo, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment, type Testimonial, type InsertTestimonial, type UpdateTestimonial } from "@shared/schema";
+import { type User, type InsertUser, type UpdateUserProfile, type UserGalleryPhoto, type InsertUserGalleryPhoto, type Admin, type InsertAdmin, type UpdateAdmin, type SliderImage, type InsertSliderImage, type UpdateSliderImage, type SiteSettings, type InsertSiteSettings, type UpdateSiteSettings, type Sponsor, type InsertSponsor, type UpdateSponsor, type News, type InsertNews, type UpdateNews, type GalleryImage, type InsertGalleryImage, type UpdateGalleryImage, type Competition, type InsertCompetition, type UpdateCompetition, type CompetitionParticipant, type InsertCompetitionParticipant, type Team, type InsertTeam, type UpdateTeam, type TeamMember, type InsertTeamMember, type LeaderboardEntry, type InsertLeaderboardEntry, type UpdateLeaderboardEntry, type Payment, type InsertPayment } from "@shared/schema";
 import { randomUUID } from "crypto";
 import { IStorage } from "./storage";
 
@@ -13,8 +13,6 @@ export class MongoDBStorage implements IStorage {
   private sponsors!: Collection<Sponsor>;
   private news!: Collection<News>;
   private galleryImages!: Collection<GalleryImage>;
-  private youtubeVideos!: Collection<YoutubeVideo>;
-  private testimonials!: Collection<Testimonial>;
   private competitions!: Collection<Competition>;
   private competitionParticipants!: Collection<CompetitionParticipant>;
   private teams!: Collection<Team>;
@@ -24,13 +22,7 @@ export class MongoDBStorage implements IStorage {
   private payments!: Collection<Payment>;
 
   constructor(uri: string) {
-    this.client = new MongoClient(uri, {
-      maxPoolSize: 50,
-      minPoolSize: 10,
-      connectTimeoutMS: 5000,
-      socketTimeoutMS: 30000,
-      waitQueueTimeoutMS: 10000
-    });
+    this.client = new MongoClient(uri);
   }
 
   async connect() {
@@ -46,8 +38,6 @@ export class MongoDBStorage implements IStorage {
       this.sponsors = this.db.collection<Sponsor>("sponsors");
       this.news = this.db.collection<News>("news");
       this.galleryImages = this.db.collection<GalleryImage>("gallery_images");
-      this.youtubeVideos = this.db.collection<YoutubeVideo>("youtube_videos");
-      this.testimonials = this.db.collection<Testimonial>("testimonials");
       this.competitions = this.db.collection<Competition>("competitions");
       this.competitionParticipants = this.db.collection<CompetitionParticipant>("competition_participants");
       this.teams = this.db.collection<Team>("teams");
@@ -70,57 +60,35 @@ export class MongoDBStorage implements IStorage {
   }
 
   private async createIndexes() {
-    // ... existing indexes ...
-    await this.testimonials?.createIndex({ id: 1 }, { unique: true });
-    await this.testimonials?.createIndex({ order: 1 });
-  }
-
-  // Testimonial methods
-  async getAllTestimonials(): Promise<Testimonial[]> {
-    return await this.testimonials.find({}).sort({ order: 1, createdAt: -1 }).toArray();
-  }
-
-  async getTestimonial(id: string): Promise<Testimonial | undefined> {
-    const testimonial = await this.testimonials.findOne({ id });
-    return testimonial || undefined;
-  }
-
-  async createTestimonial(testimonial: InsertTestimonial): Promise<Testimonial> {
-    const newTestimonial: Testimonial = {
-      id: randomUUID(),
-      ...testimonial,
-      role: testimonial.role ?? null,
-      avatar: testimonial.avatar ?? null,
-      rating: testimonial.rating ?? 5,
-      isActive: testimonial.isActive ?? true,
-      order: testimonial.order ?? 0,
-      createdAt: new Date(),
-    };
-    await this.testimonials.insertOne(newTestimonial);
-    return newTestimonial;
-  }
-
-  async updateTestimonial(id: string, updates: UpdateTestimonial): Promise<Testimonial | undefined> {
-    const result = await this.testimonials.findOneAndUpdate(
-      { id },
-      { $set: updates },
-      { returnDocument: "after" }
+    // Create unique indexes for email and username
+    await this.users.createIndex({ email: 1 }, { unique: true });
+    await this.users.createIndex({ username: 1 }, { unique: true });
+    await this.admins.createIndex({ email: 1 }, { unique: true });
+    await this.competitionParticipants.createIndex({ competitionId: 1, userId: 1 }, { unique: true });
+    
+    // Create sparse unique compound index to prevent duplicate peg assignments per competition
+    // Sparse index only enforces uniqueness for non-null pegNumber values
+    await this.competitionParticipants.createIndex(
+      { competitionId: 1, pegNumber: 1 }, 
+      { unique: true, sparse: true }
     );
-    return result || undefined;
+    
+    // Create indexes for angler directory search and sorting performance
+    await this.users.createIndex({ firstName: 1 });
+    await this.users.createIndex({ lastName: 1 });
+    await this.users.createIndex({ club: 1 });
+    await this.users.createIndex({ memberSince: -1 });
+    
+    // Create team indexes
+    await this.teams.createIndex({ competitionId: 1 });
+    await this.teams.createIndex({ createdBy: 1 });
+    await this.teams.createIndex({ inviteCode: 1 }, { unique: true });
+    await this.teamMembers.createIndex({ teamId: 1 });
+    await this.teamMembers.createIndex({ userId: 1 });
+    await this.teamMembers.createIndex({ teamId: 1, userId: 1 }, { unique: true });
   }
 
-  async deleteTestimonial(id: string): Promise<boolean> {
-    const result = await this.testimonials.deleteOne({ id });
-    return result.deletedCount === 1;
-  }
-
-  async initializeDefaultData() {
-    // Migration for existing sponsors: ensure featuredAboveFooter is set to true if missing
-    await this.sponsors.updateMany(
-      { featuredAboveFooter: { $exists: false } },
-      { $set: { featuredAboveFooter: true } }
-    );
-
+  private async initializeDefaultData() {
     // Check if admin exists
     const adminCount = await this.admins.countDocuments();
     if (adminCount === 0) {
@@ -196,7 +164,6 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
-          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -224,7 +191,6 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
-          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -252,7 +218,6 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
-          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -280,7 +245,6 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
-          isAmbassador: false,
         },
         {
           id: randomUUID(),
@@ -308,7 +272,6 @@ export class MongoDBStorage implements IStorage {
           emailVerified: false,
           verificationToken: null,
           verificationTokenExpiry: null,
-          isAmbassador: false,
         },
       ];
       await this.users.insertMany(sampleUsers);
@@ -603,7 +566,6 @@ export class MongoDBStorage implements IStorage {
       emailVerified: false,
       verificationToken: null,
       verificationTokenExpiry: null,
-      isAmbassador: user.isAmbassador ?? false,
     };
     await this.users.insertOne(newUser);
     return newUser;
@@ -877,7 +839,6 @@ export class MongoDBStorage implements IStorage {
         twitter: sponsor.social.twitter as string | undefined,
         instagram: sponsor.social.instagram as string | undefined,
       } : null,
-      featuredAboveFooter: sponsor.featuredAboveFooter ?? true,
       createdAt: new Date(),
     };
     await this.sponsors.insertOne(newSponsor);
@@ -908,62 +869,12 @@ export class MongoDBStorage implements IStorage {
 
   // News methods
   async getAllNews(): Promise<News[]> {
-    return await this.news.find({}).sort({ date: -1, createdAt: -1 }).toArray();
+    return await this.news.find({}).sort({ publishDate: -1 }).toArray();
   }
 
   async getNews(id: string): Promise<News | undefined> {
-    // Fast indexed query - returns full document for news detail page
-    // Using lean findOne with id index
-    const newsItem = await this.news.findOne({ id }, { projection: { _id: 0 } });
+    const newsItem = await this.news.findOne({ id });
     return newsItem || undefined;
-  }
-
-  async getNewsBySlug(slug: string): Promise<News | undefined> {
-    const newsItem = await this.news.findOne({ slug }, { projection: { _id: 0 } });
-    return newsItem || undefined;
-  }
-
-  async listNews(query: {
-    category?: string;
-    search?: string;
-    page?: number;
-    limit?: number;
-  }): Promise<{ news: News[]; pagination: any }> {
-    const { category, search, page = 1, limit = 10 } = query;
-    const skip = (page - 1) * limit;
-
-    const filter: any = {};
-    if (category && category !== "all") {
-      filter.category = category;
-    }
-    if (search) {
-      filter.$or = [
-        { title: { $regex: search, $options: "i" } },
-        { excerpt: { $regex: search, $options: "i" } },
-        { content: { $regex: search, $options: "i" } }
-      ];
-    }
-
-    const totalItems = await this.news.countDocuments(filter);
-    const totalPages = Math.ceil(totalItems / limit);
-
-    const news = await this.news.find(filter)
-      .project({ content: 0 }) // Exclude full content for list view performance
-      .sort({ date: -1, createdAt: -1 })
-      .skip(skip)
-      .limit(limit)
-      .toArray();
-
-    return {
-      news,
-      pagination: {
-        page,
-        limit,
-        totalItems,
-        totalPages,
-        hasMore: page < totalPages
-      }
-    };
   }
 
   async createNews(news: InsertNews): Promise<News> {
@@ -1027,48 +938,6 @@ export class MongoDBStorage implements IStorage {
 
   async deleteGalleryImage(id: string): Promise<boolean> {
     const result = await this.galleryImages.deleteOne({ id });
-    return result.deletedCount === 1;
-  }
-
-  // YouTube Video methods
-  async getAllYoutubeVideos(): Promise<YoutubeVideo[]> {
-    return await this.youtubeVideos.find({}).sort({ displayOrder: 1 }).toArray();
-  }
-
-  async getActiveYoutubeVideos(): Promise<YoutubeVideo[]> {
-    return await this.youtubeVideos.find({ active: true }).sort({ displayOrder: 1 }).toArray();
-  }
-
-  async getYoutubeVideo(id: string): Promise<YoutubeVideo | undefined> {
-    const video = await this.youtubeVideos.findOne({ id });
-    return video || undefined;
-  }
-
-  async createYoutubeVideo(insertVideo: InsertYoutubeVideo): Promise<YoutubeVideo> {
-    const id = randomUUID();
-    const newVideo: YoutubeVideo = {
-      ...insertVideo,
-      id,
-      description: insertVideo.description || null,
-      displayOrder: insertVideo.displayOrder ?? 0,
-      active: insertVideo.active ?? true,
-      createdAt: new Date(),
-    };
-    await this.youtubeVideos.insertOne(newVideo);
-    return newVideo;
-  }
-
-  async updateYoutubeVideo(id: string, updates: UpdateYoutubeVideo): Promise<YoutubeVideo | undefined> {
-    const result = await this.youtubeVideos.findOneAndUpdate(
-      { id },
-      { $set: updates },
-      { returnDocument: "after" }
-    );
-    return result || undefined;
-  }
-
-  async deleteYoutubeVideo(id: string): Promise<boolean> {
-    const result = await this.youtubeVideos.deleteOne({ id });
     return result.deletedCount === 1;
   }
 
@@ -1284,14 +1153,7 @@ export class MongoDBStorage implements IStorage {
 
   async leaveCompetition(competitionId: string, userId: string): Promise<boolean> {
     const result = await this.competitionParticipants.deleteOne({ competitionId, userId });
-    if (result.deletedCount === 1) {
-      await this.competitions.updateOne(
-        { id: competitionId },
-        { $inc: { pegsBooked: -1 } }
-      );
-      return true;
-    }
-    return false;
+    return result.deletedCount === 1;
   }
 
   async deleteParticipant(participantId: string): Promise<boolean> {
@@ -1317,6 +1179,8 @@ export class MongoDBStorage implements IStorage {
 
   async updateParticipantPeg(participantId: string, pegNumber: number): Promise<CompetitionParticipant | undefined> {
     try {
+      // Update the peg number atomically
+      // The unique compound index on {competitionId, pegNumber} will prevent duplicate assignments
       const result = await this.competitionParticipants.findOneAndUpdate(
         { id: participantId },
         { $set: { pegNumber } },
@@ -1324,23 +1188,10 @@ export class MongoDBStorage implements IStorage {
       );
       return result || undefined;
     } catch (error: any) {
+      // MongoDB duplicate key error code is 11000
       if (error.code === 11000) {
         throw new Error(`Peg ${pegNumber} is already assigned to another angler`);
       }
-      throw error;
-    }
-  }
-
-  async updateParticipantPosition(participantId: string, position: number): Promise<CompetitionParticipant | undefined> {
-    try {
-      const result = await this.competitionParticipants.findOneAndUpdate(
-        { id: participantId },
-        { $set: { position } },
-        { returnDocument: "after" }
-      );
-      return result || undefined;
-    } catch (error: any) {
-      console.error("Error updating participant position:", error);
       throw error;
     }
   }
@@ -1351,66 +1202,36 @@ export class MongoDBStorage implements IStorage {
       .find({ competitionId })
       .toArray();
     
-    if (entries.length === 0) {
-      return [];
-    }
-
-    // Detect if this is a team competition by checking if entries have teamIds
-    const hasTeamIds = entries.some((e) => e.teamId && e.teamId.trim() !== '');
-    const isTeamCompetition = hasTeamIds;
-    
-    console.log(`[LEADERBOARD-MONGO] Competition ${competitionId}: ${entries.length} entries, Team mode: ${isTeamCompetition}`);
-    
-    // Group entries by teamId (for team competitions) or userId (for individual competitions)
+    // Group entries by userId and aggregate total weight
     const participantMap = new Map<string, { 
       entries: LeaderboardEntry[], 
       totalWeight: number,
-      pegNumber: number,
-      teamId?: string,
-      userId?: string
+      pegNumber: number 
     }>();
     
     entries.forEach((entry) => {
       const weight = parseFloat(entry.weight.toString().replace(/[^\d.-]/g, ''));
       
-      // For team competitions, ALWAYS use teamId as the grouping key
-      // For individual competitions, use userId
-      const key = isTeamCompetition ? (entry.teamId || entry.userId) : entry.userId;
-      
-      if (!key) {
-        console.warn(`[LEADERBOARD-MONGO] Warning: Entry has no key - teamId: ${entry.teamId}, userId: ${entry.userId}`);
-        return;
-      }
-      
-      if (participantMap.has(key)) {
-        const participant = participantMap.get(key)!;
+      if (participantMap.has(entry.userId)) {
+        const participant = participantMap.get(entry.userId)!;
         participant.entries.push(entry);
         participant.totalWeight += weight;
       } else {
-        participantMap.set(key, {
+        participantMap.set(entry.userId, {
           entries: [entry],
           totalWeight: weight,
           pegNumber: entry.pegNumber,
-          teamId: entry.teamId,
-          userId: entry.userId,
         });
       }
     });
     
-    console.log(`[LEADERBOARD-MONGO] Grouped into ${participantMap.size} rows (${isTeamCompetition ? 'teams' : 'individuals'})`);
-    
-    // Create aggregated entries with total weight and fish count
-    const aggregatedEntries = Array.from(participantMap.entries()).map(([key, data]) => {
+    // Create aggregated entries with total weight
+    const aggregatedEntries: LeaderboardEntry[] = Array.from(participantMap.entries()).map(([userId, data]) => {
+      // Use the most recent entry as the base
       const latestEntry = data.entries[data.entries.length - 1];
-      const totalWeightNum = data.totalWeight;
-      const fishCount = data.entries.length;
-      
       return {
         ...latestEntry,
-        weight: totalWeightNum.toString(),
-        teamId: isTeamCompetition ? (data.teamId || latestEntry.teamId) : latestEntry.teamId,
-        userId: isTeamCompetition ? latestEntry.userId : (data.userId || latestEntry.userId),
-        fishCount,
+        weight: data.totalWeight.toString(), // Store total weight
       };
     });
     
@@ -1670,15 +1491,6 @@ export class MongoDBStorage implements IStorage {
     const result = await this.teamMembers.findOneAndUpdate(
       { id },
       { $set: { status } },
-      { returnDocument: "after" }
-    );
-    return result || undefined;
-  }
-
-  async updateTeamMember(id: string, updates: Partial<TeamMember>): Promise<TeamMember | undefined> {
-    const result = await this.teamMembers.findOneAndUpdate(
-      { id },
-      { $set: updates },
       { returnDocument: "after" }
     );
     return result || undefined;

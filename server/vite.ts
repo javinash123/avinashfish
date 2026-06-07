@@ -20,112 +20,6 @@ export function log(message: string, source = "express") {
   console.log(`${formattedTime} [${source}] ${message}`);
 }
 
-function resolveImageUrl(imageUrl: string, baseUrl: string): string {
-  if (!imageUrl) return '';
-  if (imageUrl.startsWith('http')) return imageUrl;
-  return `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
-}
-
-async function injectOgTagsForRoute(req: any, url: string, template: string, storage: any): Promise<string> {
-  if (!storage) return template;
-  const basePath = process.env.EXPRESS_BASE_PATH || '';
-  const cleanPath = (basePath ? url.replace(basePath, '') : url).split('?')[0];
-  const baseUrl = `${req.protocol}://${req.headers.host}`;
-
-  try {
-    // /news/:id  (e.g. /news/abc123)
-    const newsPathMatch = cleanPath.match(/^\/news\/([^/]+)$/);
-    if (newsPathMatch) {
-      const article = await storage.getNews(newsPathMatch[1]);
-      if (article) {
-        return injectMetaTagsIntoHtml(template, {
-          title: article.title,
-          description: article.excerpt || (article.content || '').replace(/<[^>]*>/g, '').substring(0, 160),
-          image: resolveImageUrl(article.image || '', baseUrl),
-          url: `${baseUrl}/news/${newsPathMatch[1]}`,
-          type: 'article',
-          siteName: 'Peg Slam',
-        });
-      }
-    }
-
-    // /news?article=xxx  (legacy query param style)
-    const urlObj = new URL(url, `http://${req.headers.host}`);
-    const articleId = urlObj.searchParams.get('article');
-    if (cleanPath.startsWith('/news') && articleId) {
-      const article = await storage.getNews(articleId);
-      if (article) {
-        return injectMetaTagsIntoHtml(template, {
-          title: article.title,
-          description: article.excerpt || (article.content || '').replace(/<[^>]*>/g, '').substring(0, 160),
-          image: resolveImageUrl(article.image || '', baseUrl),
-          url: `${baseUrl}/news/${articleId}`,
-          type: 'article',
-          siteName: 'Peg Slam',
-        });
-      }
-    }
-
-    // /competition/:id
-    const compPathMatch = cleanPath.match(/^\/competition\/([^/]+)$/);
-    if (compPathMatch) {
-      const competition = await storage.getCompetition(compPathMatch[1]);
-      if (competition) {
-        return injectMetaTagsIntoHtml(template, {
-          title: competition.name,
-          description: `${competition.venue} — ${competition.date}. Entry fee: ${competition.entryFee}. Book your peg now on Peg Slam.`,
-          image: resolveImageUrl(competition.imageUrl || competition.thumbnailUrl || '', baseUrl),
-          url: `${baseUrl}/competition/${compPathMatch[1]}`,
-          type: 'website',
-          siteName: 'Peg Slam',
-        });
-      }
-    }
-
-    // /profile/:username
-    const profilePathMatch = cleanPath.match(/^\/profile\/([^/]+)$/);
-    if (profilePathMatch && storage.getUserByUsername) {
-      const user = await storage.getUserByUsername(profilePathMatch[1]);
-      if (user) {
-        const name = `${user.firstName} ${user.lastName}`.trim() || user.username;
-        return injectMetaTagsIntoHtml(template, {
-          title: `${name} — Angler Profile`,
-          description: user.bio || `View ${name}'s angler profile, competition history, and achievements on Peg Slam.`,
-          image: resolveImageUrl(user.avatar || '', baseUrl),
-          url: `${baseUrl}/profile/${profilePathMatch[1]}`,
-          type: 'profile',
-          siteName: 'Peg Slam',
-        });
-      }
-    }
-
-    // /gallery?id=xxx
-    const galleryId = urlObj.searchParams.get('id');
-    if (cleanPath.startsWith('/gallery') && galleryId && storage.getGalleryImage) {
-      const image = await storage.getGalleryImage(galleryId);
-      if (image) {
-        const imageUrl = image.urls && image.urls.length > 0
-          ? resolveImageUrl(image.urls[0].replace('-optimized.webp', ''), baseUrl)
-          : '';
-        const desc = [image.description, image.angler ? `Angler: ${image.angler}` : '', image.competition || '']
-          .filter(Boolean).join(' | ').substring(0, 160);
-        return injectMetaTagsIntoHtml(template, {
-          title: image.title,
-          description: desc || `Gallery photo from Peg Slam — ${image.date}`,
-          image: imageUrl,
-          url: `${baseUrl}/gallery?id=${galleryId}`,
-          type: 'website',
-          siteName: 'Peg Slam',
-        });
-      }
-    }
-  } catch (err) {
-    log(`Error injecting OG meta tags: ${err}`);
-  }
-
-  return template;
-}
-
 export async function setupVite(app: Express, server: Server, storage?: any) {
   const serverOptions = {
     middlewareMode: true,
@@ -172,7 +66,34 @@ export async function setupVite(app: Express, server: Server, storage?: any) {
       const configScript = `<script>window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};</script>`;
       template = template.replace('</head>', `${configScript}</head>`);
       
-      template = await injectOgTagsForRoute(req, url, template, storage);
+      const urlObj = new URL(url, `http://${req.headers.host}`);
+      const articleId = urlObj.searchParams.get('article');
+      const basePath = process.env.EXPRESS_BASE_PATH || '';
+      const pathWithoutBase = basePath ? url.replace(basePath, '') : url;
+      
+      if (pathWithoutBase.startsWith('/news') && articleId && storage) {
+        try {
+          const article = await storage.getNews(articleId);
+          if (article) {
+            const baseUrl = `${req.protocol}://${req.headers.host}`;
+            let imageUrl = article.image || '';
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            template = injectMetaTagsIntoHtml(template, {
+              title: article.title,
+              description: article.excerpt || article.content?.substring(0, 160) || '',
+              image: imageUrl,
+              url: `${baseUrl}/news?article=${articleId}`,
+              type: 'article',
+              siteName: 'Peg Slam',
+            });
+          }
+        } catch (err) {
+          log(`Error fetching news article for OG meta: ${err}`);
+        }
+      }
       
       const page = await vite.transformIndexHtml(url, template);
       res.status(200).set({ "Content-Type": "text/html" }).end(page);
@@ -209,7 +130,33 @@ export function serveStatic(app: Express, storage?: any) {
       const configScript = `<script>window.RUNTIME_CONFIG = ${JSON.stringify(runtimeConfig)};</script>`;
       template = template.replace('</head>', `${configScript}</head>`);
       
-      template = await injectOgTagsForRoute(req, url, template, storage);
+      const urlObj = new URL(url, `http://${req.headers.host}`);
+      const articleId = urlObj.searchParams.get('article');
+      const pathWithoutBase = basePath ? url.replace(basePath, '') : url;
+      
+      if (pathWithoutBase.startsWith('/news') && articleId && storage) {
+        try {
+          const article = await storage.getNews(articleId);
+          if (article) {
+            const baseUrl = `${req.protocol}://${req.headers.host}`;
+            let imageUrl = article.image || '';
+            if (imageUrl && !imageUrl.startsWith('http')) {
+              imageUrl = `${baseUrl}${imageUrl.startsWith('/') ? '' : '/'}${imageUrl}`;
+            }
+            
+            template = injectMetaTagsIntoHtml(template, {
+              title: article.title,
+              description: article.excerpt || article.content?.substring(0, 160) || '',
+              image: imageUrl,
+              url: `${baseUrl}/news?article=${articleId}`,
+              type: 'article',
+              siteName: 'Peg Slam',
+            });
+          }
+        } catch (err) {
+          log(`Error fetching news article for OG meta: ${err}`);
+        }
+      }
       
       res.status(200).set({ "Content-Type": "text/html" }).end(template);
     } catch (e) {

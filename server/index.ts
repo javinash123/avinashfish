@@ -1,55 +1,13 @@
-// ⚠️ CRITICAL: Load environment variables FIRST, before any other imports
-// This ensures all environment-dependent code has access to process.env vars
-import dotenv from "dotenv";
-import path from "path";
-
-// Load .env file from project root directory
-// Works in both development (npm run dev) and production (node dist/index.js)
-const projectRoot = process.cwd();
-const envPath = path.join(projectRoot, '.env');
-dotenv.config({ path: envPath, override: true }); // Load from .env file, override existing env vars
-
 import express, { type Request, Response, NextFunction } from "express";
-import compression from "compression";
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
 
-// FIX: Add type declaration for compression to fix LSP error
-declare module 'compression';
-
-// Log environment info for debugging
-console.log('📋 ENVIRONMENT STARTUP INFO:');
-console.log(`   NODE_ENV: ${process.env.NODE_ENV || 'not set'}`);
-console.log(`   Stripe Public Key: ${process.env.VITE_STRIPE_PUBLIC_KEY ? (process.env.VITE_STRIPE_PUBLIC_KEY.substring(0, 10) + '... ' + (process.env.VITE_STRIPE_PUBLIC_KEY.startsWith('pk_live_') ? '✅ LIVE' : '⚠️ TEST')) : 'NOT SET'}`);
-console.log(`   Stripe Secret Key: ${process.env.STRIPE_SECRET_KEY ? (process.env.STRIPE_SECRET_KEY.substring(0, 10) + '... ' + (process.env.STRIPE_SECRET_KEY.startsWith('sk_live_') ? '✅ LIVE' : '⚠️ TEST')) : 'NOT SET'}`);
-console.log(`   MongoDB: ${process.env.MONGODB_URI ? 'configured' : 'not configured'}`);
-console.log('');
-
 // Production environment validation
 if (process.env.NODE_ENV === 'production') {
-  const errors: string[] = [];
   const warnings: string[] = [];
-  
-  // CRITICAL: Validate Stripe keys
-  const stripePublicKey = process.env.VITE_STRIPE_PUBLIC_KEY || '';
-  const stripeSecretKey = process.env.STRIPE_SECRET_KEY || '';
-  
-  // Check if Stripe keys are using test mode
-  const isUsingTestKeys = stripePublicKey.startsWith('pk_test_') || stripeSecretKey.startsWith('sk_test_');
-  if (isUsingTestKeys) {
-    errors.push('❌ CRITICAL: Using Stripe TEST keys in PRODUCTION! Replace with live keys (pk_live_... and sk_live_...)');
-  }
-  
-  // Check if Stripe keys are configured
-  if (!stripePublicKey) {
-    errors.push('❌ CRITICAL: VITE_STRIPE_PUBLIC_KEY not set in production!');
-  }
-  if (!stripeSecretKey) {
-    errors.push('❌ CRITICAL: STRIPE_SECRET_KEY not set in production!');
-  }
   
   // Warn if using default session secret
   if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET === 'dev-secret-key-change-in-production') {
@@ -61,27 +19,15 @@ if (process.env.NODE_ENV === 'production') {
     warnings.push('⚠️  WARNING: MONGODB_URI not set. Using in-memory storage (data will be lost on restart).');
   }
   
-  // Log all critical errors
-  if (errors.length > 0) {
-    console.log('\n========== 🚨 CRITICAL PRODUCTION CONFIGURATION ERRORS 🚨 ==========');
-    errors.forEach(error => console.log(error));
-    console.log('=====================================================================\n');
-    // IMPORTANT: In production, we should NOT crash on missing keys to allow graceful degradation
-    // but we MUST warn the user prominently
-  }
-  
   // Log all warnings
   if (warnings.length > 0) {
-    console.log('\n========== ⚠️  PRODUCTION CONFIGURATION WARNINGS ⚠️  ==========');
+    console.log('\n========== PRODUCTION CONFIGURATION WARNINGS ==========');
     warnings.forEach(warning => console.log(warning));
-    console.log('==============================================================\n');
+    console.log('========================================================\n');
   }
 }
    
 const app = express();
-
-// Enable gzip compression
-app.use(compression());
 
 // Trust proxy - required when behind AWS load balancer or reverse proxy
 app.set('trust proxy', 1);
@@ -130,9 +76,28 @@ app.use(cors({
 }));
 
 // Session configuration
-const MemoryStore = createMemoryStore(session);
+// const MemoryStore = createMemoryStore(session);
 const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
 
+// Original session configuration (commented out for AWS EC2 deployment)
+// app.use(session({
+//   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
+//   resave: false,
+//   saveUninitialized: true,
+//   store: new MemoryStore({
+//     checkPeriod: 86400000, // prune expired entries every 24h
+//   }),
+//   cookie: {
+//     path: EXPRESS_BASE_PATH || '/',
+//     maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
+//     httpOnly: true,
+//     secure: process.env.NODE_ENV === "production", // Use secure cookies in production
+//     sameSite: "lax",
+//   },
+//   proxy: true
+// }));
+
+// Simplified session configuration for AWS EC2 deployment
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
   resave: false,
@@ -201,13 +166,8 @@ app.use((req, res, next) => {
   // New uploads use /attached-assets to avoid Vite bundle conflicts
   // The /assets route only serves the attached_assets/uploads subdirectory to avoid
   // conflicts with Vite's /assets output (which contains CSS/JS bundles)
-  const staticOptions = {
-    maxAge: '1d',
-    immutable: true,
-    index: false
-  };
-  app.use('/assets/uploads', express.static('attached_assets/uploads', staticOptions));
-  app.use('/attached-assets', express.static('attached_assets', staticOptions));
+  app.use('/assets/uploads', express.static('attached_assets/uploads'));
+  app.use('/attached-assets', express.static('attached_assets'));
   
   // Register routes after storage is ready - pass storage instance directly
   const server = await registerRoutes(app, storage);

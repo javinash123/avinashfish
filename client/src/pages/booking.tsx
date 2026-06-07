@@ -27,45 +27,18 @@ declare global {
   }
 }
 
-// Lazy load Stripe - fetch keys from runtime config endpoint for live updates
+// Lazy load Stripe - keys might be injected later via window.RUNTIME_CONFIG
 let stripePromise: ReturnType<typeof loadStripe> | null = null;
 let stripePromiseLoaded = false;
 
-async function getStripePublicKey(): Promise<string> {
-  try {
-    // Fetch from runtime config endpoint - this returns live environment variables
-    const response = await fetch('/api/runtime-config');
-    if (response.ok) {
-      const config = await response.json();
-      const key = config.VITE_STRIPE_PUBLIC_KEY;
-      if (key) {
-        console.log('[Booking] Loaded Stripe public key from runtime config');
-        return key;
-      }
-    }
-  } catch (error) {
-    console.warn('[Booking] Failed to fetch runtime config:', error);
-  }
-  
-  // Fallback to build-time environment variable if runtime config fails
-  const fallbackKey = import.meta.env.VITE_STRIPE_PUBLIC_KEY;
-  if (fallbackKey) {
-    console.log('[Booking] Using fallback Stripe public key from build-time env');
-    return fallbackKey;
-  }
-  
-  console.warn('[Booking] Stripe public key not found');
-  return '';
-}
-
-async function getStripePromise() {
+function getStripePromise() {
   if (!stripePromiseLoaded) {
-    const stripePublicKey = await getStripePublicKey();
+    const stripePublicKey = window.RUNTIME_CONFIG?.VITE_STRIPE_PUBLIC_KEY || import.meta.env.VITE_STRIPE_PUBLIC_KEY;
     if (stripePublicKey) {
       console.log('[Booking] Loading Stripe with public key');
       stripePromise = loadStripe(stripePublicKey);
     } else {
-      console.warn('[Booking] Stripe public key not found - Stripe payment will not work');
+      console.warn('[Booking] Stripe public key not found in RUNTIME_CONFIG or environment');
     }
     stripePromiseLoaded = true;
   }
@@ -88,26 +61,11 @@ function PaymentForm({
   const { toast } = useToast();
   const [isProcessing, setIsProcessing] = useState(false);
   const [hasProcessed, setHasProcessed] = useState(false);
-  const [isStripeReady, setIsStripeReady] = useState(false);
-
-  // Check when Stripe and elements are ready
-  useEffect(() => {
-    if (stripe && elements) {
-      setIsStripeReady(true);
-    }
-  }, [stripe, elements]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!stripe || !elements || !isStripeReady || isProcessing || hasProcessed) {
-      console.warn('[PaymentForm] Form submission blocked:', { 
-        hasStripe: !!stripe, 
-        hasElements: !!elements, 
-        isStripeReady,
-        isProcessing,
-        hasProcessed 
-      });
+    if (!stripe || !elements || isProcessing || hasProcessed) {
       return;
     }
 
@@ -215,17 +173,12 @@ function PaymentForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
-      {!isStripeReady && (
-        <div className="text-sm text-muted-foreground">
-          Loading payment processor...
-        </div>
-      )}
       <PaymentElement />
       <Button 
         type="submit"
         className="w-full" 
         size="lg"
-        disabled={!stripe || !isStripeReady || isProcessing}
+        disabled={!stripe || isProcessing}
         data-testid="button-submit-payment"
       >
         {isProcessing ? (

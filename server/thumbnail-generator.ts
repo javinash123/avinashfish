@@ -41,8 +41,8 @@ export async function generateCompetitionThumbnails(
     try {
       await sharp(sourcePath)
         .resize(config.width, config.height, {
-          fit: 'cover',
-          position: 'center'
+          fit: 'contain',
+          background: { r: 0, g: 0, b: 0, alpha: 0.1 }
         })
         .webp({ quality: 85 })
         .toFile(thumbnailPath);

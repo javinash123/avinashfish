@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -43,15 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2, Bold, Italic, List, ListOrdered, Heading2, Heading3, AlignLeft, Minus } from "lucide-react";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -59,65 +51,8 @@ import type { Competition } from "@shared/schema";
 import { getCompetitionStatus } from "@/lib/uk-timezone";
 import { convertToOunces, formatWeight, convertFromOunces } from "@shared/weight-utils";
 
-interface AdminUser {
-  id: string;
-  email: string;
-  firstName?: string;
-  lastName?: string;
-  name?: string;
-  role?: "admin" | "manager" | "marshal";
-}
-
-function HtmlEditorToolbar({ textareaRef, value, onChange }: { textareaRef: React.RefObject<HTMLTextAreaElement>; value: string; onChange: (val: string) => void }) {
-  const insertTag = (openTag: string, closeTag: string) => {
-    const el = textareaRef.current;
-    if (!el) return;
-    const start = el.selectionStart;
-    const end = el.selectionEnd;
-    const selected = value.substring(start, end);
-    const newValue = value.substring(0, start) + openTag + selected + closeTag + value.substring(end);
-    onChange(newValue);
-    setTimeout(() => {
-      el.focus();
-      el.setSelectionRange(start + openTag.length, start + openTag.length + selected.length);
-    }, 0);
-  };
-
-  const tools = [
-    { icon: Bold, label: "Bold", open: "<strong>", close: "</strong>" },
-    { icon: Italic, label: "Italic", open: "<em>", close: "</em>" },
-    { icon: Heading2, label: "Heading 2", open: "<h2>", close: "</h2>" },
-    { icon: Heading3, label: "Heading 3", open: "<h3>", close: "</h3>" },
-    { icon: AlignLeft, label: "Paragraph", open: "<p>", close: "</p>" },
-    { icon: List, label: "Bullet List", open: "<ul>\n  <li>", close: "</li>\n</ul>" },
-    { icon: ListOrdered, label: "Numbered List", open: "<ol>\n  <li>", close: "</li>\n</ol>" },
-    { icon: Minus, label: "Line Break", open: "<br>", close: "" },
-  ];
-
-  return (
-    <div className="flex flex-wrap gap-1 p-2 border border-b-0 rounded-t-md bg-muted/50">
-      {tools.map(({ icon: Icon, label, open, close }) => (
-        <Button
-          key={label}
-          type="button"
-          variant="ghost"
-          size="sm"
-          title={label}
-          className="h-7 w-7 p-0"
-          onClick={() => insertTag(open, close)}
-        >
-          <Icon className="h-3.5 w-3.5" />
-        </Button>
-      ))}
-      <span className="text-xs text-muted-foreground self-center ml-2">HTML Editor</span>
-    </div>
-  );
-}
-
 export default function AdminCompetitions() {
   const { toast } = useToast();
-  const createDescRef = useRef<HTMLTextAreaElement>(null);
-  const editDescRef = useRef<HTMLTextAreaElement>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [isPegAssignmentOpen, setIsPegAssignmentOpen] = useState(false);
@@ -127,15 +62,6 @@ export default function AdminCompetitions() {
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [competitionToDelete, setCompetitionToDelete] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
-
-  // Get admin role for permission checks
-  const { data: admin } = useQuery<AdminUser>({
-    queryKey: ["/api/admin/me"],
-  });
-
-  // Role-based permission helpers
-  const canModify = admin?.role === "admin" || admin?.role === "manager";
-  const canViewPayments = admin?.role === "admin";
   const [selectedUserId, setSelectedUserId] = useState<string>("");
   const [entryToDelete, setEntryToDelete] = useState<{ id: string; weight: string } | null>(null);
   
@@ -172,7 +98,7 @@ export default function AdminCompetitions() {
   const { data: teams = [] } = useQuery<Array<{
     id: string;
     teamName: string;
-    pegNumber: number | null;
+    pegNumber: number;
     memberCount: number;
     members: Array<{
       userId: string;
@@ -585,26 +511,6 @@ export default function AdminCompetitions() {
       toast({
         title: "Error",
         description: "Failed to remove participant",
-        variant: "destructive",
-      });
-    },
-  });
-
-  const regenerateThumbnailsMutation = useMutation({
-    mutationFn: async () => {
-      return await apiRequest("POST", "/api/admin/regenerate-thumbnails");
-    },
-    onSuccess: (data: any) => {
-      queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
-      toast({
-        title: "Thumbnails Regenerated",
-        description: `Processed ${data.processed} competitions: ${data.success} succeeded, ${data.skipped} skipped, ${data.errors} errors`,
-      });
-    },
-    onError: (error: any) => {
-      toast({
-        title: "Error",
-        description: error.message || "Failed to regenerate thumbnails",
         variant: "destructive",
       });
     },
@@ -1089,29 +995,10 @@ export default function AdminCompetitions() {
             Create and manage fishing competitions
           </p>
         </div>
-        <div className="flex gap-2">
-          {canModify && (
-            <>
-              <Button 
-                variant="outline" 
-                onClick={() => regenerateThumbnailsMutation.mutate()}
-                disabled={regenerateThumbnailsMutation.isPending}
-                data-testid="button-regenerate-thumbnails"
-              >
-                {regenerateThumbnailsMutation.isPending ? (
-                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                {regenerateThumbnailsMutation.isPending ? "Regenerating..." : "Fix Images"}
-              </Button>
-              <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
-                <Plus className="h-4 w-4 mr-2" />
-                Create Competition
-              </Button>
-            </>
-          )}
-        </div>
+        <Button onClick={() => setIsCreateOpen(true)} data-testid="button-create-competition">
+          <Plus className="h-4 w-4 mr-2" />
+          Create Competition
+        </Button>
       </div>
 
       <div className="flex gap-2">
@@ -1158,7 +1045,7 @@ export default function AdminCompetitions() {
                 <TableHead>Date & Time</TableHead>
                 <TableHead>Lake</TableHead>
                 <TableHead>Pegs</TableHead>
-                {canViewPayments && <TableHead>Entry Fee</TableHead>}
+                <TableHead>Entry Fee</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead className="text-right">Actions</TableHead>
               </TableRow>
@@ -1205,78 +1092,71 @@ export default function AdminCompetitions() {
                       </Badge>
                     </div>
                   </TableCell>
-                  {canViewPayments && <TableCell>£{competition.entryFee}</TableCell>}
+                  <TableCell>£{competition.entryFee}</TableCell>
                   <TableCell>
                     <Badge variant={getStatusBadgeVariant(getCompetitionStatus(competition))}>
                       {getCompetitionStatus(competition)}
                     </Badge>
                   </TableCell>
                   <TableCell className="text-right">
-                    <DropdownMenu>
-                      <DropdownMenuTrigger asChild>
-                        <Button variant="ghost" size="sm" data-testid={`button-actions-${competition.id}`}>
-                          <MoreVertical className="h-4 w-4" />
-                        </Button>
-                      </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end">
-                        <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                        <DropdownMenuSeparator />
-                        {getCompetitionStatus(competition) === "upcoming" && (
-                          <DropdownMenuItem 
-                            onClick={() => openPegAssignment(competition)}
-                            data-testid={`action-assign-pegs-${competition.id}`}
-                          >
-                            <MapPin className="h-4 w-4 mr-2" />
-                            Assign Pegs
-                          </DropdownMenuItem>
-                        )}
-                        {getCompetitionStatus(competition) === "live" && (
-                          <DropdownMenuItem 
-                            onClick={() => openWeighIn(competition)}
-                            data-testid={`action-weigh-in-${competition.id}`}
-                          >
-                            <Trophy className="h-4 w-4 mr-2" />
-                            Weigh-in
-                          </DropdownMenuItem>
-                        )}
-                        <DropdownMenuItem 
-                          onClick={() => openAnglersDialog(competition)}
-                          data-testid={`action-anglers-${competition.id}`}
+                    <div className="flex justify-end gap-2">
+                      {getCompetitionStatus(competition) === "upcoming" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openPegAssignment(competition)}
+                          data-testid={`button-assign-pegs-${competition.id}`}
                         >
-                          <Users className="h-4 w-4 mr-2" />
-                          Anglers
-                        </DropdownMenuItem>
-                        {canViewPayments && (
-                          <DropdownMenuItem 
-                            onClick={() => openPaymentsDialog(competition)}
-                            data-testid={`action-payments-${competition.id}`}
-                          >
-                            <CreditCard className="h-4 w-4 mr-2" />
-                            Payments
-                          </DropdownMenuItem>
-                        )}
-                        {canModify && (
-                          <>
-                            <DropdownMenuSeparator />
-                            <DropdownMenuItem 
-                              onClick={() => openEditDialog(competition)}
-                              data-testid={`action-edit-${competition.id}`}
-                            >
-                              <Pencil className="h-4 w-4 mr-2" />
-                              Edit
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => handleDelete(competition)}
-                              data-testid={`action-delete-${competition.id}`}
-                              className="text-destructive"
-                            >
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete
-                            </DropdownMenuItem>
-                          </>
-                        )}
-                      </DropdownMenuContent>
-                    </DropdownMenu>
+                          <MapPin className="h-3 w-3 mr-1" />
+                          Pegs
+                        </Button>
+                      )}
+                      {getCompetitionStatus(competition) === "live" && (
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openWeighIn(competition)}
+                          data-testid={`button-weigh-in-${competition.id}`}
+                        >
+                          <Trophy className="h-3 w-3 mr-1" />
+                          Weigh-in
+                        </Button>
+                      )}
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openAnglersDialog(competition)}
+                        data-testid={`button-anglers-${competition.id}`}
+                      >
+                        <Users className="h-3 w-3 mr-1" />
+                        Anglers
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openPaymentsDialog(competition)}
+                        data-testid={`button-payments-${competition.id}`}
+                      >
+                        <CreditCard className="h-3 w-3 mr-1" />
+                        Payments
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => openEditDialog(competition)}
+                        data-testid={`button-edit-${competition.id}`}
+                      >
+                        <Pencil className="h-3 w-3" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => handleDelete(competition)}
+                        data-testid={`button-delete-${competition.id}`}
+                      >
+                        <Trash2 className="h-3 w-3" />
+                      </Button>
+                    </div>
                   </TableCell>
                 </TableRow>
                 ))
@@ -1489,31 +1369,15 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="description">Description</Label>
-              <HtmlEditorToolbar
-                textareaRef={createDescRef}
-                value={formData.description}
-                onChange={(val) => setFormData({ ...formData, description: val })}
-              />
               <Textarea
-                ref={createDescRef}
                 id="description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                placeholder="Competition details and rules... (HTML supported)"
-                className="rounded-t-none min-h-[150px] font-mono text-sm"
+                placeholder="Competition details and rules..."
                 data-testid="input-description"
               />
-              {formData.description && (
-                <div className="mt-1">
-                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                  <div
-                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
-                    dangerouslySetInnerHTML={{ __html: formData.description }}
-                  />
-                </div>
-              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="image">Competition Image</Label>
@@ -1740,30 +1604,14 @@ export default function AdminCompetitions() {
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-description">Description</Label>
-              <HtmlEditorToolbar
-                textareaRef={editDescRef}
-                value={formData.description}
-                onChange={(val) => setFormData({ ...formData, description: val })}
-              />
               <Textarea
-                ref={editDescRef}
                 id="edit-description"
                 value={formData.description}
                 onChange={(e) =>
                   setFormData({ ...formData, description: e.target.value })
                 }
-                className="rounded-t-none min-h-[150px] font-mono text-sm"
                 data-testid="input-edit-description"
               />
-              {formData.description && (
-                <div className="mt-1">
-                  <p className="text-xs text-muted-foreground mb-1">Preview:</p>
-                  <div
-                    className="html-description text-sm border rounded-md p-3 bg-muted/30"
-                    dangerouslySetInnerHTML={{ __html: formData.description }}
-                  />
-                </div>
-              )}
             </div>
             <div className="grid gap-2">
               <Label htmlFor="edit-image">Competition Image</Label>
@@ -1829,15 +1677,15 @@ export default function AdminCompetitions() {
             {selectedCompetition?.competitionMode === "team" && selectedCompetition?.teamPegAssignmentMode === "team" && (
               <Card>
                 <CardHeader>
-                  <CardTitle>Team Peg Assignments</CardTitle>
+                  <CardTitle>Current Team Assignments</CardTitle>
                   <CardDescription>
-                    {teams.filter(t => t.pegNumber && t.pegNumber > 0).length} / {teams.length} teams assigned
+                    {teams.filter(t => t.pegNumber > 0).length} / {teams.length} teams assigned
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  {teams.length === 0 ? (
+                  {teams.filter(t => t.pegNumber > 0).length === 0 ? (
                     <div className="text-center py-8 text-muted-foreground">
-                      <p>No teams registered for this competition yet.</p>
+                      <p>No teams assigned yet. Use Auto-Assign or Random Draw above to get started.</p>
                     </div>
                   ) : (
                     <Table>
@@ -1851,13 +1699,8 @@ export default function AdminCompetitions() {
                       </TableHeader>
                       <TableBody>
                         {teams
-                          .sort((a, b) => {
-                            // Sort: assigned pegs first (by number), then unassigned
-                            if (a.pegNumber && b.pegNumber) return a.pegNumber - b.pegNumber;
-                            if (a.pegNumber) return -1;
-                            if (b.pegNumber) return 1;
-                            return 0;
-                          })
+                          .filter(t => t.pegNumber > 0)
+                          .sort((a, b) => a.pegNumber - b.pegNumber)
                           .map((team) => (
                             <TableRow key={team.id}>
                             <TableCell>
@@ -1931,7 +1774,7 @@ export default function AdminCompetitions() {
                                 </div>
                               ) : (
                                 <Badge variant="outline" className="font-mono">
-                                  {team.pegNumber ? team.pegNumber : "Not assigned"}
+                                  {team.pegNumber}
                                 </Badge>
                               )}
                             </TableCell>
@@ -1948,7 +1791,7 @@ export default function AdminCompetitions() {
                                   variant="ghost"
                                   onClick={() => {
                                     setEditingPegTeamId(team.id);
-                                    setEditPegNumber(team.pegNumber ? team.pegNumber.toString() : "");
+                                    setEditPegNumber(team.pegNumber.toString());
                                   }}
                                   data-testid={`button-edit-team-peg-${team.id}`}
                                 >

@@ -10,7 +10,7 @@ export default function About() {
 
   return (
     <div className="min-h-screen py-8">
-      <div className="container mx-auto px-4 lg:px-8 max-w-7xl">
+      <div className="container mx-auto px-4 lg:px-8 max-w-4xl">
         <div className="mb-12 text-center">
           <div className="inline-flex items-center justify-center w-20 h-20 mb-6">
             {siteSettings?.logoUrl ? (

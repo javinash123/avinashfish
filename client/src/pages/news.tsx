@@ -6,94 +6,81 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
-import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, ChevronLeft, ChevronRight } from "lucide-react";
+import { Calendar, Clock, Search, ArrowRight, Trophy, Newspaper, Share2 } from "lucide-react";
+import { SiFacebook, SiX } from "react-icons/si";
+import { FaWhatsapp } from "react-icons/fa";
 import type { News } from "@shared/schema";
+import { updateMetaTags, resetMetaTags } from "@/lib/meta-tags";
 
-interface NewsSummary {
-  id: string;
-  title: string;
-  excerpt: string;
-  image: string;
-  category: string;
-  date: string;
-  readTime: string;
-  author: string;
-  featured?: boolean;
-  content?: string;
-}
-
-const getNewsImageUrl = (image: string | any) => {
-  if (!image) return "/attached-assets/placeholder-news.jpg";
-  
-  // If it's an object (News with potential thumbnail fields)
-  if (typeof image === 'object') {
-    const thumb = image.thumbnailUrlMd || image.thumbnailUrl || image.image;
-    if (!thumb) return "/attached-assets/placeholder-news.jpg";
-    if (thumb.startsWith('http') || thumb.startsWith('data:') || thumb.startsWith('/')) {
-      return thumb;
-    }
-    return `/attached-assets/uploads/news/${thumb}`;
-  }
-
-  // If it's a string
-  if (image.startsWith('http') || image.startsWith('data:') || image.startsWith('/')) {
-    return image;
-  }
-  
-  return `/attached-assets/uploads/news/${image}`;
-};
-
-interface PaginatedNewsResponse {
-  news: NewsSummary[];
-  pagination: {
-    page: number;
-    limit: number;
-    totalItems: number;
-    totalPages: number;
-    hasMore: boolean;
-  };
-}
-
-export default function NewsPage() {
+export default function News() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
-  const [currentPage, setCurrentPage] = useState(1);
+  const [selectedArticle, setSelectedArticle] = useState<News | null>(null);
   const { toast } = useToast();
-  const [, setLocation] = useLocation();
-  const ITEMS_PER_PAGE = 6;
+  const [location, setLocation] = useLocation();
 
-  const { data: newsData, isLoading } = useQuery<PaginatedNewsResponse>({
-    queryKey: ["/api/news", currentPage, ITEMS_PER_PAGE, selectedCategory, searchQuery],
-    queryFn: async () => {
-      const params = new URLSearchParams({
-        page: currentPage.toString(),
-        limit: ITEMS_PER_PAGE.toString(),
-        category: selectedCategory,
-        search: searchQuery
-      });
-      const response = await fetch(`/api/news?${params.toString()}`);
-      if (!response.ok) throw new Error("Failed to fetch news");
-      return response.json();
-    },
-    staleTime: 5 * 60 * 1000,
-    gcTime: 10 * 60 * 1000,
+  const { data: newsArticles = [], isLoading } = useQuery<News[]>({
+    queryKey: ["/api/news"],
   });
 
-  const newsArticles = newsData?.news || [];
-  const pagination = newsData?.pagination;
-
-  // Reset to first page when filters change
+  // Handle deep linking - auto-open article from URL parameter and browser navigation
   useEffect(() => {
-    setCurrentPage(1);
-  }, [selectedCategory, searchQuery]);
+    if (newsArticles.length > 0) {
+      const urlParams = new URLSearchParams(window.location.search);
+      const articleId = urlParams.get('article');
+      
+      if (articleId) {
+        const article = newsArticles.find(a => a.id === articleId);
+        if (article) {
+          setSelectedArticle(article);
+          // Update meta tags for social sharing
+          const articleUrl = `${window.location.origin}/news?article=${article.id}`;
+          updateMetaTags({
+            title: article.title,
+            description: article.excerpt,
+            image: article.image,
+            url: articleUrl,
+            type: 'article',
+          });
+        }
+      } else {
+        setSelectedArticle(null);
+        resetMetaTags();
+      }
+    }
+  }, [newsArticles, location]);
 
-  const handleArticleOpen = (article: NewsSummary) => {
-    setLocation(`/news/${article.id}`);
+  // Update URL when article is opened/closed using wouter
+  const handleArticleOpen = (article: News) => {
+    setSelectedArticle(article);
+    
+    // Update meta tags for social sharing
+    const articleUrl = `${window.location.origin}/news?article=${article.id}`;
+    updateMetaTags({
+      title: article.title,
+      description: article.excerpt,
+      image: article.image,
+      url: articleUrl,
+      type: 'article',
+    });
+    
+    setLocation(`/news?article=${article.id}`);
   };
 
-  // The filteredArticles now come directly from the API result
-  const filteredArticles = newsArticles;
+  const handleArticleClose = () => {
+    setSelectedArticle(null);
+    resetMetaTags();
+    setLocation('/news');
+  };
+
+  const filteredArticles = newsArticles.filter((article) => {
+    const matchesSearch = article.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      article.excerpt.toLowerCase().includes(searchQuery.toLowerCase());
+    const matchesCategory = selectedCategory === "all" || article.category === selectedCategory;
+    return matchesSearch && matchesCategory;
+  });
 
   const getCategoryBadge = (category: string) => {
     switch (category) {
@@ -110,11 +97,6 @@ export default function NewsPage() {
     }
   };
 
-  const handlePageChange = (newPage: number) => {
-    setCurrentPage(newPage);
-    window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
-
   return (
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 lg:px-8 py-8">
@@ -127,19 +109,19 @@ export default function NewsPage() {
           </p>
         </div>
 
-        <div className="mb-8">
-          <div className="relative w-full">
+        <div className="mb-8 flex flex-col sm:flex-row gap-4">
+          <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
               type="text"
               placeholder="Search articles..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 w-full bg-background"
+              className="pl-10"
               data-testid="input-news-search"
             />
           </div>
-          <div className="flex gap-2 flex-wrap mt-4">
+          <div className="flex gap-2 flex-wrap">
             <Button
               variant={selectedCategory === "all" ? "default" : "outline"}
               onClick={() => setSelectedCategory("all")}
@@ -169,13 +151,6 @@ export default function NewsPage() {
             >
               General
             </Button>
-            <Button
-              variant={selectedCategory === "news" ? "default" : "outline"}
-              onClick={() => setSelectedCategory("news")}
-              data-testid="button-filter-news"
-            >
-              News
-            </Button>
           </div>
         </div>
 
@@ -183,7 +158,7 @@ export default function NewsPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="flex flex-col overflow-hidden">
-                <Skeleton className="w-full h-48" />
+                <Skeleton className="aspect-video w-full" />
                 <CardHeader>
                   <Skeleton className="h-6 w-3/4 mb-2" />
                   <Skeleton className="h-4 w-full" />
@@ -205,12 +180,11 @@ export default function NewsPage() {
                 
                 return (
                   <Card key={article.id} className="flex flex-col overflow-hidden hover-elevate" data-testid={`card-news-${article.id}`}>
-                    <div className="relative w-full overflow-hidden bg-muted">
+                    <div className="relative aspect-video overflow-hidden bg-muted">
                       <img
-                        src={getNewsImageUrl(article)}
+                        src={article.image}
                         alt={article.title}
-                        className="w-full h-auto object-cover"
-                        loading="lazy"
+                        className="w-full h-full object-contain"
                       />
                       <div className="absolute top-2 left-2">
                         <Badge variant={categoryInfo.variant}>
@@ -262,47 +236,123 @@ export default function NewsPage() {
                 </p>
               </div>
             )}
-
-            {pagination && pagination.totalPages > 1 && (
-              <div className="flex items-center justify-center gap-2 mt-8">
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(currentPage - 1)}
-                  disabled={currentPage === 1}
-                  data-testid="button-prev-page"
-                >
-                  <ChevronLeft className="h-4 w-4" />
-                </Button>
-                
-                <div className="flex items-center gap-1">
-                  {Array.from({ length: pagination.totalPages }, (_, i) => i + 1).map((page) => (
-                    <Button
-                      key={page}
-                      variant={page === currentPage ? "default" : "outline"}
-                      size="sm"
-                      onClick={() => handlePageChange(page)}
-                      data-testid={`button-page-${page}`}
-                    >
-                      {page}
-                    </Button>
-                  ))}
-                </div>
-
-                <Button
-                  variant="outline"
-                  size="icon"
-                  onClick={() => handlePageChange(currentPage + 1)}
-                  disabled={currentPage === pagination.totalPages}
-                  data-testid="button-next-page"
-                >
-                  <ChevronRight className="h-4 w-4" />
-                </Button>
-              </div>
-            )}
           </>
         )}
       </div>
+
+      <Dialog open={!!selectedArticle} onOpenChange={(open) => { if (!open) handleArticleClose(); }}>
+        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto" data-testid="dialog-news-detail">
+          {selectedArticle && (() => {
+            // Generate shareable URL for this specific article
+            const articleUrl = `${window.location.origin}/news?article=${selectedArticle.id}`;
+            
+            return (
+              <>
+                <DialogHeader>
+                  <DialogTitle data-testid="text-dialog-news-title">{selectedArticle.title}</DialogTitle>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="relative aspect-video overflow-hidden rounded-md bg-muted">
+                    <img
+                      src={selectedArticle.image}
+                      alt={selectedArticle.title}
+                      className="w-full h-full object-contain"
+                    />
+                  </div>
+                  <div className="flex flex-wrap items-center gap-4">
+                    {(() => {
+                      const categoryInfo = getCategoryBadge(selectedArticle.category);
+                      const CategoryIcon = categoryInfo.icon;
+                      return (
+                        <Badge variant={categoryInfo.variant}>
+                          <CategoryIcon className="h-3 w-3 mr-1" />
+                          {categoryInfo.label}
+                        </Badge>
+                      );
+                    })()}
+                    <div className="flex items-center gap-4 text-sm text-muted-foreground">
+                      <div className="flex items-center gap-1">
+                        <Calendar className="h-3 w-3" />
+                        <span data-testid="text-dialog-news-date">{selectedArticle.date}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Clock className="h-3 w-3" />
+                        <span>{selectedArticle.readTime}</span>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="space-y-3">
+                    <p className="text-muted-foreground font-medium">{selectedArticle.excerpt}</p>
+                    <div className="prose prose-sm max-w-none dark:prose-invert" data-testid="text-dialog-news-content" dangerouslySetInnerHTML={{ __html: selectedArticle.content }} />
+                    <div className="flex items-center gap-4 text-sm pt-4 border-t">
+                      <span className="text-muted-foreground">By {selectedArticle.author}</span>
+                      {selectedArticle.competition && (
+                        <>
+                          <span className="text-muted-foreground">•</span>
+                          <div className="flex items-center gap-2">
+                            <Trophy className="h-4 w-4 text-muted-foreground" />
+                            <span data-testid="text-dialog-news-competition">{selectedArticle.competition}</span>
+                          </div>
+                        </>
+                      )}
+                    </div>
+                    <div className="flex items-center gap-2 pt-4 border-t mt-4">
+                      <Share2 className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground mr-2">Share:</span>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const text = selectedArticle.title;
+                          window.open(`https://wa.me/?text=${encodeURIComponent(text + ' - ' + articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-whatsapp"
+                      >
+                        <FaWhatsapp className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          window.open(`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-facebook"
+                      >
+                        <SiFacebook className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="icon"
+                        onClick={() => {
+                          const text = selectedArticle.title;
+                          window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(articleUrl)}`, '_blank');
+                        }}
+                        data-testid="button-share-x"
+                      >
+                        <SiX className="h-4 w-4" />
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          navigator.clipboard.writeText(articleUrl);
+                          toast({
+                            title: "Link copied",
+                            description: "Article link copied to clipboard - share it anywhere!",
+                          });
+                        }}
+                        data-testid="button-share-instagram"
+                      >
+                        Copy Link
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              </>
+            );
+          })()}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
