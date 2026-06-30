@@ -64,9 +64,9 @@ export default function AdminLogin() {
         title: "Login successful",
         description: `Welcome back!`,
       });
-      
-      // Invalidate queries to update UI
-      await queryClient.invalidateQueries({ queryKey: ["/api/admin/me"] });
+
+      // Immediately seed the cache so AdminDashboard sees the data on first render
+      queryClient.setQueryData(["/api/admin/me"], data);
       
       setLocation("/admin");
     } catch (error: any) {

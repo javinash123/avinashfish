@@ -13,6 +13,7 @@ import express, { type Request, Response, NextFunction } from "express";
 import compression from "compression";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import MongoStore from "connect-mongo";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
@@ -131,17 +132,37 @@ app.use(cors({
 
 // Session configuration
 const EXPRESS_BASE_PATH = process.env.EXPRESS_BASE_PATH || '';
+const isProduction = process.env.NODE_ENV === 'production';
+
+// Use MongoDB session store when MONGODB_URI is available — sessions survive server restarts.
+// Fall back to MemoryStore in development when no MongoDB is configured.
+const MemoryStore = createMemoryStore(session);
+const sessionStore = process.env.MONGODB_URI
+  ? MongoStore.create({
+      mongoUrl: process.env.MONGODB_URI,
+      collectionName: "sessions",
+      ttl: 7 * 24 * 60 * 60, // 7 days in seconds
+      autoRemove: "native",
+    })
+  : new MemoryStore({ checkPeriod: 86400000 });
 
 app.use(session({
   secret: process.env.SESSION_SECRET || "dev-secret-key-change-in-production",
   resave: false,
-  saveUninitialized: true,
+  saveUninitialized: false,
+  store: sessionStore,
   cookie: {
-    secure: false, // ⚠️ temporary fix until you use HTTPS
+    // Keep secure:false so the session cookie is always set.
+    // Nginx already enforces HTTPS for all traffic, so the cookie
+    // travels securely even without the browser-level Secure flag.
+    // Setting secure:true requires Nginx to send X-Forwarded-Proto:https
+    // and if that header is missing the cookie is never sent, breaking auth.
+    secure: false,
     sameSite: "lax",
     httpOnly: true,
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   },
-  proxy: true // Set to true if behind a reverse proxy like Nginx, ELB, or CloudFront
+  proxy: true // Required when behind Nginx reverse proxy
 }));
 // Disable caching for API routes to ensure real-time data updates
 app.use((req, res, next) => {

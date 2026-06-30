@@ -37,15 +37,15 @@ Onboarding is done once all three hold: the connection is assigned to this Repl,
 
 ## Step 3: Catalog setup (Admin API, only when the user asks to add products)
 
-Run setup through `shopify-admin-api.mjs`. Setup/seed scripts are orchestration only (which products to create, which local mapping file to write); every Admin request must go through the proxy helper with `Connector-Name: shopify-store`. Do not call `https://{shop_domain}/admin/...` directly, use Admin SDK clients, or read Admin tokens.
+Run setup through `shopify-admin-api.mjs`. Setup/seed scripts are orchestration only (which products to create, which local mapping file to write); every Admin request must go through the proxy helper with `Connector-Name: shopify-store`. Do not call `https://{shop_domain}/admin/...` directly, use Admin SDK clients, or read Admin tokens. For the whole sequence, prefer copying the known-good `./references/seed-products.mjs` golden script (replace its `PRODUCTS` array, run it) rather than hand-assembling the mutations — it already implements the order, idempotency, and error handling below.
 
 See `./references/code-templates.md` → "Create, price, stock, and publish a product" for the exact GraphQL. The required order and the mutations to copy:
 
-1. `productCreate` → product `id` (set `status: "ACTIVE"`).
+1. Look the product up by `handle` (`productByHandle`) first and reuse its IDs if it exists; otherwise `productCreate` → product `id` (set `status: "ACTIVE"`). `productCreate` is not idempotent, so the handle check keeps re-runs from duplicating products.
 2. Query `product.variants` for the variant `id` (this is the Storefront cart `merchandiseId` — persist/render it, never invent IDs) and `inventoryItem { id }`.
 3. `productVariantsBulkUpdate` to set price.
-4. Inventory, in this exact order or stock is silently unenforced: `inventoryItemUpdate({ tracked: true })` → `inventoryActivate(inventoryItemId, locationId)` → `inventorySetQuantities`. Resolve the location with `locations(first: 1)`; never hardcode it.
-5. Resolve the publication with `publications(first: 20)` (the payload has none): prefer the Replit-owned Sales Channel publication; fall back to `Online Store` only for Replit-created Vibe/dev stores or after explicit merchant confirmation on live stores. Then `publishablePublish`. If no publication exists, skip publishing and tell the user the Sales Channel publication is not provisioned yet.
+4. Inventory, in this exact order or stock is silently unenforced: `inventoryItemUpdate({ tracked: true })` → `inventoryActivate(inventoryItemId, locationId)` → read the current `available` level, then `inventoryAdjustQuantities` with a per-change `changeFromQuantity` compare-and-set. Resolve the location with `locations(first: 1)`; never hardcode it. Shopify requires the `@idempotent(key: ...)` directive at the **field** level (stable per-item key, e.g. the handle) on `inventoryActivate` and `inventoryAdjustQuantities`; omitting it fails with `The @idempotent directive is required for this mutation but was not provided`. (`inventorySetQuantities` also works but on `2026-04` dropped `ignoreCompareQuantity` and requires a per-item `changeFromQuantity`.)
+5. Resolve the Replit-owned publication via `currentAppInstallation { publication { id } }` (the connection payload has none) — this is the authoritative Replit Sales Channel, the same lookup the `shopify-store` connector uses. If absent, fall back to the publication named exactly `Online Store` (match the exact name, not a broad `Sales Channel` substring that would catch unrelated channels like `Google & YouTube Sales Channel`); on a transferred live store, gate that fallback behind explicit user confirmation since it exposes products on the merchant's existing storefront. Then `publishablePublish`. If neither exists, skip publishing and tell the user the Sales Channel publication is not provisioned yet.
 
 Inspect `userErrors` on every mutation and stop on the first non-empty array. Products are invisible to the Storefront API until active AND published to a storefront-visible publication. For batches >20 items use `bulkOperationRunMutation`, and throttle on `extensions.cost.throttleStatus` (the helper does not auto-throttle).
 
@@ -106,5 +106,6 @@ If you believe two Repls are the same app but OpenInt reports a different `repl_
 ## References
 
 - `./references/shopify-admin-api.mjs` — Admin GraphQL helper through the OpenInt proxy.
+- `./references/seed-products.mjs` — known-good runnable catalog seed script (create/price/stock/publish; idempotent and safe to re-run).
 - `./references/shopifyStorefrontClient.ts` — Storefront API client (`shopifyStorefrontRequest`) for app code.
 - `./references/code-templates.md` — copy-ready snippets: product create/price/stock/publish, product queries, cart + checkout redirect, Go Live behavior.

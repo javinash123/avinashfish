@@ -1,0 +1,16 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: 🔐 encrypt with Dotenvx: https://dotenvx.com[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: pk_test_51... ⚠️ TEST
+   Stripe Secret Key: sk_test_51... ⚠️ TEST
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+7:39:35 PM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.

@@ -119,10 +119,16 @@ function PaymentForm({
     setIsProcessing(true);
 
     try {
+      // return_url is used when 3D Secure requires a full browser redirect.
+      // We point back to the same booking page so we can detect the redirect
+      // on mount and complete the registration automatically.
+      const returnUrl = new URL(`${window.location.origin}/booking/${competitionId}`);
+      if (teamId) returnUrl.searchParams.set("teamId", teamId);
+
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         confirmParams: {
-          return_url: `${window.location.origin}/booking/success`,
+          return_url: returnUrl.toString(),
         },
         redirect: "if_required",
       });
@@ -255,8 +261,67 @@ export default function Booking() {
   const [bookingComplete, setBookingComplete] = useState(false);
   const [paymentError, setPaymentError] = useState("");
   const [isCreatingPaymentIntent, setIsCreatingPaymentIntent] = useState(false);
+  const [isHandlingRedirect, setIsHandlingRedirect] = useState(false);
 
   const competitionId = params?.id || "";
+
+  // Handle return from 3D Secure bank redirect.
+  // When a card requires 3DS verification, Stripe redirects the browser away
+  // and back to this page with ?payment_intent=...&redirect_status=succeeded.
+  // We detect that here and complete the registration automatically.
+  useEffect(() => {
+    if (!competitionId) return;
+    const urlParams = new URLSearchParams(window.location.search);
+    const paymentIntentId = urlParams.get("payment_intent");
+    const redirectStatus = urlParams.get("redirect_status");
+    const returnedTeamId = urlParams.get("teamId");
+
+    if (!paymentIntentId) return; // Normal page load, not a 3DS return
+
+    // Clear Stripe params from URL immediately to prevent re-processing on re-renders
+    window.history.replaceState({}, "", `/booking/${competitionId}`);
+
+    if (redirectStatus === "succeeded") {
+      setIsHandlingRedirect(true);
+      const requestBody: any = { paymentIntentId, competitionId };
+      if (returnedTeamId) requestBody.teamId = returnedTeamId;
+
+      apiRequest("POST", "/api/confirm-payment-and-join", requestBody)
+        .then((res) => {
+          if (!res.ok) {
+            return res.json().then((data) => {
+              throw new Error(data.message || "Booking failed");
+            });
+          }
+          return res.json();
+        })
+        .then(() => {
+          setBookingComplete(true);
+          toast({
+            title: "Booking Confirmed",
+            description: returnedTeamId ? "Your team peg has been booked!" : "Your peg has been booked!",
+          });
+        })
+        .catch((err) => {
+          setPaymentError(
+            err.message || "Payment succeeded but booking failed. Please contact support."
+          );
+          toast({
+            title: "Booking Error",
+            description: err.message || "An unexpected error occurred. Please contact support.",
+            variant: "destructive",
+          });
+        })
+        .finally(() => setIsHandlingRedirect(false));
+    } else {
+      setPaymentError("Your payment was not completed. Please try again.");
+      toast({
+        title: "Payment Incomplete",
+        description: "Your payment was not completed. Please try again.",
+        variant: "destructive",
+      });
+    }
+  }, [competitionId]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Fetch competition data from API
   const { data: competition, isLoading: competitionLoading } = useQuery<Competition>({
@@ -402,6 +467,21 @@ export default function Booking() {
         });
     }
   }, [acceptTerms, clientSecret, paymentError, competition]);
+
+  // Show a processing screen while completing registration after 3DS redirect
+  if (isHandlingRedirect) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <Card className="max-w-md w-full">
+          <CardContent className="py-10 text-center space-y-4">
+            <div className="mx-auto w-12 h-12 rounded-full border-4 border-primary border-t-transparent animate-spin" />
+            <p className="text-lg font-medium">Completing your booking...</p>
+            <p className="text-sm text-muted-foreground">Please wait while we register your place.</p>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   if (!competitionId) {
     return (

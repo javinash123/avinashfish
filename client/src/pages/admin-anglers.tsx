@@ -566,6 +566,10 @@ export default function AdminAnglers() {
                   <h4 className="text-sm font-medium text-muted-foreground mb-1">Status</h4>
                   <p className="text-sm capitalize">{selectedAngler.status}</p>
                 </div>
+                <div>
+                  <h4 className="text-sm font-medium text-muted-foreground mb-1">Mobile Number</h4>
+                  <p className="text-sm">{selectedAngler.mobileNumber || "Not provided"}</p>
+                </div>
               </div>
 
               {selectedAngler.bio && (

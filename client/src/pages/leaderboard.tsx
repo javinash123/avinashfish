@@ -30,6 +30,7 @@ export default function Leaderboard() {
         venue: comp.venue,
         time: comp.time,
         prizePool: comp.prizePool,
+        prizeType: comp.prizeType || "pool",
       };
     })
     .filter((comp) => comp.status === "live" || comp.status === "completed")
@@ -160,7 +161,7 @@ export default function Leaderboard() {
             </div>
             <div>
               <div className="text-xs text-muted-foreground">Time / Prize</div>
-              <div className="font-semibold">{selectedComp.time} • £{selectedComp.prizePool}</div>
+              <div className="font-semibold">{selectedComp.time} • {(selectedComp as any).prizeType !== "other" ? `£${selectedComp.prizePool}` : selectedComp.prizePool}</div>
             </div>
           </div>
         )}

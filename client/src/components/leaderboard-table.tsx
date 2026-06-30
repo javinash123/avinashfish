@@ -140,13 +140,13 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
   return (
     <>
       <Card className="overflow-hidden">
-        <Table className="min-w-[600px] table-fixed">
+        <Table className="table-fixed w-full">
         <TableHeader>
           <TableRow>
-            <TableHead className="w-10 sm:w-16 px-1 sm:px-4">Pos</TableHead>
+            <TableHead className="w-8 sm:w-16 px-1 sm:px-4">Pos</TableHead>
             <TableHead className="px-1 sm:px-4">Angler</TableHead>
-            <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Peg</TableHead>
-            <TableHead className="text-center w-10 sm:w-14 px-1 sm:px-4">Fish</TableHead>
+            <TableHead className="text-center w-9 sm:w-14 px-1 sm:px-4">Peg</TableHead>
+            <TableHead className="text-center w-9 sm:w-14 px-1 sm:px-4">Fish</TableHead>
             <TableHead className="text-right w-16 sm:w-24 px-1 sm:px-4">Weight</TableHead>
           </TableRow>
         </TableHeader>

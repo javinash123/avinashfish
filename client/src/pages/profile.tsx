@@ -574,15 +574,6 @@ export default function Profile() {
                       </div>
                     </div>
                   )}
-                  {isOwnProfile && displayUser.mobileNumber && (
-                    <div className="flex items-start gap-2 text-sm">
-                      <UserIcon className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />
-                      <div className="flex-1">
-                        <p className="text-xs font-semibold text-muted-foreground mb-0.5">Mobile Number</p>
-                        <span data-testid="text-mobile">{displayUser.mobileNumber}</span>
-                      </div>
-                    </div>
-                  )}
                   {isOwnProfile && displayUser.dateOfBirth && (
                     <div className="flex items-start gap-2 text-sm">
                       <Calendar className="h-4 w-4 text-muted-foreground mt-0.5 flex-shrink-0" />

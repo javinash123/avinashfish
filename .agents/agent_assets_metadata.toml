@@ -12,3 +12,21 @@ id = "vwakbJDGlBGBHXT6nMkRp"
 uri = "file://dist.zip"
 type = "unspecified"
 title = "PegSlam Production Build (dist.zip) - 400 KB"
+
+[[outputs]]
+id = "ma-VZKY-pSLCSDnBZZoH9"
+uri = "file://pegslam-deploy.zip"
+type = "unspecified"
+title = "pegslam-deploy.zip — Production build with all 6 fixes"
+
+[[outputs]]
+id = "CfEcAN1szVgbf4tO11H9J"
+uri = "file://pegslam_build_20260616_071643.zip"
+type = "unspecified"
+title = "Peg Slam Build — Search + Session Fix"
+
+[[outputs]]
+id = "FZLa_qHbmVuTAR8vHobB0"
+uri = "file://pegslam_build_20260620_144739.zip"
+type = "unspecified"
+title = "Peg Slam Build — Leaderboard Mobile Fix"

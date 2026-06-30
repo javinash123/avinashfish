@@ -9,3 +9,4 @@ vite.config.ts.*
 .env
 .env.local
 .env.production
+.config/replit/.semgrep/semgrep_rules.json".config/" 

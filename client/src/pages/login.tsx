@@ -46,7 +46,8 @@ export default function Login() {
       const data = await response.json();
 
       if (response.ok) {
-        await queryClient.invalidateQueries({ queryKey: ["/api/user/me"] });
+        // Immediately seed the cache so the rest of the app sees the user on first render
+        queryClient.setQueryData(["/api/user/me"], data);
         toast({
           title: "Welcome back!",
           description: `Logged in as ${data.firstName} ${data.lastName}`,

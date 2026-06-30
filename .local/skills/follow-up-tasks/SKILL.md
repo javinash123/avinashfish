@@ -21,7 +21,7 @@ Before submitting, review each title by asking: "Would a non-technical user unde
 - "Store recipes in a database with full CRUD support" -> "Let users add, edit, and delete their own recipes"
 - "Add server-side validation for recipe API endpoints" -> "Prevent broken recipes from being saved"
 
-Before marking your task as complete, propose up to 3 follow-up tasks by calling `proposeFollowUpTasks` — NOT `bulkCreateProjectTasks` or `createProjectTask`. The `proposeFollowUpTasks` callback automatically links follow-ups to your current task as the parent — required for correct task hierarchy. Submit them all in a single call with clear titles, descriptions, and a `category` (required). Keep only the highest-impact follow-ups. Each description should include relevant file paths and enough context for another agent to pick up the work independently.
+Before marking your task as complete, propose up to 4 follow-up tasks by calling `proposeFollowUpTasks` — NOT `bulkCreateProjectTasks` or `createProjectTask`. The `proposeFollowUpTasks` callback automatically links follow-ups to your current task as the parent — required for correct task hierarchy. Submit them all in a single call with clear titles, descriptions, and a `category` (required). Keep only the highest-impact follow-ups. Each description should include relevant file paths and enough context for another agent to pick up the work independently.
 
 Only propose follow-ups that represent genuine, actionable work.
 

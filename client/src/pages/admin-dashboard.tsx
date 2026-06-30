@@ -77,7 +77,7 @@ export default function AdminDashboard() {
   const { toast } = useToast();
 
   // Check authentication first to get role
-  const { data: admin, isLoading: isCheckingAuth } = useQuery<AdminUser>({
+  const { data: admin, isLoading: isCheckingAuth, isFetching } = useQuery<AdminUser>({
     queryKey: ["/api/admin/me"],
     retry: false,
   });
@@ -111,10 +111,10 @@ export default function AdminDashboard() {
   });
 
   useEffect(() => {
-    if (!isCheckingAuth && !admin) {
+    if (!isCheckingAuth && !isFetching && !admin) {
       setLocation("/admin/login");
     }
-  }, [admin, isCheckingAuth, setLocation]);
+  }, [admin, isCheckingAuth, isFetching, setLocation]);
 
   const handleLogout = async () => {
     try {

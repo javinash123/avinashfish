@@ -1,0 +1,36 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: ⚙️  suppress all logs with { quiet: true }[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: pk_test_51... ⚠️ TEST
+   Stripe Secret Key: sk_test_51... ⚠️ TEST
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+6:33:20 AM [express] serving on port 5000
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+6:33:36 AM [express] GET /api/user/me 401 in 4ms :: {"message":"Not authenticated"}
+6:33:36 AM [express] GET /api/site-settings 200 in 1ms :: {"id":"09d07c73-b023-4e2f-837c-081718e60cb…
+6:33:36 AM [express] GET /api/slider-images 200 in 1ms :: [{"id":"e2153493-231a-47ed-9bc1-d8d6949d2c…
+6:33:36 AM [express] GET /api/ambassadors 200 in 0ms :: []
+6:33:36 AM [express] GET /api/news/featured 200 in 0ms :: []
+6:33:36 AM [express] GET /api/competitions 200 in 4ms :: [{"id":"dd8e5b1f-98d2-45f5-a3af-54b4c281610…
+6:33:36 AM [express] GET /api/gallery/featured 200 in 2ms :: []
+6:33:36 AM [express] GET /api/youtube-videos 200 in 1ms :: []
+6:33:36 AM [express] GET /api/testimonials 200 in 1ms :: []
+6:33:36 AM [express] GET /api/sponsors 200 in 0ms :: []
+6:33:37 AM [express] GET /api/ambassadors 200 in 1ms :: []
+6:33:58 AM [express] GET /api/user/me 401 in 2ms :: {"message":"Not authenticated"}
+6:33:58 AM [express] GET /api/site-settings 200 in 1ms :: {"id":"09d07c73-b023-4e2f-837c-081718e60cb…
+6:33:58 AM [express] GET /api/gallery/featured 200 in 0ms :: []
+6:33:58 AM [express] GET /api/competitions 200 in 3ms :: [{"id":"dd8e5b1f-98d2-45f5-a3af-54b4c281610…
+6:33:58 AM [express] GET /api/youtube-videos 200 in 1ms :: []
+6:33:58 AM [express] GET /api/testimonials 200 in 1ms :: []
+6:33:58 AM [express] GET /api/slider-images 200 in 0ms :: [{"id":"e2153493-231a-47ed-9bc1-d8d6949d2c…
+6:33:58 AM [express] GET /api/sponsors 200 in 1ms :: []
+6:33:58 AM [express] GET /api/ambassadors 200 in 0ms :: []

@@ -1078,12 +1078,44 @@ export class MongoDBStorage implements IStorage {
 
   // Competition methods
   async getAllCompetitions(): Promise<Competition[]> {
-    return await this.competitions.find({}).sort({ date: 1 }).toArray();
+    const competitions = await this.competitions.find({}).sort({ date: 1 }).toArray();
+    if (competitions.length === 0) return [];
+
+    // Get real-time participant counts for individual competitions
+    const participantCounts = await this.competitionParticipants.aggregate([
+      { $match: { paymentStatus: { $ne: "pending" } } },
+      { $group: { _id: "$competitionId", count: { $sum: 1 } } }
+    ]).toArray();
+    const participantCountMap = new Map<string, number>(participantCounts.map((c: any) => [c._id as string, c.count as number]));
+
+    // Get real-time team counts for team competitions
+    const teamCounts = await this.teams.aggregate([
+      { $match: { paymentStatus: { $ne: "pending" } } },
+      { $group: { _id: "$competitionId", count: { $sum: 1 } } }
+    ]).toArray();
+    const teamCountMap = new Map<string, number>(teamCounts.map((c: any) => [c._id as string, c.count as number]));
+
+    return competitions.map(comp => ({
+      ...comp,
+      pegsBooked: (comp as any).competitionMode === "team"
+        ? (teamCountMap.get(comp.id) ?? 0)
+        : (participantCountMap.get(comp.id) ?? 0),
+    })) as unknown as Competition[];
   }
 
   async getCompetition(id: string): Promise<Competition | undefined> {
     const competition = await this.competitions.findOne({ id });
-    return competition || undefined;
+    if (!competition) return undefined;
+
+    // Count only confirmed (non-pending) participants or teams depending on competition mode
+    const pegsBooked = (competition as any).competitionMode === "team"
+      ? await this.teams.countDocuments({ competitionId: id, paymentStatus: { $ne: "pending" } })
+      : await this.competitionParticipants.countDocuments({ competitionId: id, paymentStatus: { $ne: "pending" } });
+
+    return {
+      ...competition,
+      pegsBooked,
+    } as unknown as Competition;
   }
 
   async createCompetition(competition: InsertCompetition): Promise<Competition> {

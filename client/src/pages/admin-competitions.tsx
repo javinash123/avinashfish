@@ -43,7 +43,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2, Bold, Italic, List, ListOrdered, Heading2, Heading3, AlignLeft, Minus } from "lucide-react";
+import { Plus, Pencil, Trash2, MapPin, Users, Trophy, CreditCard, MoreVertical, RefreshCw, Loader2, Bold, Italic, List, ListOrdered, Heading2, Heading3, AlignLeft, Minus, Search } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -127,6 +127,7 @@ export default function AdminCompetitions() {
   const [selectedCompetition, setSelectedCompetition] = useState<Competition | null>(null);
   const [competitionToDelete, setCompetitionToDelete] = useState<Competition | null>(null);
   const [filter, setFilter] = useState<"all" | "upcoming" | "live" | "completed">("all");
+  const [searchQuery, setSearchQuery] = useState("");
 
   // Get admin role for permission checks
   const { data: admin } = useQuery<AdminUser>({
@@ -137,6 +138,8 @@ export default function AdminCompetitions() {
   const canModify = admin?.role === "admin" || admin?.role === "manager";
   const canViewPayments = admin?.role === "admin";
   const [selectedUserId, setSelectedUserId] = useState<string>("");
+  const [selectedTeamToAdd, setSelectedTeamToAdd] = useState<string>("");
+  const [isAddingTeam, setIsAddingTeam] = useState(false);
   const [entryToDelete, setEntryToDelete] = useState<{ id: string; weight: string } | null>(null);
   
   // Weigh-in state
@@ -185,7 +188,7 @@ export default function AdminCompetitions() {
     }>;
   }>>({
     queryKey: [`/api/competitions/${selectedCompetition?.id}/teams`],
-    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && selectedCompetition.teamPegAssignmentMode === "team" && (isPegAssignmentOpen || isWeighInOpen),
+    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
   });
 
   // Fetch all users for adding to competition
@@ -546,9 +549,17 @@ export default function AdminCompetitions() {
     },
   });
 
+  const [isAdminPaymentOpen, setIsAdminPaymentOpen] = useState(false);
+  const [adminPaymentForm, setAdminPaymentForm] = useState({
+    paymentMethod: "cash",
+    paymentDate: new Date().toISOString().split("T")[0],
+    paymentReference: "",
+    paymentNotes: "",
+  });
+
   const addParticipantMutation = useMutation({
-    mutationFn: async ({ competitionId, userId }: { competitionId: string; userId: string }) => {
-      return await apiRequest("POST", `/api/admin/competitions/${competitionId}/participants`, { userId });
+    mutationFn: async ({ competitionId, userId, paymentDetails }: { competitionId: string; userId: string; paymentDetails?: { paymentMethod: string; paymentDate: string; paymentReference: string; paymentNotes: string } }) => {
+      return await apiRequest("POST", `/api/admin/competitions/${competitionId}/participants`, { userId, ...paymentDetails });
     },
     onSuccess: () => {
       if (selectedCompetition) {
@@ -904,8 +915,56 @@ export default function AdminCompetitions() {
     setIsPaymentsOpen(true);
   };
 
+  const markTeamPaidMutation = useMutation({
+    mutationFn: async ({ teamId, paymentDetails }: { teamId: string; paymentDetails?: { paymentMethod: string; paymentDate: string; paymentReference: string; paymentNotes: string } }) => {
+      return await apiRequest("PUT", `/api/admin/teams/${teamId}`, {
+        paymentStatus: "succeeded",
+        ...(paymentDetails || {}),
+      });
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/teams`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      }
+      setSelectedTeamToAdd("");
+      toast({
+        title: "Team added",
+        description: "The team has been marked as paid and added to the competition.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add team",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddParticipant = () => {
-    if (!selectedCompetition || !selectedUserId) {
+    if (!selectedCompetition) return;
+
+    // Team competition mode
+    if (selectedCompetition.competitionMode === "team") {
+      if (!selectedTeamToAdd) {
+        toast({ title: "Error", description: "Please select a team to add", variant: "destructive" });
+        return;
+      }
+      const entryFee = parseFloat(selectedCompetition.entryFee) || 0;
+      if (entryFee > 0) {
+        setAdminPaymentForm({ paymentMethod: "cash", paymentDate: new Date().toISOString().split("T")[0], paymentReference: "", paymentNotes: "" });
+        setIsAddingTeam(true);
+        setIsAdminPaymentOpen(true);
+      } else {
+        markTeamPaidMutation.mutate({ teamId: selectedTeamToAdd });
+      }
+      return;
+    }
+
+    // Individual competition mode
+    if (!selectedUserId) {
       toast({
         title: "Error",
         description: "Please select an angler to add",
@@ -914,10 +973,42 @@ export default function AdminCompetitions() {
       return;
     }
 
-    addParticipantMutation.mutate({
-      competitionId: selectedCompetition.id,
-      userId: selectedUserId,
-    });
+    const entryFee = parseFloat(selectedCompetition.entryFee) || 0;
+    if (entryFee > 0) {
+      setAdminPaymentForm({
+        paymentMethod: "cash",
+        paymentDate: new Date().toISOString().split("T")[0],
+        paymentReference: "",
+        paymentNotes: "",
+      });
+      setIsAddingTeam(false);
+      setIsAdminPaymentOpen(true);
+    } else {
+      addParticipantMutation.mutate({
+        competitionId: selectedCompetition.id,
+        userId: selectedUserId,
+      });
+    }
+  };
+
+  const handleAdminPaymentConfirm = () => {
+    if (!selectedCompetition) return;
+    if (!adminPaymentForm.paymentDate) {
+      toast({ title: "Error", description: "Please provide a payment date", variant: "destructive" });
+      return;
+    }
+    if (isAddingTeam) {
+      if (!selectedTeamToAdd) return;
+      markTeamPaidMutation.mutate({ teamId: selectedTeamToAdd, paymentDetails: adminPaymentForm });
+    } else {
+      if (!selectedUserId) return;
+      addParticipantMutation.mutate({
+        competitionId: selectedCompetition.id,
+        userId: selectedUserId,
+        paymentDetails: adminPaymentForm,
+      });
+    }
+    setIsAdminPaymentOpen(false);
   };
 
   const handleRemoveParticipant = (participantId: string, participantName: string) => {
@@ -1125,9 +1216,15 @@ export default function AdminCompetitions() {
     setFishPhotoPreview("");
   };
 
-  const filteredCompetitions = competitions.filter(
-    (comp) => filter === "all" || getCompetitionStatus(comp) === filter
-  );
+  const filteredCompetitions = competitions.filter((comp) => {
+    const matchesStatus = filter === "all" || getCompetitionStatus(comp) === filter;
+    const q = searchQuery.trim().toLowerCase();
+    const matchesSearch = !q ||
+      comp.name.toLowerCase().includes(q) ||
+      (comp.venue || "").toLowerCase().includes(q) ||
+      (comp.type || "").toLowerCase().includes(q);
+    return matchesStatus && matchesSearch;
+  });
 
   const getStatusBadgeVariant = (status: string) => {
     switch (status) {
@@ -1176,39 +1273,51 @@ export default function AdminCompetitions() {
         </div>
       </div>
 
-      <div className="flex gap-2">
-        <Button
-          variant={filter === "all" ? "default" : "outline"}
-          onClick={() => setFilter("all")}
-          size="sm"
-          data-testid="filter-all"
-        >
-          All
-        </Button>
-        <Button
-          variant={filter === "upcoming" ? "default" : "outline"}
-          onClick={() => setFilter("upcoming")}
-          size="sm"
-          data-testid="filter-upcoming"
-        >
-          Upcoming
-        </Button>
-        <Button
-          variant={filter === "live" ? "default" : "outline"}
-          onClick={() => setFilter("live")}
-          size="sm"
-          data-testid="filter-live"
-        >
-          Live
-        </Button>
-        <Button
-          variant={filter === "completed" ? "default" : "outline"}
-          onClick={() => setFilter("completed")}
-          size="sm"
-          data-testid="filter-completed"
-        >
-          Completed
-        </Button>
+      <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex gap-2 flex-wrap">
+          <Button
+            variant={filter === "all" ? "default" : "outline"}
+            onClick={() => setFilter("all")}
+            size="sm"
+            data-testid="filter-all"
+          >
+            All
+          </Button>
+          <Button
+            variant={filter === "upcoming" ? "default" : "outline"}
+            onClick={() => setFilter("upcoming")}
+            size="sm"
+            data-testid="filter-upcoming"
+          >
+            Upcoming
+          </Button>
+          <Button
+            variant={filter === "live" ? "default" : "outline"}
+            onClick={() => setFilter("live")}
+            size="sm"
+            data-testid="filter-live"
+          >
+            Live
+          </Button>
+          <Button
+            variant={filter === "completed" ? "default" : "outline"}
+            onClick={() => setFilter("completed")}
+            size="sm"
+            data-testid="filter-completed"
+          >
+            Completed
+          </Button>
+        </div>
+        <div className="relative sm:ml-auto sm:w-64">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Search by name or lake..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-8 h-8 text-sm"
+            data-testid="input-competition-search"
+          />
+        </div>
       </div>
 
       <Card>
@@ -2496,39 +2605,72 @@ export default function AdminCompetitions() {
           <div className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle>Add Angler</CardTitle>
+                <CardTitle>{selectedCompetition?.competitionMode === "team" ? "Add Team" : "Add Angler"}</CardTitle>
               </CardHeader>
               <CardContent>
-                <div className="flex gap-2">
-                  <Select value={selectedUserId} onValueChange={setSelectedUserId}>
-                    <SelectTrigger className="flex-1" data-testid="select-angler">
-                      <SelectValue placeholder="Select an angler to add..." />
-                    </SelectTrigger>
-                    <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
-                      {allUsers
-                        .filter(user => !participants.some(p => p.userId === user.id))
-                        .map(user => (
-                          <SelectItem key={user.id} value={user.id}>
-                            {user.firstName} {user.lastName} (@{user.username}) {user.club && `- ${user.club}`}
-                          </SelectItem>
-                        ))}
-                    </SelectContent>
-                  </Select>
-                  <Button
-                    onClick={handleAddParticipant}
-                    disabled={!selectedUserId || addParticipantMutation.isPending}
-                    data-testid="button-add-participant"
-                  >
-                    {addParticipantMutation.isPending ? (
-                      <>Adding...</>
-                    ) : (
-                      <>
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add
-                      </>
-                    )}
-                  </Button>
-                </div>
+                {selectedCompetition?.competitionMode === "team" ? (
+                  <div className="flex gap-2">
+                    <Select value={selectedTeamToAdd} onValueChange={setSelectedTeamToAdd}>
+                      <SelectTrigger className="flex-1" data-testid="select-team">
+                        <SelectValue placeholder="Select a team to add..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
+                        {teams
+                          .filter((t: any) => t.paymentStatus !== "succeeded")
+                          .map((team: any) => (
+                            <SelectItem key={team.id} value={team.id}>
+                              {team.teamName || team.name} ({team.memberCount} member{team.memberCount !== 1 ? "s" : ""})
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleAddParticipant}
+                      disabled={!selectedTeamToAdd || markTeamPaidMutation.isPending}
+                      data-testid="button-add-team"
+                    >
+                      {markTeamPaidMutation.isPending ? (
+                        <>Adding...</>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2">
+                    <Select value={selectedUserId} onValueChange={setSelectedUserId}>
+                      <SelectTrigger className="flex-1" data-testid="select-angler">
+                        <SelectValue placeholder="Select an angler to add..." />
+                      </SelectTrigger>
+                      <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
+                        {allUsers
+                          .filter(user => !participants.some(p => p.userId === user.id))
+                          .map(user => (
+                            <SelectItem key={user.id} value={user.id}>
+                              {user.firstName} {user.lastName} (@{user.username}) {user.club && `- ${user.club}`}
+                            </SelectItem>
+                          ))}
+                      </SelectContent>
+                    </Select>
+                    <Button
+                      onClick={handleAddParticipant}
+                      disabled={!selectedUserId || addParticipantMutation.isPending}
+                      data-testid="button-add-participant"
+                    >
+                      {addParticipantMutation.isPending ? (
+                        <>Adding...</>
+                      ) : (
+                        <>
+                          <Plus className="h-4 w-4 mr-1" />
+                          Add
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
 
@@ -2745,6 +2887,79 @@ export default function AdminCompetitions() {
           </div>
         </AlertDialogContent>
       </AlertDialog>
+
+      {/* Admin Manual Payment Dialog */}
+      <Dialog open={isAdminPaymentOpen} onOpenChange={setIsAdminPaymentOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle>Record Payment</DialogTitle>
+            <DialogDescription>
+              This competition has an entry fee of £{selectedCompetition?.entryFee}. Please record the payment details for this angler.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="space-y-2">
+              <Label htmlFor="admin-payment-method">Payment Method <span className="text-destructive">*</span></Label>
+              <Select
+                value={adminPaymentForm.paymentMethod}
+                onValueChange={(v) => setAdminPaymentForm(f => ({ ...f, paymentMethod: v }))}
+              >
+                <SelectTrigger id="admin-payment-method" data-testid="select-admin-payment-method">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
+                  <SelectItem value="cash">Cash</SelectItem>
+                  <SelectItem value="bank_transfer">Bank Transfer</SelectItem>
+                  <SelectItem value="other">Other</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-payment-date">Payment Date <span className="text-destructive">*</span></Label>
+              <Input
+                id="admin-payment-date"
+                type="date"
+                value={adminPaymentForm.paymentDate}
+                onChange={(e) => setAdminPaymentForm(f => ({ ...f, paymentDate: e.target.value }))}
+                data-testid="input-admin-payment-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-payment-reference">Payment Reference / ID</Label>
+              <Input
+                id="admin-payment-reference"
+                placeholder="e.g. cheque number, transfer ref..."
+                value={adminPaymentForm.paymentReference}
+                onChange={(e) => setAdminPaymentForm(f => ({ ...f, paymentReference: e.target.value }))}
+                data-testid="input-admin-payment-reference"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="admin-payment-notes">Notes</Label>
+              <Textarea
+                id="admin-payment-notes"
+                placeholder="Any additional notes..."
+                value={adminPaymentForm.paymentNotes}
+                onChange={(e) => setAdminPaymentForm(f => ({ ...f, paymentNotes: e.target.value }))}
+                rows={2}
+                data-testid="input-admin-payment-notes"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsAdminPaymentOpen(false)} data-testid="button-cancel-admin-payment">
+              Cancel
+            </Button>
+            <Button
+              onClick={handleAdminPaymentConfirm}
+              disabled={addParticipantMutation.isPending || !adminPaymentForm.paymentDate}
+              data-testid="button-confirm-admin-payment"
+            >
+              {addParticipantMutation.isPending ? "Adding..." : "Confirm & Add Angler"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

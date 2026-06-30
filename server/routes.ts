@@ -143,25 +143,39 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const staffMember = await storage.getStaffByEmail(email);
       if (staffMember && staffMember.password === password && staffMember.isActive) {
         req.session.staffId = staffMember.id;
-        return res.json({ 
+        const responseData = { 
           id: staffMember.id,
           email: staffMember.email,
           firstName: staffMember.firstName,
           lastName: staffMember.lastName,
           role: staffMember.role,
+        };
+        return req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          res.json(responseData);
         });
       }
 
       // Fallback to legacy admin table
       const admin = await storage.getAdminByEmail(email);
       if (admin && admin.password === password) {
-        req.session.adminId = admin.id; // Support legacy session key
-        req.session.staffId = admin.id; // Support new session key
-        return res.json({ 
+        req.session.adminId = admin.id;
+        req.session.staffId = admin.id;
+        const responseData = { 
           id: admin.id,
           email: admin.email,
           name: admin.name,
           role: "admin",
+        };
+        return req.session.save((err) => {
+          if (err) {
+            console.error("Session save error:", err);
+            return res.status(500).json({ message: "Failed to save session" });
+          }
+          res.json(responseData);
         });
       }
 
@@ -734,8 +748,20 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         });
       } else {
         // Verify this is not a team payment (payment.teamId should be null)
-        if (payment.teamId) {
+        if (!isFreeCompetition && payment && payment.teamId) {
           return res.status(400).json({ message: "This payment was created for a team. Please provide teamId." });
+        }
+
+        // Idempotency: check if user is already registered (handles 3DS redirects and retries)
+        const alreadyRegistered = await storage.isUserInCompetition(competitionId, userId);
+        if (alreadyRegistered) {
+          const participants = await storage.getCompetitionParticipants(competitionId);
+          const existingParticipant = participants.find(p => p.userId === userId);
+          return res.json({ 
+            success: true, 
+            participant: existingParticipant,
+            message: "Already registered for this competition" 
+          });
         }
 
         // Mark payment as succeeded
@@ -954,7 +980,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/profile", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
@@ -2003,7 +2029,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin anglers management routes
   app.get("/api/admin/anglers", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2019,7 +2045,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.patch("/api/admin/anglers/:id/status", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2044,7 +2070,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.get("/api/admin/anglers/:id/stats", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2091,7 +2117,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.get("/api/admin/anglers/:id/participations", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2129,7 +2155,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.post("/api/admin/anglers", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2164,7 +2190,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/anglers/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2206,7 +2232,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/anglers/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2226,7 +2252,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin dashboard stats
   app.get("/api/admin/dashboard/stats", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2313,7 +2339,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin recent participations
   app.get("/api/admin/recent-participations", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2361,7 +2387,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin slider images management routes
   app.get("/api/admin/slider-images", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2375,7 +2401,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
   app.post("/api/admin/slider-images", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2395,7 +2421,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/slider-images/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2419,7 +2445,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/slider-images/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2449,7 +2475,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/site-settings", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2495,7 +2521,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin sponsors management routes
   app.post("/api/admin/sponsors", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2515,7 +2541,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/sponsors/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2539,7 +2565,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/sponsors/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2658,7 +2684,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.post("/api/admin/news", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2678,7 +2704,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/news/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2702,7 +2728,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/news/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2744,7 +2770,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin gallery management routes
   app.post("/api/admin/gallery", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2764,7 +2790,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/gallery/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2788,7 +2814,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/gallery/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2974,7 +3000,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin competition management routes
   app.get("/api/admin/competitions", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -2989,7 +3015,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.post("/api/admin/competitions", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -3009,7 +3035,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.put("/api/admin/competitions/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -3050,7 +3076,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/competitions/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -3087,7 +3113,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin peg assignment route
   app.post("/api/admin/competitions/:id/assign-pegs", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -3123,35 +3149,62 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "Competition not found" });
       }
 
-      // For team competitions, return teams
+      const isAdmin = !!(req.session?.adminId || req.session?.staffId);
+
+      // For team competitions
       if (competition.competitionMode === "team") {
         const teams = await storage.getTeamsByCompetition(req.params.id);
-        
-        // Enrich teams with member data and payment status
-        const enrichedTeams = await Promise.all(
+
+        // Enrich all teams with their accepted members
+        const enrichedTeamsData = await Promise.all(
           teams.map(async (team) => {
             const members = await storage.getTeamMembers(team.id);
             const acceptedMembers = members.filter(m => m.status === "accepted");
             const captain = await storage.getUser(team.createdBy);
-            
-            return {
-              id: team.id,
-              userId: team.id, // Use team ID as userId for compatibility with admin UI
-              pegNumber: team.pegNumber,
-              name: team.name, // Return team name correctly
-              teamName: team.name, // Also include for direct access
-              username: captain?.username || "",
-              club: captain?.club || "",
-              avatar: captain?.avatar || "",
-              joinedAt: team.createdAt,
-              memberCount: acceptedMembers.length,
-              paymentStatus: team.paymentStatus,
-              isTeam: true,
-            };
+            return { team, acceptedMembers, captain };
           })
         );
-        
-        return res.json(enrichedTeams);
+
+        if (isAdmin) {
+          // Admins see teams as units (including pending)
+          return res.json(enrichedTeamsData.map(({ team, acceptedMembers, captain }) => ({
+            id: team.id,
+            userId: team.id,
+            pegNumber: team.pegNumber,
+            name: team.name,
+            teamName: team.name,
+            username: captain?.username || "",
+            club: captain?.club || "",
+            avatar: captain?.avatar || "",
+            joinedAt: team.createdAt,
+            memberCount: acceptedMembers.length,
+            paymentStatus: team.paymentStatus,
+            isTeam: true,
+          })));
+        }
+
+        // Non-admins: expand paid teams into individual member entries
+        const paidTeamsData = enrichedTeamsData.filter(({ team }) => team.paymentStatus !== "pending");
+        const allMembers: any[] = [];
+        for (const { team, acceptedMembers } of paidTeamsData) {
+          for (const member of acceptedMembers) {
+            const user = await storage.getUser(member.userId);
+            allMembers.push({
+              id: member.id,
+              userId: member.userId,
+              pegNumber: team.pegNumber,
+              name: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+              username: user?.username || "",
+              club: user?.club || "",
+              avatar: user?.avatar || "",
+              joinedAt: team.createdAt,
+              paymentStatus: team.paymentStatus,
+              teamName: team.name,
+              isTeam: false,
+            });
+          }
+        }
+        return res.json(allMembers);
       }
 
       // For individual competitions, return participants
@@ -3176,7 +3229,12 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         })
       );
       
-      res.json(enrichedParticipants);
+      // Non-admins only see participants who have completed payment (or free entry)
+      const visibleParticipants = isAdmin
+        ? enrichedParticipants
+        : enrichedParticipants.filter(p => p.paymentStatus !== "pending");
+      
+      res.json(visibleParticipants);
     } catch (error: any) {
       console.error("Error fetching participants:", error);
       res.status(500).json({ message: "Error fetching participants: " + error.message });
@@ -3344,7 +3402,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const { userId, pegNumber } = req.body;
+      const { userId, pegNumber, paymentMethod, paymentDate, paymentReference, paymentNotes } = req.body;
       if (!userId) {
         return res.status(400).json({ message: "User ID is required" });
       }
@@ -3382,8 +3440,32 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         pegNumber: pegNumber || undefined,
       });
 
-      // Mark manually-added participants as "not paid" (admin override)
-      await storage.updateParticipantPaymentStatus(participant.id, "not_paid");
+      const entryFee = parseFloat(competition.entryFee) || 0;
+
+      if (entryFee > 0 && paymentMethod) {
+        // Record manual payment and mark participant as paid
+        const amountInPence = Math.round(entryFee * 100);
+        const paymentRefId = paymentReference
+          ? `admin_${paymentMethod}_${paymentReference}`
+          : `admin_${paymentMethod}_${Date.now()}`;
+        await storage.createPayment({
+          competitionId,
+          userId,
+          amount: amountInPence.toString(),
+          currency: "gbp",
+          stripePaymentIntentId: paymentRefId,
+          status: "succeeded",
+          paymentMethod,
+          paymentDate: paymentDate || new Date().toISOString().split("T")[0],
+          paymentReference: paymentReference || null,
+          paymentNotes: paymentNotes || null,
+        } as any);
+        await storage.updateParticipantPaymentStatus(participant.id, "succeeded");
+      } else {
+        // Free competition or no entry fee — mark as not_paid (admin override)
+        await storage.updateParticipantPaymentStatus(participant.id, "not_paid");
+      }
+
       const updatedParticipant = await storage.getParticipantById(participant.id);
 
       res.json(updatedParticipant || participant);
@@ -3574,7 +3656,11 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         })
       );
       
-      res.json(enrichedTeams);
+      const isAdmin = !!(req.session?.adminId || req.session?.staffId);
+      const visibleTeams = isAdmin
+        ? enrichedTeams
+        : enrichedTeams.filter((t: any) => t.paymentStatus !== "pending");
+      res.json(visibleTeams);
     } catch (error: any) {
       console.error("Error fetching teams:", error);
       res.status(500).json({ message: "Error fetching teams: " + error.message });
@@ -3756,6 +3842,80 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     } catch (error: any) {
       console.error("Error joining team:", error);
       res.status(500).json({ message: "Error joining team: " + error.message });
+    }
+  });
+
+  // Captain adds a team member by their email address
+  app.post("/api/teams/:id/add-member-by-email", async (req, res) => {
+    try {
+      const userId = req.session?.userId;
+      if (!userId) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      const { email } = req.body;
+      if (!email?.trim()) {
+        return res.status(400).json({ message: "Email address is required" });
+      }
+
+      const team = await storage.getTeam(req.params.id);
+      if (!team) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
+      if (team.createdBy !== userId) {
+        return res.status(403).json({ message: "Only the team captain can add members this way" });
+      }
+
+      const userToAdd = await storage.getUserByEmail(email.trim().toLowerCase());
+      if (!userToAdd) {
+        return res.status(404).json({ message: "No angler found with this email address" });
+      }
+
+      if (userToAdd.id === userId) {
+        return res.status(400).json({ message: "You are already the team captain" });
+      }
+
+      const isAlreadyMember = await storage.isUserInTeam(team.id, userToAdd.id);
+      if (isAlreadyMember) {
+        return res.status(400).json({ message: "This angler is already in your team" });
+      }
+
+      const allTeams = await storage.getTeamsByCompetition(team.competitionId);
+      for (const t of allTeams) {
+        if (t.id !== team.id) {
+          const inOtherTeam = await storage.isUserInTeam(t.id, userToAdd.id);
+          if (inOtherTeam) {
+            return res.status(400).json({ message: "This angler is already in another team for this competition" });
+          }
+        }
+      }
+
+      const competition = await storage.getCompetition(team.competitionId);
+      const currentMembers = await storage.getTeamMembers(team.id);
+      const acceptedCount = currentMembers.filter(m => m.status === "accepted").length;
+      if (competition?.maxTeamMembers && acceptedCount >= competition.maxTeamMembers) {
+        return res.status(400).json({ message: `Team is full (max ${competition.maxTeamMembers} members)` });
+      }
+
+      const member = await storage.addTeamMember({
+        teamId: team.id,
+        userId: userToAdd.id,
+        role: "member",
+        status: "accepted",
+      });
+
+      return res.json({
+        id: member.id,
+        userId: userToAdd.id,
+        name: `${userToAdd.firstName} ${userToAdd.lastName}`,
+        username: userToAdd.username,
+        avatar: userToAdd.avatar || null,
+        club: userToAdd.club || null,
+      });
+    } catch (error: any) {
+      console.error("Error adding team member by email:", error);
+      res.status(500).json({ message: "Error adding member: " + error.message });
     }
   });
 
@@ -3991,11 +4151,44 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const { name, paymentStatus } = req.body;
-      
+      const { name, paymentStatus, paymentMethod, paymentDate, paymentReference, paymentNotes } = req.body;
+
+      // Get current team to detect payment status change
+      const currentTeam = await storage.getTeam(req.params.id);
+      if (!currentTeam) {
+        return res.status(404).json({ message: "Team not found" });
+      }
+
       const team = await storage.updateTeam(req.params.id, { name, paymentStatus });
       if (!team) {
         return res.status(404).json({ message: "Team not found" });
+      }
+
+      // Create payment record when marking a team as paid
+      if (paymentStatus === "succeeded" && currentTeam.paymentStatus !== "succeeded" && paymentMethod) {
+        const competition = await storage.getCompetition(team.competitionId);
+        if (competition) {
+          const entryFee = parseFloat(competition.entryFee) || 0;
+          if (entryFee > 0) {
+            const amountInPence = Math.round(entryFee * 100);
+            const paymentRefId = paymentReference
+              ? `admin_${paymentMethod}_${paymentReference}`
+              : `admin_${paymentMethod}_${Date.now()}`;
+            await storage.createPayment({
+              competitionId: team.competitionId,
+              teamId: team.id,
+              userId: null,
+              amount: amountInPence.toString(),
+              currency: "gbp",
+              stripePaymentIntentId: paymentRefId,
+              status: "succeeded",
+              paymentMethod,
+              paymentDate: paymentDate || new Date().toISOString().split("T")[0],
+              paymentReference: paymentReference || null,
+              paymentNotes: paymentNotes || null,
+            } as any);
+          }
+        }
       }
 
       res.json(team);
@@ -4232,7 +4425,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       console.log("[BACKEND WEIGHT] Request body:", req.body);
       console.log("[BACKEND WEIGHT] Session adminId:", req.session?.adminId);
       
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         console.log("[BACKEND WEIGHT] NOT AUTHENTICATED - no adminId in session");
         return res.status(401).json({ message: "Not authenticated" });
@@ -4313,7 +4506,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Get all weight entries for a participant in a competition (admin only)
   app.get("/api/admin/competitions/:competitionId/participants/:userId/entries", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4340,7 +4533,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Get all weight entries for a team in a competition (admin only)
   app.get("/api/admin/competitions/:competitionId/teams/:teamId/entries", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4366,7 +4559,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.get("/api/admin/competitions/:id/payments", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4402,7 +4595,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // MongoDB Diagnostics endpoint (admin only)
   app.get("/api/admin/diagnostics", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4482,7 +4675,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Admin testimonial routes (admin only)
   app.get("/api/admin/testimonials", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4496,7 +4689,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.post("/api/admin/testimonials", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4514,7 +4707,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.patch("/api/admin/testimonials/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }
@@ -4535,7 +4728,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
 
   app.delete("/api/admin/testimonials/:id", async (req, res) => {
     try {
-      const adminId = req.session?.adminId;
+      const adminId = req.session?.adminId || req.session?.staffId;
       if (!adminId) {
         return res.status(401).json({ message: "Not authenticated" });
       }

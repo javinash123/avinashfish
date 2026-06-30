@@ -82,6 +82,8 @@ export default function CompetitionDetails() {
   const [joinInviteCode, setJoinInviteCode] = useState("");
   const [createdTeam, setCreatedTeam] = useState<any>(null);
   const [copiedInvite, setCopiedInvite] = useState(false);
+  const [memberEmail, setMemberEmail] = useState("");
+  const [addedMembers, setAddedMembers] = useState<Array<{ id: string; name: string; username: string }>>([]);
 
   const handleBookPeg = () => {
     if (!competition) return;
@@ -239,6 +241,37 @@ export default function CompetitionDetails() {
       });
     },
   });
+
+  const addMemberByEmailMutation = useMutation({
+    mutationFn: async ({ teamId, email }: { teamId: string; email: string }) => {
+      const response = await apiRequest("POST", `/api/teams/${teamId}/add-member-by-email`, { email });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || "Failed to add member");
+      }
+      return response.json();
+    },
+    onSuccess: (data) => {
+      setAddedMembers(prev => [...prev, { id: data.id, name: data.name, username: data.username }]);
+      setMemberEmail("");
+      toast({
+        title: "Member added!",
+        description: `${data.name} has been added to your team`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddMemberByEmail = () => {
+    if (!createdTeam?.id || !memberEmail.trim()) return;
+    addMemberByEmailMutation.mutate({ teamId: createdTeam.id, email: memberEmail.trim() });
+  };
 
   const handleCreateTeam = () => {
     if (!teamName.trim()) {
@@ -995,14 +1028,49 @@ export default function CompetitionDetails() {
                 </p>
               </div>
               
+              <div className="space-y-2">
+                <Label>Add Members by Email</Label>
+                <div className="flex gap-2">
+                  <Input
+                    type="email"
+                    value={memberEmail}
+                    onChange={(e) => setMemberEmail(e.target.value)}
+                    placeholder="angler@example.com"
+                    data-testid="input-member-email"
+                    onKeyPress={(e) => { if (e.key === "Enter") handleAddMemberByEmail(); }}
+                  />
+                  <Button
+                    onClick={handleAddMemberByEmail}
+                    disabled={addMemberByEmailMutation.isPending || !memberEmail.trim()}
+                    size="sm"
+                    data-testid="button-add-member-email"
+                  >
+                    {addMemberByEmailMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                  </Button>
+                </div>
+                <p className="text-xs text-muted-foreground">
+                  Enter the email address of an angler to add them directly
+                </p>
+              </div>
+
               <div className="bg-card rounded-md border p-4">
                 <div className="flex items-center gap-2 mb-2">
                   <Users className="h-4 w-4 text-muted-foreground" />
                   <span className="font-semibold">{createdTeam.teamName}</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  1 / {competition?.maxTeamMembers || 4} members
+                  {1 + addedMembers.length} / {competition?.maxTeamMembers || 4} members
                 </p>
+                {addedMembers.length > 0 && (
+                  <div className="mt-2 space-y-1">
+                    {addedMembers.map(m => (
+                      <div key={m.id} className="text-xs text-muted-foreground flex items-center gap-1">
+                        <UserPlus className="h-3 w-3" />
+                        {m.name} (@{m.username})
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
             </div>
           )}
