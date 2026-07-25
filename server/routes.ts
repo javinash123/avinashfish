@@ -1,6 +1,7 @@
 import { formatWeight, parseWeight } from "@shared/weight-utils";
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import rateLimit from "express-rate-limit";
 import type { IStorage } from "./storage";
 import { insertUserSchema, registerUserSchema, loginUserSchema, forgotPasswordSchema, resetPasswordSchema, updateUserProfileSchema, updateUserPasswordSchema, updateUserUsernameSchema, updateUserEmailSchema, insertUserGalleryPhotoSchema, insertStaffSchema, updateStaffSchema, staffLoginSchema, updateStaffPasswordSchema, insertSliderImageSchema, updateSliderImageSchema, updateSiteSettingsSchema, insertSponsorSchema, updateSponsorSchema, insertNewsSchema, updateNewsSchema, insertGalleryImageSchema, updateGalleryImageSchema, insertCompetitionSchema, updateCompetitionSchema, insertCompetitionParticipantSchema, insertLeaderboardEntrySchema, updateLeaderboardEntrySchema, anglerDirectoryQuerySchema, updateTeamSchema, insertTestimonialSchema, updateTestimonialSchema } from "@shared/schema";
 import { sendPasswordResetEmail, sendContactEmail, sendEmailVerification, sendCompetitionBookingEmail } from "./email";
@@ -1237,7 +1238,35 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // User/Angler authentication routes
-  app.post("/api/user/register", async (req, res) => {
+  // Rate limiters — blocks bot spam on auth endpoints
+  const registerLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour window
+    max: 5,                    // max 5 registrations per IP per hour
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many registration attempts from this IP. Please try again later." },
+    skip: () => process.env.NODE_ENV !== "production", // only enforce in production
+  });
+
+  const loginLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minute window
+    max: 20,                   // max 20 login attempts per IP per 15 mins
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many login attempts. Please try again in 15 minutes." },
+    skip: () => process.env.NODE_ENV !== "production",
+  });
+
+  const forgotPasswordLimiter = rateLimit({
+    windowMs: 60 * 60 * 1000, // 1 hour window
+    max: 5,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: { message: "Too many password reset requests. Please try again later." },
+    skip: () => process.env.NODE_ENV !== "production",
+  });
+
+  app.post("/api/user/register", registerLimiter, async (req, res) => {
     try {
       const result = registerUserSchema.safeParse(req.body);
       if (!result.success) {
@@ -1286,7 +1315,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
     }
   });
 
-  app.post("/api/user/login", async (req, res) => {
+  app.post("/api/user/login", loginLimiter, async (req, res) => {
     try {
       const result = loginUserSchema.safeParse(req.body);
       if (!result.success) {
@@ -1353,7 +1382,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   });
 
   // Forgot Password - Send reset email
-  app.post("/api/auth/forgot-password", async (req, res) => {
+  app.post("/api/auth/forgot-password", forgotPasswordLimiter, async (req, res) => {
     try {
       const result = forgotPasswordSchema.safeParse(req.body);
       if (!result.success) {
@@ -2034,9 +2063,26 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const users = await storage.getAllUsers();
-      const anglersWithoutPasswords = users.map(({ password, ...user }) => user);
-      res.json(anglersWithoutPasswords);
+      const {
+        search = '',
+        page = '1',
+        pageSize = '50',
+        sortBy = 'memberSince',
+        sortOrder = 'desc',
+        status,
+      } = req.query as Record<string, string>;
+
+      const result = await storage.listAnglers({
+        search,
+        page: parseInt(page),
+        pageSize: parseInt(pageSize),
+        sortBy: sortBy as any,
+        sortOrder: sortOrder as any,
+        status,
+      });
+
+      const data = result.data.map(({ password, ...user }) => user);
+      res.json({ data, total: result.total });
     } catch (error: any) {
       console.error("Error fetching anglers:", error);
       res.status(500).json({ message: "Error fetching anglers: " + error.message });
@@ -2257,10 +2303,12 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const users = await storage.getAllUsers();
-      const competitions = await storage.getAllCompetitions();
-      const allParticipations = await storage.getAllParticipants();
-      
+      const [totalAnglers, competitions, allParticipations] = await Promise.all([
+        storage.getUserCount(),
+        storage.getAllCompetitions(),
+        storage.getAllParticipants(),
+      ]);
+
       // Helper function to compute competition status using UK timezone
       // Competition dates/times are stored as strings without timezone info
       // We treat them as UK local time and compare against UK current time
@@ -2325,7 +2373,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       }
 
       res.json({
-        totalAnglers: users.length,
+        totalAnglers,
         activeCompetitions,
         totalRevenue: `£${totalRevenue.toFixed(0)}`,
         bookingsToday,
@@ -2344,26 +2392,25 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(401).json({ message: "Not authenticated" });
       }
 
-      const allParticipations = await storage.getAllParticipants();
-      const competitions = await storage.getAllCompetitions();
-      const users = await storage.getAllUsers();
-      
-      // Sort by joinedAt descending and take top 10
-      const recentParticipations = allParticipations
-        .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
-        .slice(0, 10)
-        .map(participation => {
-          const user = users.find(u => u.id === participation.userId);
-          const competition = competitions.find(c => c.id === participation.competitionId);
-          
+      // Use optimised method: fetch only the 10 most recent rows then
+      // do individual lookups (fast indexed reads) instead of loading
+      // every participant + every user in the database.
+      const recent = await storage.getRecentParticipants(10);
+      const recentParticipations = await Promise.all(
+        recent.map(async (p) => {
+          const [user, competition] = await Promise.all([
+            storage.getUser(p.userId),
+            storage.getCompetition(p.competitionId),
+          ]);
           return {
-            id: participation.id,
+            id: p.id,
             anglerName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
             competitionName: competition?.name || "Unknown Competition",
-            pegNumber: participation.pegNumber,
-            joinedAt: participation.joinedAt,
+            pegNumber: p.pegNumber,
+            joinedAt: p.joinedAt,
           };
-        });
+        })
+      );
 
       res.json(recentParticipations);
     } catch (error: any) {
@@ -3144,49 +3191,23 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
   // Competition Participant routes (returns teams for team competitions, individuals for individual competitions)
   app.get("/api/competitions/:id/participants", async (req, res) => {
     try {
+      const isAdmin = Boolean(req.session?.staffId || req.session?.adminId);
       const competition = await storage.getCompetition(req.params.id);
       if (!competition) {
         return res.status(404).json({ message: "Competition not found" });
       }
 
-      const isAdmin = !!(req.session?.adminId || req.session?.staffId);
-
-      // For team competitions
+      // For team competitions — always expand paid teams into individual member entries
       if (competition.competitionMode === "team") {
         const teams = await storage.getTeamsByCompetition(req.params.id);
 
-        // Enrich all teams with their accepted members
-        const enrichedTeamsData = await Promise.all(
-          teams.map(async (team) => {
-            const members = await storage.getTeamMembers(team.id);
-            const acceptedMembers = members.filter(m => m.status === "accepted");
-            const captain = await storage.getUser(team.createdBy);
-            return { team, acceptedMembers, captain };
-          })
-        );
+        // Only include teams that have completed payment (status !== "pending")
+        const paidTeams = teams.filter(t => t.paymentStatus !== "pending");
 
-        if (isAdmin) {
-          // Admins see teams as units (including pending)
-          return res.json(enrichedTeamsData.map(({ team, acceptedMembers, captain }) => ({
-            id: team.id,
-            userId: team.id,
-            pegNumber: team.pegNumber,
-            name: team.name,
-            teamName: team.name,
-            username: captain?.username || "",
-            club: captain?.club || "",
-            avatar: captain?.avatar || "",
-            joinedAt: team.createdAt,
-            memberCount: acceptedMembers.length,
-            paymentStatus: team.paymentStatus,
-            isTeam: true,
-          })));
-        }
-
-        // Non-admins: expand paid teams into individual member entries
-        const paidTeamsData = enrichedTeamsData.filter(({ team }) => team.paymentStatus !== "pending");
         const allMembers: any[] = [];
-        for (const { team, acceptedMembers } of paidTeamsData) {
+        for (const team of paidTeams) {
+          const members = await storage.getTeamMembers(team.id);
+          const acceptedMembers = members.filter(m => m.status === "accepted");
           for (const member of acceptedMembers) {
             const user = await storage.getUser(member.userId);
             allMembers.push({
@@ -3656,10 +3677,8 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         })
       );
       
-      const isAdmin = !!(req.session?.adminId || req.session?.staffId);
-      const visibleTeams = isAdmin
-        ? enrichedTeams
-        : enrichedTeams.filter((t: any) => t.paymentStatus !== "pending");
+      // Public view: only show teams that have completed payment
+      const visibleTeams = enrichedTeams.filter((t: any) => t.paymentStatus !== "pending");
       res.json(visibleTeams);
     } catch (error: any) {
       console.error("Error fetching teams:", error);
@@ -4159,7 +4178,10 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
         return res.status(404).json({ message: "Team not found" });
       }
 
-      const team = await storage.updateTeam(req.params.id, { name, paymentStatus });
+      // Only update name if explicitly provided to avoid overwriting with undefined/null
+      const updates: Record<string, any> = { paymentStatus };
+      if (name !== undefined && name !== null) updates.name = name;
+      const team = await storage.updateTeam(req.params.id, updates);
       if (!team) {
         return res.status(404).json({ message: "Team not found" });
       }
@@ -4368,6 +4390,7 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
             isTeam,
             fishCount: entry.fishCount || 1,
             fishImageUrl: entry.fishImageUrl,
+            fishImages: (entry as any).fishImages || [],
           };
         })
       );
@@ -4567,19 +4590,25 @@ export async function registerRoutes(app: Express, storage: IStorage): Promise<S
       const competitionId = req.params.id;
       const payments = await storage.getCompetitionPayments(competitionId);
 
-      // Enrich payments with user data
+      // Enrich payments with user/team data
       const enrichedPayments = await Promise.all(
         payments.map(async (payment) => {
-          const user = await storage.getUser(payment.userId);
+          const user = payment.userId ? await storage.getUser(payment.userId) : null;
+          const team = (payment as any).teamId ? await storage.getTeam((payment as any).teamId) : null;
           return {
             id: payment.id,
             userId: payment.userId,
-            userName: user ? `${user.firstName} ${user.lastName}` : "Unknown",
+            teamId: (payment as any).teamId || null,
+            userName: user ? `${user.firstName} ${user.lastName}` : (team ? (team.name || currentTeam?.name || "Unknown Team") : "Unknown"),
+            teamName: team?.name || null,
             userEmail: user?.email || "",
             amount: payment.amount,
             currency: payment.currency,
             status: payment.status,
             stripePaymentIntentId: payment.stripePaymentIntentId,
+            paymentMethod: (payment as any).paymentMethod || null,
+            paymentDate: (payment as any).paymentDate || null,
+            paymentReference: (payment as any).paymentReference || null,
             createdAt: payment.createdAt,
           };
         })

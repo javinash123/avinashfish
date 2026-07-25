@@ -30,3 +30,9 @@ id = "FZLa_qHbmVuTAR8vHobB0"
 uri = "file://pegslam_build_20260620_144739.zip"
 type = "unspecified"
 title = "Peg Slam Build — Leaderboard Mobile Fix"
+
+[[outputs]]
+id = "Gl5e3Lq_5fl70Yu66zbWY"
+uri = "file://pegslam-build.zip"
+type = "unspecified"
+title = "Peg Slam Production Build (with anti-spam rate limiting)"

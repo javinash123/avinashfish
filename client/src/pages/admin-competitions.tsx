@@ -174,12 +174,14 @@ export default function AdminCompetitions() {
     enabled: !!selectedCompetition && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
   });
 
-  // Fetch teams for team competitions (only when "Assign to Team" mode is used)
+  // Fetch teams for team competitions — use admin endpoint so pending teams are included
   const { data: teams = [] } = useQuery<Array<{
     id: string;
-    teamName: string;
+    name: string;
+    teamName?: string;
     pegNumber: number | null;
     memberCount: number;
+    paymentStatus?: string;
     members: Array<{
       userId: string;
       name: string;
@@ -187,8 +189,8 @@ export default function AdminCompetitions() {
       isPrimary: boolean;
     }>;
   }>>({
-    queryKey: [`/api/competitions/${selectedCompetition?.id}/teams`],
-    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen),
+    queryKey: [`/api/admin/competitions/${selectedCompetition?.id}/teams`],
+    enabled: !!selectedCompetition && selectedCompetition.competitionMode === "team" && (isPegAssignmentOpen || isWeighInOpen || isAnglersOpen || isPaymentsOpen),
   });
 
   // Fetch all users for adding to competition
@@ -589,7 +591,6 @@ export default function AdminCompetitions() {
       if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
         queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
-        // Update local state so pegsBooked counter reflects deletion without page refresh
         if (selectedCompetition.pegsBooked > 0) {
           setSelectedCompetition({
             ...selectedCompetition,
@@ -606,6 +607,30 @@ export default function AdminCompetitions() {
       toast({
         title: "Error",
         description: "Failed to remove participant",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const removeTeamMutation = useMutation({
+    mutationFn: async (teamId: string) => {
+      return await apiRequest("DELETE", `/api/admin/teams/${teamId}`);
+    },
+    onSuccess: () => {
+      if (selectedCompetition) {
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/competitions/${selectedCompetition.id}/teams`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
+        queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
+      }
+      toast({
+        title: "Team removed",
+        description: "The team has been removed from the competition.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Error",
+        description: "Failed to remove team",
         variant: "destructive",
       });
     },
@@ -925,19 +950,20 @@ export default function AdminCompetitions() {
     onSuccess: () => {
       if (selectedCompetition) {
         queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/participants`] });
-        queryClient.invalidateQueries({ queryKey: [`/api/competitions/${selectedCompetition.id}/teams`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/competitions/${selectedCompetition.id}/teams`] });
+        queryClient.invalidateQueries({ queryKey: [`/api/admin/competitions/${selectedCompetition.id}/payments`] });
         queryClient.invalidateQueries({ queryKey: ["/api/competitions"] });
       }
       setSelectedTeamToAdd("");
       toast({
-        title: "Team added",
-        description: "The team has been marked as paid and added to the competition.",
+        title: "Payment recorded",
+        description: "The team has been marked as paid successfully.",
       });
     },
     onError: (error: any) => {
       toast({
         title: "Error",
-        description: error.message || "Failed to add team",
+        description: error.message || "Failed to record payment",
         variant: "destructive",
       });
     },
@@ -2676,10 +2702,73 @@ export default function AdminCompetitions() {
 
             <Card>
               <CardHeader>
-                <CardTitle>Current Participants ({participants.length})</CardTitle>
+                <CardTitle>
+                  {selectedCompetition?.competitionMode === "team"
+                    ? `Teams (${teams.length})`
+                    : `Current Participants (${participants.length})`}
+                </CardTitle>
               </CardHeader>
               <CardContent>
-                {participants.length > 0 ? (
+                {selectedCompetition?.competitionMode === "team" ? (
+                  teams.length > 0 ? (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Team Name</TableHead>
+                          <TableHead>Members</TableHead>
+                          <TableHead>Peg</TableHead>
+                          <TableHead>Payment</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {teams.map((team: any) => (
+                          <TableRow key={team.id}>
+                            <TableCell>
+                              <div className="font-medium">{team.name || team.teamName}</div>
+                            </TableCell>
+                            <TableCell>{team.memberCount} member{team.memberCount !== 1 ? "s" : ""}</TableCell>
+                            <TableCell>
+                              {team.pegNumber ? (
+                                <Badge variant="outline" className="font-mono">{team.pegNumber}</Badge>
+                              ) : (
+                                <span className="text-muted-foreground">Not assigned</span>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={team.paymentStatus === "succeeded" ? "default" : "secondary"}
+                                data-testid={`badge-team-payment-${team.id}`}
+                              >
+                                {team.paymentStatus === "succeeded" ? "Paid" : "Unpaid"}
+                              </Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => {
+                                  if (window.confirm(`Remove team "${team.name || team.teamName}" from this competition?`)) {
+                                    removeTeamMutation.mutate(team.id);
+                                  }
+                                }}
+                                disabled={removeTeamMutation.isPending}
+                                data-testid={`button-remove-team-${team.id}`}
+                              >
+                                <Trash2 className="h-3 w-3 mr-1" />
+                                Remove
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  ) : (
+                    <div className="text-center py-8 text-muted-foreground">
+                      No teams yet. Add teams using the form above.
+                    </div>
+                  )
+                ) : participants.length > 0 ? (
                   <Table>
                     <TableHeader>
                       <TableRow>
@@ -2758,9 +2847,51 @@ export default function AdminCompetitions() {
           <DialogHeader>
             <DialogTitle>Payments - {selectedCompetition?.name}</DialogTitle>
             <DialogDescription>
-              View all payments for this competition
+              View and record payments for this competition
             </DialogDescription>
           </DialogHeader>
+
+          {/* Add manual payment for team competitions */}
+          {selectedCompetition?.competitionMode === "team" && (
+            <div className="border rounded-lg p-4 space-y-3 bg-muted/30">
+              <p className="text-sm font-medium">Record Manual Team Payment</p>
+              <div className="flex gap-2">
+                <Select value={selectedTeamToAdd} onValueChange={setSelectedTeamToAdd}>
+                  <SelectTrigger className="flex-1" data-testid="select-team-payment">
+                    <SelectValue placeholder="Select a team to record payment for..." />
+                  </SelectTrigger>
+                  <SelectContent className="bg-white dark:bg-zinc-950 text-black dark:text-white">
+                    {teams
+                      .filter((t: any) => t.paymentStatus !== "succeeded")
+                      .map((team: any) => (
+                        <SelectItem key={team.id} value={team.id}>
+                          {team.name || team.teamName} ({team.memberCount} member{team.memberCount !== 1 ? "s" : ""})
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Button
+                  onClick={() => {
+                    if (!selectedTeamToAdd) {
+                      toast({ title: "Error", description: "Please select a team", variant: "destructive" });
+                      return;
+                    }
+                    setAdminPaymentForm({ paymentMethod: "cash", paymentDate: new Date().toISOString().split("T")[0], paymentReference: "", paymentNotes: "" });
+                    setIsAddingTeam(true);
+                    setIsAdminPaymentOpen(true);
+                  }}
+                  disabled={!selectedTeamToAdd || markTeamPaidMutation.isPending}
+                  data-testid="button-add-team-payment"
+                >
+                  <Plus className="h-4 w-4 mr-1" />
+                  Add Payment
+                </Button>
+              </div>
+              {teams.filter((t: any) => t.paymentStatus !== "succeeded").length === 0 && (
+                <p className="text-xs text-muted-foreground">All teams have been paid.</p>
+              )}
+            </div>
+          )}
 
           <div className="py-4">
             {paymentsLoading ? (
@@ -2952,10 +3083,14 @@ export default function AdminCompetitions() {
             </Button>
             <Button
               onClick={handleAdminPaymentConfirm}
-              disabled={addParticipantMutation.isPending || !adminPaymentForm.paymentDate}
+              disabled={(addParticipantMutation.isPending || markTeamPaidMutation.isPending) || !adminPaymentForm.paymentDate}
               data-testid="button-confirm-admin-payment"
             >
-              {addParticipantMutation.isPending ? "Adding..." : "Confirm & Add Angler"}
+              {(addParticipantMutation.isPending || markTeamPaidMutation.isPending)
+                ? "Saving..."
+                : isAddingTeam
+                  ? "Record Team Payment"
+                  : "Confirm & Add Angler"}
             </Button>
           </DialogFooter>
         </DialogContent>

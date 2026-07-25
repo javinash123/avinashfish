@@ -1,0 +1,63 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: 📡 add observability to secrets: https://dotenvx.com/ops[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: NOT SET
+   Stripe Secret Key: NOT SET
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+7:02:17 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+7:02:37 PM [express] GET /api/user/me 401 in 4ms :: {"message":"Not authenticated"}
+7:02:37 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:02:37 PM [express] GET /api/slider-images 200 in 2ms :: [{"id":"699a3dbc-9929-4dc9-8d2e-46c866aa22…
+7:02:37 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"54ad6dcc-6a92-43f3-b2ca-fa1c7e67f53…
+7:02:37 PM [express] GET /api/competitions 200 in 3ms :: [{"id":"438a3c8f-3555-41f3-9a97-c846b98a7fa…
+7:02:37 PM [express] GET /api/news/featured 200 in 1ms :: []
+7:02:37 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+7:02:37 PM [express] GET /api/testimonials 200 in 1ms :: []
+7:02:37 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+7:02:37 PM [express] GET /api/sponsors 200 in 0ms :: []
+7:02:37 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:02:38 PM [express] GET /api/competitions/438a3c8f-3555-41f3-9a97-c846b98a7fa9/leaderboard 200 in 1…
+7:02:38 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:02:39 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:05:29 PM [express] GET /api/gallery/featured 200 in 3ms :: []
+7:05:29 PM [express] GET /api/testimonials 200 in 5ms :: []
+7:05:29 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"54ad6dcc-6a92-43f3-b2ca-fa1c7e67f53…
+7:05:29 PM [express] GET /api/youtube-videos 200 in 2ms :: []
+7:05:29 PM [express] GET /api/competitions 200 in 18ms :: [{"id":"438a3c8f-3555-41f3-9a97-c846b98a7f…
+7:05:29 PM [express] GET /api/user/me 401 in 1ms :: {"message":"Not authenticated"}
+7:05:30 PM [express] GET /api/sponsors 200 in 1ms :: []
+7:05:30 PM [express] GET /api/competitions/438a3c8f-3555-41f3-9a97-c846b98a7fa9/leaderboard 200 in 1…
+7:05:30 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"699a3dbc-9929-4dc9-8d2e-46c866aa22…
+7:05:30 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:08:13 PM [express] GET /api/user/me 401 in 1ms :: {"message":"Not authenticated"}
+7:08:13 PM [express] GET /api/news/featured 200 in 5ms :: []
+7:08:13 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+7:08:13 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"54ad6dcc-6a92-43f3-b2ca-fa1c7e67f53…
+7:08:13 PM [express] GET /api/youtube-videos 200 in 2ms :: []
+7:08:13 PM [express] GET /api/competitions 200 in 4ms :: [{"id":"438a3c8f-3555-41f3-9a97-c846b98a7fa…
+7:08:14 PM [express] GET /api/ambassadors 200 in 1ms :: []
+7:08:14 PM [express] GET /api/competitions/438a3c8f-3555-41f3-9a97-c846b98a7fa9/leaderboard 200 in 1…
+7:08:14 PM [express] GET /api/testimonials 200 in 0ms :: []
+7:08:14 PM [express] GET /api/sponsors 200 in 1ms :: []
+7:08:14 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"699a3dbc-9929-4dc9-8d2e-46c866aa22…
+7:13:52 PM [express] POST /api/admin/login 400 in 6ms :: {"message":"Invalid input","errors":[{"code…
+7:14:04 PM [express] POST /api/admin/login 200 in 6ms :: {"id":"0c65b426-1d3c-4a4d-a7f9-d23fb9839d53…
+7:14:08 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"438a3c8f-3555-41f3-9a97-c846b98a7fa…
+Error fetching participants: ReferenceError: isAdmin is not defined
+    at <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:3206:35[90m)[39m
+7:14:14 PM [express] GET /api/competitions/438a3c8f-3555-41f3-9a97-c846b98a7fa9/participants 500 in …
+Error fetching participants: ReferenceError: isAdmin is not defined
+    at <anonymous> [90m(/home/runner/workspace/[39mserver/routes.ts:3206:35[90m)[39m
+7:14:20 PM [express] GET /api/competitions/438a3c8f-3555-41f3-9a97-c846b98a7fa9/participants 500 in …

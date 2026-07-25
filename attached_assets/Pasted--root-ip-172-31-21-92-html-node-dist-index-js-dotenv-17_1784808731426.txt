@@ -1,0 +1,112 @@
+[root@ip-172-31-21-92 html]# node dist/index.js
+[dotenv@17.2.3] injecting env (13) from .env -- tip: 👥 sync secrets across teammates & machines: https://dotenvx.com/ops
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: production
+   Stripe Public Key: pk_live_51... ✅ LIVE
+   Stripe Secret Key: sk_live_51... ✅ LIVE
+   MongoDB: configured
+
+🔌 Initializing MongoDB storage...
+✅ Connected to MongoDB Atlas successfully
+12:08:52 PM [express] serving on port 7118
+12:09:01 PM [express] GET /api/user/me 401 in 35ms :: {"message":"Not authenticated"}
+12:09:02 PM [express] GET /api/site-settings 200 in 269ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+12:09:02 PM [express] GET /api/slider-images 200 in 195ms :: [{"_id":"6907edd757e524ccd352b8a0","id":…
+12:09:02 PM [express] GET /api/gallery/featured 200 in 379ms :: [{"_id":"690721da57e524ccd352b88e","i…
+12:09:02 PM [express] GET /api/youtube-videos 200 in 192ms :: [{"_id":"693338ddb5ca33664314d2dc","tit…
+12:09:02 PM [express] GET /api/testimonials 200 in 190ms :: []
+12:09:03 PM [express] GET /api/sponsors 200 in 191ms :: [{"_id":"69ccf7af445365eaebf68251","id":"2df2…
+12:09:03 PM [express] GET /api/competitions 200 in 1039ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":…
+Get anglers error: MongoServerError: PlanExecutor error during aggregation :: caused by :: Sort exceeded memory limit of 33554432 bytes, but did not opt in to external sorting.
+    at Connection.sendCommand (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:306:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.command (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:334:26)
+    at async Server.command (/var/www/html/node_modules/mongodb/lib/sdam/server.js:194:29)
+    at async tryOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:213:32)
+    at async executeOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:78:16)
+    at async AggregationCursor._initialize (/var/www/html/node_modules/mongodb/lib/cursor/aggregation_cursor.js:57:26)
+    at async AggregationCursor.cursorInit (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:632:27)
+    at async AggregationCursor.fetchBatch (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:666:13)
+    at async AggregationCursor.next (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:342:17) {
+  errorLabelSet: Set(0) {},
+  errorResponse: {
+    ok: 0,
+    errmsg: 'PlanExecutor error during aggregation :: caused by :: Sort exceeded memory limit of 33554432 bytes, but did not opt in to external sorting.',
+    code: 292,
+    codeName: 'QueryExceededMemoryLimitNoDiskUseAllowed',
+    '$clusterTime': {
+      clusterTime: new Timestamp({ t: 1784808554, i: 1 }),
+      signature: [Object]
+    },
+    operationTime: new Timestamp({ t: 1784808554, i: 1 })
+  },
+  ok: 0,
+  code: 292,
+  codeName: 'QueryExceededMemoryLimitNoDiskUseAllowed',
+  '$clusterTime': {
+    clusterTime: new Timestamp({ t: 1784808554, i: 1 }),
+    signature: {
+      hash: Binary.createFromBase64('s7ozObkfx8zzG0Y79MWi32cyPdU=', 0),
+      keyId: new Long('7610492193777647618')
+    }
+  },
+  operationTime: new Timestamp({ t: 1784808554, i: 1 })
+}
+12:09:14 PM [express] GET /api/anglers 500 in 347ms :: {"message":"Error fetching anglers: PlanExecut…
+12:09:15 PM [express] GET /api/news/featured 200 in 13200ms :: [{"id":"b45babb7-0510-4610-b215-d002e0…
+12:09:18 PM [express] GET /api/site-settings 200 in 188ms :: {"_id":"68ea1bd7241b9aba5ab087e2","id":"…
+12:09:19 PM [express] GET /api/competitions 200 in 937ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":"…
+12:09:20 PM [express] GET /api/competitions/5cd0167e-e65b-4e97-b04d-bfed200c8c13/leaderboard 200 in 6…
+Get anglers error: MongoServerError: PlanExecutor error during aggregation :: caused by :: Sort exceeded memory limit of 33554432 bytes, but did not opt in to external sorting.
+    at Connection.sendCommand (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:306:27)
+    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+    at async Connection.command (/var/www/html/node_modules/mongodb/lib/cmap/connection.js:334:26)
+    at async Server.command (/var/www/html/node_modules/mongodb/lib/sdam/server.js:194:29)
+    at async tryOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:213:32)
+    at async executeOperation (/var/www/html/node_modules/mongodb/lib/operations/execute_operation.js:78:16)
+    at async AggregationCursor._initialize (/var/www/html/node_modules/mongodb/lib/cursor/aggregation_cursor.js:57:26)
+    at async AggregationCursor.cursorInit (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:632:27)
+    at async AggregationCursor.fetchBatch (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:666:13)
+    at async AggregationCursor.next (/var/www/html/node_modules/mongodb/lib/cursor/abstract_cursor.js:342:17) {
+  errorLabelSet: Set(0) {},
+  errorResponse: {
+    ok: 0,
+    errmsg: 'PlanExecutor error during aggregation :: caused by :: Sort exceeded memory limit of 33554432 bytes, but did not opt in to external sorting.',
+    code: 292,
+    codeName: 'QueryExceededMemoryLimitNoDiskUseAllowed',
+    '$clusterTime': {
+      clusterTime: new Timestamp({ t: 1784808561, i: 4 }),
+      signature: [Object]
+    },
+    operationTime: new Timestamp({ t: 1784808561, i: 4 })
+  },
+  ok: 0,
+  code: 292,
+  codeName: 'QueryExceededMemoryLimitNoDiskUseAllowed',
+  '$clusterTime': {
+    clusterTime: new Timestamp({ t: 1784808561, i: 4 }),
+    signature: {
+      hash: Binary.createFromBase64('CE71K08ZYCf1XvF8ohuBH9Xr9+c=', 0),
+      keyId: new Long('7610492193777647618')
+    }
+  },
+  operationTime: new Timestamp({ t: 1784808561, i: 4 })
+}
+12:09:21 PM [express] GET /api/anglers 500 in 313ms :: {"message":"Error fetching anglers: PlanExecut…
+12:09:23 PM [express] GET /api/gallery 200 in 373ms :: [{"_id":"690721da57e524ccd352b88e","id":"645ed…
+12:09:26 PM [express] GET /api/news 200 in 388ms :: {"news":[{"_id":"6a42b2363749cd5b942b0c3d","id":"…
+12:09:28 PM [express] GET /api/sponsors 200 in 193ms :: [{"_id":"69ccf7af445365eaebf68251","id":"2df2…
+12:09:30 PM [express] GET /api/ambassadors 200 in 27701ms :: []
+12:09:42 PM [express] GET /api/admin/me 401 in 1ms :: {"message":"Not authenticated"}
+12:09:43 PM [express] GET /api/admin/me 401 in 0ms :: {"message":"Not authenticated"}
+12:09:53 PM [express] POST /api/admin/login 200 in 593ms :: {"id":"5ed3407b-9f51-4e14-8c2c-af9fb32200…
+12:09:54 PM [express] GET /api/admin/me 200 in 581ms :: {"id":"5ed3407b-9f51-4e14-8c2c-af9fb322004d",…
+12:09:56 PM [express] GET /api/admin/competitions 200 in 1171ms :: [{"_id":"692b149cd2d5a6ab1af56ff8"…
+12:10:03 PM [express] GET /api/admin/me 200 in 765ms :: {"id":"5ed3407b-9f51-4e14-8c2c-af9fb322004d",…
+12:10:03 PM [express] GET /api/competitions 200 in 1229ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":…
+12:10:06 PM [express] GET /api/competitions 200 in 1284ms :: [{"_id":"692b149cd2d5a6ab1af56ff8","id":…
+12:10:10 PM [express] GET /api/admin/competitions/f608c585-c1ae-4081-a69a-154463e8310a/teams 200 in 2…
+12:10:15 PM [express] GET /api/admin/dashboard/stats 200 in 20548ms :: {"totalAnglers":57347,"activeC…
+12:10:18 PM [express] GET /api/admin/recent-participations 200 in 24420ms :: [{"id":"801294f4-923d-44…
+12:10:35 PM [express] GET /api/admin/anglers 200 in 21537ms :: [{"_id":"69275ffe164b8c6b61faf4cf","id…
+

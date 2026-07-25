@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import {
@@ -135,10 +135,26 @@ export default function AdminTeams() {
     enabled: !!selectedCompetitionId,
   });
 
-  const { data: allAnglers = [] } = useQuery<Angler[]>({
-    queryKey: ["/api/admin/anglers"],
+  const [debouncedAnglerSearch, setDebouncedAnglerSearch] = useState("");
+  const anglerDebounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (anglerDebounceRef.current) clearTimeout(anglerDebounceRef.current);
+    anglerDebounceRef.current = setTimeout(() => setDebouncedAnglerSearch(anglerSearch), 400);
+    return () => { if (anglerDebounceRef.current) clearTimeout(anglerDebounceRef.current); };
+  }, [anglerSearch]);
+
+  const { data: anglerSearchResult } = useQuery<{ data: Angler[]; total: number }>({
+    queryKey: ["/api/admin/anglers", debouncedAnglerSearch, "teams-search"],
+    queryFn: async () => {
+      const params = new URLSearchParams({ search: debouncedAnglerSearch, pageSize: "30", sortBy: "name", sortOrder: "asc" });
+      const res = await fetch(`/api/admin/anglers?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
     enabled: isCreateTeamOpen || isAddMemberOpen,
   });
+  const allAnglers = anglerSearchResult?.data ?? [];
 
   const selectedCompetition = teamCompetitions.find(c => c.id === selectedCompetitionId);
 

@@ -106,8 +106,6 @@ export default function AnglerDirectory() {
               <SelectItem value="name-desc">Name (Z-A)</SelectItem>
               <SelectItem value="memberSince-desc">Newest Members</SelectItem>
               <SelectItem value="memberSince-asc">Oldest Members</SelectItem>
-              <SelectItem value="club-asc">Club (A-Z)</SelectItem>
-              <SelectItem value="club-desc">Club (Z-A)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -167,13 +165,7 @@ export default function AnglerDirectory() {
                           <p className="text-xs text-muted-foreground mb-2">@{angler.username}</p>
 
                           <div className="space-y-1">
-                            {angler.club && (
-                              <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
-                                <Users className="h-3 w-3 shrink-0 text-primary/70" />
-                                <span className="truncate">{angler.club}</span>
-                              </div>
-                            )}
-
+  
                             {angler.location && (
                               <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
                                 <MapPin className="h-3 w-3 shrink-0 text-primary/70" />

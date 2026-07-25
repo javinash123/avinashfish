@@ -21,12 +21,15 @@ export interface IStorage {
   setEmailVerificationToken(userId: string, token: string, expiry: Date): Promise<User | undefined>;
   getUserByVerificationToken(token: string): Promise<User | undefined>;
   verifyUserEmail(userId: string): Promise<User | undefined>;
+  getUserCount(): Promise<number>;
+  getRecentParticipants(limit: number): Promise<CompetitionParticipant[]>;
   listAnglers(query: {
     search?: string;
     sortBy?: 'name' | 'memberSince' | 'club';
     sortOrder?: 'asc' | 'desc';
     page?: number;
     pageSize?: number;
+    status?: string;
   }): Promise<{ data: User[]; total: number }>;
   
   // User gallery methods
@@ -514,6 +517,7 @@ export class MemStorage implements IStorage {
           competitionId: liveComp.id,
           userId: users[0].id,
           pegNumber: 5,
+          paymentStatus: "succeeded",
           joinedAt: new Date(),
         },
         {
@@ -521,6 +525,7 @@ export class MemStorage implements IStorage {
           competitionId: liveComp.id,
           userId: users[1].id,
           pegNumber: 12,
+          paymentStatus: "succeeded",
           joinedAt: new Date(),
         },
         {
@@ -528,6 +533,7 @@ export class MemStorage implements IStorage {
           competitionId: liveComp.id,
           userId: users[2].id,
           pegNumber: 8,
+          paymentStatus: "succeeded",
           joinedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
         },
         {
@@ -535,6 +541,7 @@ export class MemStorage implements IStorage {
           competitionId: liveComp.id,
           userId: users[3].id,
           pegNumber: 15,
+          paymentStatus: "succeeded",
           joinedAt: new Date(Date.now() - 3 * 24 * 60 * 60 * 1000),
         },
         {
@@ -542,11 +549,12 @@ export class MemStorage implements IStorage {
           competitionId: liveComp.id,
           userId: users[4].id,
           pegNumber: 3,
+          paymentStatus: "succeeded",
           joinedAt: new Date(Date.now() - 5 * 24 * 60 * 60 * 1000),
         },
       ];
 
-      todayParticipations.forEach(p => this.competitionParticipants.set(p.id, p));
+      todayParticipations.forEach(p => this.competitionParticipants.set(p.id, p as any));
 
       // Participations for upcoming competitions
       if (competitions.length > 1) {
@@ -557,6 +565,7 @@ export class MemStorage implements IStorage {
             competitionId: upcomingComp.id,
             userId: users[0].id,
             pegNumber: 3,
+            paymentStatus: "succeeded",
             joinedAt: new Date(Date.now() - 1 * 24 * 60 * 60 * 1000),
           },
           {
@@ -564,10 +573,11 @@ export class MemStorage implements IStorage {
             competitionId: upcomingComp.id,
             userId: users[2].id,
             pegNumber: 7,
+            paymentStatus: "succeeded",
             joinedAt: new Date(Date.now() - 2 * 24 * 60 * 60 * 1000),
           },
         ];
-        upcomingParticipations.forEach(p => this.competitionParticipants.set(p.id, p));
+        upcomingParticipations.forEach(p => this.competitionParticipants.set(p.id, p as any));
       }
     }
   }
@@ -594,14 +604,25 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserCount(): Promise<number> {
+    return this.users.size;
+  }
+
+  async getRecentParticipants(limit: number): Promise<CompetitionParticipant[]> {
+    return Array.from(this.competitionParticipants.values())
+      .sort((a, b) => new Date(b.joinedAt).getTime() - new Date(a.joinedAt).getTime())
+      .slice(0, limit);
+  }
+
   async listAnglers(query: {
     search?: string;
     sortBy?: 'name' | 'memberSince' | 'club';
     sortOrder?: 'asc' | 'desc';
     page?: number;
     pageSize?: number;
+    status?: string;
   }): Promise<{ data: User[]; total: number }> {
-    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20 } = query;
+    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20, status } = query;
     
     let filteredUsers = Array.from(this.users.values());
     
@@ -613,6 +634,10 @@ export class MemStorage implements IStorage {
         user.username.toLowerCase().includes(searchLower) ||
         (user.club && user.club.toLowerCase().includes(searchLower))
       );
+    }
+
+    if (status && status !== 'all') {
+      filteredUsers = filteredUsers.filter(user => user.status === status);
     }
     
     filteredUsers.sort((a, b) => {
@@ -1013,13 +1038,29 @@ export class MemStorage implements IStorage {
 
   // Competition methods
   async getAllCompetitions(): Promise<Competition[]> {
-    return Array.from(this.competitions.values()).sort((a, b) => 
+    const competitions = Array.from(this.competitions.values()).sort((a, b) => 
       new Date(a.date).getTime() - new Date(b.date).getTime()
     );
+    return competitions.map(comp => this.withComputedPegsBooked(comp));
   }
 
   async getCompetition(id: string): Promise<Competition | undefined> {
-    return this.competitions.get(id);
+    const competition = this.competitions.get(id);
+    if (!competition) return undefined;
+    return this.withComputedPegsBooked(competition);
+  }
+
+  // For individual competitions, pegsBooked should only reflect participants whose
+  // payment has actually succeeded (not pending, not failed). Team competitions keep
+  // their existing stored-counter behavior untouched.
+  private withComputedPegsBooked(competition: Competition): Competition {
+    if ((competition as any).competitionMode === "team") {
+      return competition;
+    }
+    const pegsBooked = Array.from(this.competitionParticipants.values()).filter(
+      p => p.competitionId === competition.id && p.paymentStatus === "succeeded"
+    ).length;
+    return { ...competition, pegsBooked };
   }
 
   async createCompetition(competition: InsertCompetition): Promise<Competition> {

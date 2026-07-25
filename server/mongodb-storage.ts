@@ -511,14 +511,27 @@ export class MongoDBStorage implements IStorage {
     return await this.users.find({}).toArray();
   }
 
+  async getUserCount(): Promise<number> {
+    return await this.users.countDocuments({});
+  }
+
+  async getRecentParticipants(limit: number): Promise<CompetitionParticipant[]> {
+    return await this.competitionParticipants
+      .find({})
+      .sort({ joinedAt: -1 })
+      .limit(limit)
+      .toArray() as unknown as CompetitionParticipant[];
+  }
+
   async listAnglers(query: {
     search?: string;
     sortBy?: 'name' | 'memberSince' | 'club';
     sortOrder?: 'asc' | 'desc';
     page?: number;
     pageSize?: number;
+    status?: string;
   }): Promise<{ data: User[]; total: number }> {
-    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20 } = query;
+    const { search = '', sortBy = 'name', sortOrder = 'asc', page = 1, pageSize = 20, status } = query;
     
     // Build MongoDB aggregation pipeline
     const pipeline: any[] = [];
@@ -530,53 +543,48 @@ export class MongoDBStorage implements IStorage {
       }
     });
     
-    // Stage 2: Apply search filter if provided
+    // Stage 2: Apply search + status filters
+    const matchConditions: any = {};
     if (search) {
       const searchRegex = new RegExp(search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'), 'i');
-      pipeline.push({
-        $match: {
-          $or: [
-            { firstName: searchRegex },
-            { lastName: searchRegex },
-            { username: searchRegex },
-            { club: searchRegex },
-            { fullName: searchRegex }
-          ]
-        }
-      });
+      matchConditions.$or = [
+        { firstName: searchRegex },
+        { lastName: searchRegex },
+        { username: searchRegex },
+        { club: searchRegex },
+        { fullName: searchRegex }
+      ];
     }
-    
+    if (status && status !== 'all') {
+      matchConditions.status = status;
+    }
+    if (Object.keys(matchConditions).length > 0) {
+      pipeline.push({ $match: matchConditions });
+    }
+
     // Stage 3: Sort based on criteria (default to name if invalid sortBy)
-    const sortField = sortBy === 'memberSince' ? 'memberSince' 
-                    : sortBy === 'club' ? 'club' 
-                    : 'fullName';  // Default fallback to name
+    const sortField = sortBy === 'memberSince' ? 'memberSince'
+                    : sortBy === 'club' ? 'club'
+                    : 'fullName';
     const sortDirection = sortOrder === 'desc' ? -1 : 1;
-    
-    pipeline.push({
-      $sort: { [sortField]: sortDirection }
-    });
-    
-    // Get total count with same filters
+    pipeline.push({ $sort: { [sortField]: sortDirection } });
+
+    // Get total count with same filters (allowDiskUse prevents OOM on large collections)
     const countPipeline = [...pipeline, { $count: 'total' }];
-    const countResult = await this.users.aggregate(countPipeline).toArray();
+    const countResult = await this.users.aggregate(countPipeline, { allowDiskUse: true }).toArray();
     const total = countResult.length > 0 ? countResult[0].total : 0;
-    
+
     // Stage 4: Apply pagination
     const skip = (page - 1) * pageSize;
     pipeline.push({ $skip: skip });
     pipeline.push({ $limit: pageSize });
-    
+
     // Stage 5: Remove internal MongoDB _id field and temporary fullName
-    pipeline.push({
-      $project: {
-        _id: 0,
-        fullName: 0
-      }
-    });
-    
-    // Execute aggregation
-    const data = await this.users.aggregate(pipeline).toArray() as User[];
-    
+    pipeline.push({ $project: { _id: 0, fullName: 0 } });
+
+    // Execute aggregation (allowDiskUse: true required for large sort operations on free tier)
+    const data = await this.users.aggregate(pipeline, { allowDiskUse: true }).toArray() as User[];
+
     return { data, total };
   }
 
@@ -1082,8 +1090,9 @@ export class MongoDBStorage implements IStorage {
     if (competitions.length === 0) return [];
 
     // Get real-time participant counts for individual competitions
+    // Only count participants whose payment has actually succeeded
     const participantCounts = await this.competitionParticipants.aggregate([
-      { $match: { paymentStatus: { $ne: "pending" } } },
+      { $match: { paymentStatus: "succeeded" } },
       { $group: { _id: "$competitionId", count: { $sum: 1 } } }
     ]).toArray();
     const participantCountMap = new Map<string, number>(participantCounts.map((c: any) => [c._id as string, c.count as number]));
@@ -1107,10 +1116,11 @@ export class MongoDBStorage implements IStorage {
     const competition = await this.competitions.findOne({ id });
     if (!competition) return undefined;
 
-    // Count only confirmed (non-pending) participants or teams depending on competition mode
+    // For individual competitions, only count participants whose payment has actually succeeded.
+    // Team competitions keep their existing (non-pending) counting behavior untouched.
     const pegsBooked = (competition as any).competitionMode === "team"
       ? await this.teams.countDocuments({ competitionId: id, paymentStatus: { $ne: "pending" } })
-      : await this.competitionParticipants.countDocuments({ competitionId: id, paymentStatus: { $ne: "pending" } });
+      : await this.competitionParticipants.countDocuments({ competitionId: id, paymentStatus: "succeeded" });
 
     return {
       ...competition,
@@ -1455,12 +1465,17 @@ export class MongoDBStorage implements IStorage {
       const totalWeightNum = data.totalWeight;
       const fishCount = data.entries.length;
       
+      const fishImages = data.entries
+        .map((e: any) => e.fishImageUrl)
+        .filter(Boolean) as string[];
+
       return {
         ...latestEntry,
         weight: totalWeightNum.toString(),
         teamId: isTeamCompetition ? (data.teamId || latestEntry.teamId) : latestEntry.teamId,
         userId: isTeamCompetition ? latestEntry.userId : (data.userId || latestEntry.userId),
         fishCount,
+        fishImages,
       };
     });
     

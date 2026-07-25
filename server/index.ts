@@ -211,9 +211,11 @@ app.use((req, res, next) => {
   const { initializeStorage } = await import("./storage");
   const storage = await initializeStorage();
   
-  // Run migration to fix legacy profiles with missing fields
+  // Run migration in background — do NOT await, so it never blocks server startup
   const { migrateLegacyProfiles } = await import("./migrate-legacy-profiles");
-  await migrateLegacyProfiles(storage);
+  migrateLegacyProfiles(storage).catch((err) =>
+    console.error("❌ Background migration error:", err)
+  );
   
   // Serve uploaded files statically (must exist on production server)
   // BACKWARDS COMPATIBILITY: Serve from both /assets and /attached-assets

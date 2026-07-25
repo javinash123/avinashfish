@@ -108,8 +108,6 @@ export default function Ambassadors() {
               <SelectItem value="name-desc">Name (Z-A)</SelectItem>
               <SelectItem value="memberSince-desc">Newest</SelectItem>
               <SelectItem value="memberSince-asc">Oldest</SelectItem>
-              <SelectItem value="club-asc">Club (A-Z)</SelectItem>
-              <SelectItem value="club-desc">Club (Z-A)</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -154,12 +152,6 @@ export default function Ambassadors() {
                         @{angler.username}
                       </p>
 
-                      {angler.club && (
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">
-                          <Users className="h-3 w-3" />
-                          <span>{angler.club}</span>
-                        </div>
-                      )}
 
                       {angler.location && (
                         <div className="flex items-center gap-1 text-xs text-muted-foreground mb-2">

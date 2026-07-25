@@ -1,0 +1,47 @@
+[root@ip-172-31-21-92 html]# pm2 kill
+pm2 delete all
+[PM2] Applying action deleteProcessId on app [all](ids: [ 0, 1, 2, 3, 4 ])
+[PM2] [pegslam](0) ✓
+[PM2] [all](2) ✓
+[PM2] [pegpro-api](3) ✓
+[PM2] [pegslam-backend](1) ✓
+[PM2] [index](4) ✓
+[PM2] [v] All Applications Stopped
+[PM2] [v] PM2 Daemon Stopped
+[PM2] Spawning PM2 daemon with pm2_home=/root/.pm2
+[PM2] PM2 Successfully daemonized
+[PM2][WARN] No process found
+[root@ip-172-31-21-92 html]# pm2 status
+┌────┬───────────┬─────────────┬─────────┬─────────┬──────────┬────────┬──────┬───────────┬──────────┬──────────┬──────────┬──────────┐
+│ id │ name      │ namespace   │ version │ mode    │ pid      │ uptime │ ↺    │ status    │ cpu      │ mem      │ user     │ watching │
+└────┴───────────┴─────────────┴─────────┴─────────┴──────────┴────────┴──────┴───────────┴──────────┴──────────┴──────────┴──────────┘
+[root@ip-172-31-21-92 html]# node index.js
+node:internal/modules/cjs/loader:1386
+  throw err;
+  ^
+
+Error: Cannot find module '/var/www/html/index.js'
+    at Module._resolveFilename (node:internal/modules/cjs/loader:1383:15)
+    at defaultResolveImpl (node:internal/modules/cjs/loader:1025:19)
+    at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1030:22)
+    at Module._load (node:internal/modules/cjs/loader:1192:37)
+    at TracingChannel.traceSync (node:diagnostics_channel:322:14)
+    at wrapModuleLoad (node:internal/modules/cjs/loader:237:24)
+    at Function.executeUserEntryPoint [as runMain] (node:internal/modules/run_main:171:5)
+    at node:internal/main/run_main_module:36:49 {
+  code: 'MODULE_NOT_FOUND',
+  requireStack: []
+}
+
+Node.js v22.19.0
+[root@ip-172-31-21-92 html]# node dist/index.js
+[dotenv@17.2.3] injecting env (13) from .env -- tip: ✅ audit secrets and track compliance: https://dotenvx.com/ops
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: production
+   Stripe Public Key: pk_live_51... ✅ LIVE
+   Stripe Secret Key: sk_live_51... ✅ LIVE
+   MongoDB: configured
+
+🔌 Initializing MongoDB storage...
+✅ Connected to MongoDB Atlas successfully
+

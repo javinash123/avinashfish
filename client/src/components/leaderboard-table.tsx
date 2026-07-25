@@ -9,7 +9,7 @@ import {
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Trophy, Users } from "lucide-react";
+import { Trophy, Users, Fish, ChevronLeft, ChevronRight, X } from "lucide-react";
 import { Link } from "wouter";
 import { formatWeight, convertFromOunces, parseWeight } from "@shared/weight-utils";
 import {
@@ -34,6 +34,7 @@ interface LeaderboardEntry {
   isTeam?: boolean;
   fishCount?: number;
   fishImageUrl?: string;
+  fishImages?: string[];
 }
 
 interface TeamMember {
@@ -59,7 +60,8 @@ interface LeaderboardTableProps {
 
 export function LeaderboardTable({ entries, isLive = false }: LeaderboardTableProps) {
   const [selectedTeamId, setSelectedTeamId] = useState<string | null>(null);
-  
+  const [fishPhotoState, setFishPhotoState] = useState<{ images: string[]; name: string; index: number } | null>(null);
+
   // Get all unique team IDs from entries
   const teamIds = Array.from(new Set(entries
     .filter(e => e.isTeam && e.teamId)
@@ -86,7 +88,6 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
     enabled: teamIds.length > 0,
   });
   
-  // Create a map of teamId to team details for quick lookup
   const teamDetailsMap = new Map<string, TeamDetailsType>();
   allTeamsData?.forEach(team => {
     if (team) teamDetailsMap.set(team.id, team);
@@ -96,6 +97,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
     queryKey: [`/api/team/${selectedTeamId}`],
     enabled: !!selectedTeamId,
   });
+
   const getMedalColor = (position: number) => {
     if (position === 1) return "text-chart-3";
     if (position === 2) return "text-muted-foreground";
@@ -117,24 +119,26 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
 
   const formatWeightCompact = (totalOunces: number | string) => {
     const ounces = typeof totalOunces === 'string' ? parseWeight(totalOunces) : totalOunces;
-    
-    if (isNaN(ounces) || ounces === 0) {
-      return "0lb 0oz";
-    }
-    
+    if (isNaN(ounces) || ounces === 0) return "0lb 0oz";
     const { pounds, ounces: oz } = convertFromOunces(Math.round(ounces));
     return `${pounds}lb ${oz}oz`;
   };
 
   const formatWeightTwoRows = (totalOunces: number | string) => {
     const ounces = typeof totalOunces === 'string' ? parseWeight(totalOunces) : totalOunces;
-    
-    if (isNaN(ounces) || ounces === 0) {
-      return { pounds: "0 lb", ounces: "0 oz" };
-    }
-    
+    if (isNaN(ounces) || ounces === 0) return { pounds: "0 lb", ounces: "0 oz" };
     const { pounds, ounces: oz } = convertFromOunces(Math.round(ounces));
     return { pounds: `${pounds} lb`, ounces: `${oz} oz` };
+  };
+
+  const openFishPhotos = (entry: LeaderboardEntry) => {
+    const images = entry.fishImages && entry.fishImages.length > 0
+      ? entry.fishImages
+      : entry.fishImageUrl
+        ? [entry.fishImageUrl]
+        : [];
+    if (images.length === 0) return;
+    setFishPhotoState({ images, name: entry.anglerName, index: 0 });
   };
 
   return (
@@ -154,6 +158,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
           {entries.map((entry, index) => {
             const weight = formatWeightTwoRows(entry.weight);
             const weightCompact = formatWeightCompact(entry.weight);
+            const hasFishPhotos = (entry.fishImages && entry.fishImages.length > 0) || !!entry.fishImageUrl;
             return (
               <TableRow
                 key={`${entry.position}-${entry.pegNumber}`}
@@ -168,7 +173,6 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                 <TableCell className="py-2 px-1 sm:px-4">
                   <div className="flex items-center gap-1.5 sm:gap-3">
                     {entry.isTeam && entry.teamId ? (
-                      // For team entries, show stacked team member avatars
                       <div className="flex -space-x-2 shrink-0">
                         {(() => {
                           const team = teamDetailsMap.get(entry.teamId);
@@ -182,7 +186,6 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                               </Avatar>
                             ));
                           }
-                          // Fallback if team data not loaded yet
                           return (
                             <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
                               <AvatarFallback className="text-[10px] sm:text-xs">
@@ -203,33 +206,42 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                       </Avatar>
                     )}
                     <div className="min-w-0 flex-1">
-                      {entry.isTeam ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setSelectedTeamId(entry.teamId || null)}
-                          className="font-medium text-xs sm:text-base whitespace-normal break-words text-left h-auto p-0 line-clamp-2"
-                          data-testid={`button-team-${entry.position}`}
-                        >
-                          <div className="flex items-center gap-1">
+                      <div className="flex items-center gap-1.5">
+                        {entry.isTeam ? (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setSelectedTeamId(entry.teamId || null)}
+                            className="font-medium text-xs sm:text-base whitespace-normal break-words text-left h-auto p-0 line-clamp-2"
+                            data-testid={`button-team-${entry.position}`}
+                          >
+                            <div className="flex items-center gap-1">
+                              {entry.anglerName}
+                              <Users className="h-3 w-3 sm:h-4 sm:w-4" />
+                            </div>
+                          </Button>
+                        ) : entry.username ? (
+                          <Link href={`/profile/${entry.username}`}>
+                            <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
+                              {entry.anglerName}
+                            </div>
+                          </Link>
+                        ) : (
+                          <div className="font-medium text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
                             {entry.anglerName}
-                            <Users className="h-3 w-3 sm:h-4 sm:w-4" />
                           </div>
-                        </Button>
-                      ) : entry.username ? (
-                        <Link href={`/profile/${entry.username}`}>
-                          <div className="font-medium hover:underline cursor-pointer text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
-                            {entry.anglerName}
-                          </div>
-                        </Link>
-                      ) : (
-                        <div className="font-medium text-xs sm:text-base whitespace-normal break-words text-left line-clamp-2" data-testid={`text-angler-${entry.position}`}>
-                          {entry.anglerName}
-                        </div>
-                      )}
-                      {entry.club && (
-                        <div className="text-[10px] sm:text-sm text-muted-foreground hidden sm:block truncate">{entry.club}</div>
-                      )}
+                        )}
+                        {hasFishPhotos && (
+                          <button
+                            onClick={() => openFishPhotos(entry)}
+                            className="shrink-0 text-primary hover:text-primary/80 transition-colors"
+                            title="View fish photos"
+                            data-testid={`button-fish-photos-${entry.position}`}
+                          >
+                            <Fish className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </TableCell>
@@ -269,6 +281,7 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
         )}
       </Card>
 
+      {/* Team members dialog */}
       <Dialog open={!!selectedTeamId} onOpenChange={(open) => !open && setSelectedTeamId(null)}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
@@ -294,11 +307,66 @@ export function LeaderboardTable({ entries, isLive = false }: LeaderboardTablePr
                     </div>
                   </Link>
                   <p className="text-xs text-muted-foreground">@{member.username}</p>
-                  {member.club && <p className="text-xs text-muted-foreground">{member.club}</p>}
                 </div>
               </div>
             ))}
           </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* Fish photos slider dialog */}
+      <Dialog open={!!fishPhotoState} onOpenChange={(open) => !open && setFishPhotoState(null)}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Fish className="h-5 w-5 text-primary" />
+              Fish Photos — {fishPhotoState?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {fishPhotoState && (
+            <div className="relative">
+              <div className="relative aspect-video bg-black flex items-center justify-center">
+                <img
+                  src={fishPhotoState.images[fishPhotoState.index]}
+                  alt={`Fish photo ${fishPhotoState.index + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+                {fishPhotoState.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setFishPhotoState(s => s ? { ...s, index: (s.index - 1 + s.images.length) % s.images.length } : null)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                      data-testid="button-prev-photo"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setFishPhotoState(s => s ? { ...s, index: (s.index + 1) % s.images.length } : null)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                      data-testid="button-next-photo"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {fishPhotoState.images.length > 1 && (
+                <div className="flex justify-center gap-1.5 p-3">
+                  {fishPhotoState.images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setFishPhotoState(s => s ? { ...s, index: i } : null)}
+                      className={`h-2 w-2 rounded-full transition-colors ${i === fishPhotoState.index ? "bg-primary" : "bg-muted-foreground/40"}`}
+                      data-testid={`dot-photo-${i}`}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="px-4 pb-3 text-center text-sm text-muted-foreground">
+                {fishPhotoState.index + 1} / {fishPhotoState.images.length}
+              </div>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </>

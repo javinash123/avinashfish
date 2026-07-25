@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -42,6 +42,15 @@ export function CompetitionAnglersDialog({
 }: CompetitionAnglersDialogProps) {
   const { toast } = useToast();
   const [selectedAnglerId, setSelectedAnglerId] = useState("");
+  const [anglerSearch, setAnglerSearch] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => setDebouncedSearch(anglerSearch), 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [anglerSearch]);
 
   const { data: participants = [], isLoading: participantsLoading } = useQuery<Array<{
     id: string;
@@ -56,7 +65,7 @@ export function CompetitionAnglersDialog({
     enabled: !!competition && open,
   });
 
-  const { data: allAnglers = [], isLoading: anglersLoading } = useQuery<Array<{
+  const { data: anglerResult, isLoading: anglersLoading } = useQuery<{ data: Array<{
     id: string;
     firstName: string;
     lastName: string;
@@ -65,10 +74,17 @@ export function CompetitionAnglersDialog({
     club?: string;
     avatar?: string;
     status: string;
-  }>>({
-    queryKey: ["/api/admin/anglers"],
+  }>; total: number }>({
+    queryKey: ["/api/admin/anglers", debouncedSearch, "dialog"],
+    queryFn: async () => {
+      const params = new URLSearchParams({ search: debouncedSearch, pageSize: "30", sortBy: "name", sortOrder: "asc", status: "active" });
+      const res = await fetch(`/api/admin/anglers?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
     enabled: open,
   });
+  const allAnglers = anglerResult?.data ?? [];
 
   const addAnglerMutation = useMutation({
     mutationFn: async (userId: string) => {
@@ -158,17 +174,29 @@ export function CompetitionAnglersDialog({
 
         <div className="space-y-6">
           <div className="flex items-center gap-4">
-            <div className="flex-1">
+            <div className="flex-1 space-y-2">
+              <input
+                type="text"
+                placeholder="Search angler by name or username..."
+                value={anglerSearch}
+                onChange={(e) => { setAnglerSearch(e.target.value); setSelectedAnglerId(""); }}
+                className="w-full px-3 py-2 text-sm border rounded-md bg-background text-foreground border-input focus:outline-none focus:ring-2 focus:ring-ring"
+                data-testid="input-search-angler-dialog"
+              />
               <Select value={selectedAnglerId} onValueChange={setSelectedAnglerId}>
                 <SelectTrigger data-testid="select-angler">
                   <SelectValue placeholder="Select an angler to add..." />
                 </SelectTrigger>
                 <SelectContent>
-                  {availableAnglers.map((angler) => (
-                    <SelectItem key={angler.id} value={angler.id}>
-                      {angler.firstName} {angler.lastName} (@{angler.username})
-                    </SelectItem>
-                  ))}
+                  {availableAnglers.length === 0 && debouncedSearch ? (
+                    <div className="px-3 py-2 text-sm text-muted-foreground">No anglers found</div>
+                  ) : (
+                    availableAnglers.map((angler) => (
+                      <SelectItem key={angler.id} value={angler.id}>
+                        {angler.firstName} {angler.lastName} (@{angler.username})
+                      </SelectItem>
+                    ))
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -210,7 +238,6 @@ export function CompetitionAnglersDialog({
                 <TableHeader>
                   <TableRow>
                     <TableHead>Angler</TableHead>
-                    <TableHead>Club</TableHead>
                     <TableHead className="text-center">Peg</TableHead>
                     <TableHead>Joined</TableHead>
                     <TableHead className="text-right">Action</TableHead>
@@ -228,7 +255,6 @@ export function CompetitionAnglersDialog({
                           <div className="font-medium">{participant.name}</div>
                         </div>
                       </TableCell>
-                      <TableCell>{participant.club || "-"}</TableCell>
                       <TableCell className="text-center">
                         <Badge variant="outline" className="font-mono">
                           {participant.pegNumber || "Not assigned"}

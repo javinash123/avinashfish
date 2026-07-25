@@ -1,0 +1,72 @@
+[1G[0K⠙[1G[0K
+> rest-express@1.0.0 dev
+> NODE_ENV=development tsx server/index.ts
+
+[1G[0K⠙[1G[0K[dotenv@17.2.3] injecting env (0) from .env [2m-- tip: 🔄 add secrets lifecycle management: https://dotenvx.com/ops[0m
+📋 ENVIRONMENT STARTUP INFO:
+   NODE_ENV: development
+   Stripe Public Key: NOT SET
+   Stripe Secret Key: NOT SET
+   MongoDB: not configured
+
+🔌 Initializing In-memory storage (fallback)...
+✅ Migration: Updated 5 legacy user profiles with missing fields
+8:06:15 PM [express] serving on port 5000
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+
+A PostCSS plugin did not pass the `from` option to `postcss.parse`. This may cause imported assets to be incorrectly transformed. If you've recently added a PostCSS plugin that raised this warning, please contact the package author to fix the issue.
+8:06:32 PM [express] GET /api/user/me 401 in 2ms :: {"message":"Not authenticated"}
+8:06:32 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"b0d6b696-e6d8-49c8-ae63-c965b149214…
+8:06:32 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:06:32 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"29f98d7f-ad03-419e-9a6c-60fa29976d…
+8:06:32 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"725ac4ad-752e-4474-8c0f-c22a19b3749…
+8:06:32 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+8:06:32 PM [express] GET /api/news/featured 200 in 1ms :: []
+8:06:32 PM [express] GET /api/youtube-videos 200 in 0ms :: []
+8:06:32 PM [express] GET /api/testimonials 200 in 0ms :: []
+8:06:32 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:06:32 PM [express] GET /api/ambassadors 200 in 0ms :: []
+8:06:32 PM [express] GET /api/competitions/725ac4ad-752e-4474-8c0f-c22a19b37492/leaderboard 200 in 1…
+8:06:35 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:06:35 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}
+8:06:35 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"725ac4ad-752e-4474-8c0f-c22a19b3749…
+8:06:35 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"b0d6b696-e6d8-49c8-ae63-c965b149214…
+8:06:35 PM [express] GET /api/gallery/featured 200 in 1ms :: []
+8:06:35 PM [express] GET /api/testimonials 200 in 0ms :: []
+8:06:35 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+8:06:36 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"29f98d7f-ad03-419e-9a6c-60fa29976d…
+8:06:36 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:06:36 PM [express] GET /api/competitions/725ac4ad-752e-4474-8c0f-c22a19b37492/leaderboard 200 in 0…
+8:08:49 PM [express] GET /api/user/me 401 in 3ms :: {"message":"Not authenticated"}
+8:08:49 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+8:08:49 PM [express] GET /api/testimonials 200 in 0ms :: []
+8:08:49 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"b0d6b696-e6d8-49c8-ae63-c965b149214…
+8:08:49 PM [express] GET /api/youtube-videos 200 in 0ms :: []
+8:08:49 PM [express] GET /api/competitions 200 in 7ms :: [{"id":"725ac4ad-752e-4474-8c0f-c22a19b3749…
+8:08:49 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"29f98d7f-ad03-419e-9a6c-60fa29976d…
+8:08:49 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:08:49 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:08:49 PM [express] GET /api/competitions/725ac4ad-752e-4474-8c0f-c22a19b37492/leaderboard 200 in 0…
+8:09:30 PM [express] GET /api/user/me 401 in 2ms :: {"message":"Not authenticated"}
+8:09:30 PM [express] GET /api/site-settings 200 in 1ms :: {"id":"b0d6b696-e6d8-49c8-ae63-c965b149214…
+8:09:30 PM [express] GET /api/youtube-videos 200 in 1ms :: []
+8:09:30 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+8:09:30 PM [express] GET /api/competitions 200 in 6ms :: [{"id":"725ac4ad-752e-4474-8c0f-c22a19b3749…
+8:09:30 PM [express] GET /api/testimonials 200 in 1ms :: []
+8:09:30 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:09:30 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:09:30 PM [express] GET /api/slider-images 200 in 0ms :: [{"id":"29f98d7f-ad03-419e-9a6c-60fa29976d…
+8:09:30 PM [express] GET /api/competitions/725ac4ad-752e-4474-8c0f-c22a19b37492/leaderboard 200 in 0…
+8:11:49 PM [express] GET /api/site-settings 200 in 0ms :: {"id":"b0d6b696-e6d8-49c8-ae63-c965b149214…
+8:11:49 PM [express] GET /api/youtube-videos 200 in 0ms :: []
+8:11:49 PM [express] GET /api/competitions 200 in 1ms :: [{"id":"725ac4ad-752e-4474-8c0f-c22a19b3749…
+8:11:49 PM [express] GET /api/news/featured 200 in 0ms :: []
+8:11:50 PM [express] GET /api/slider-images 200 in 1ms :: [{"id":"29f98d7f-ad03-419e-9a6c-60fa29976d…
+8:11:50 PM [express] GET /api/sponsors 200 in 1ms :: []
+8:11:50 PM [express] GET /api/testimonials 200 in 0ms :: []
+8:11:50 PM [express] GET /api/ambassadors 200 in 1ms :: []
+8:11:50 PM [express] GET /api/competitions/725ac4ad-752e-4474-8c0f-c22a19b37492/leaderboard 200 in 0…
+8:11:50 PM [express] GET /api/gallery/featured 200 in 0ms :: []
+8:11:51 PM [express] GET /api/user/me 401 in 0ms :: {"message":"Not authenticated"}

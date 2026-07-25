@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -73,16 +73,48 @@ interface Angler {
 export default function AdminAnglers() {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
+  const [debouncedSearch, setDebouncedSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<"all" | "active" | "pending" | "blocked">("all");
+  const [page, setPage] = useState(1);
   const [selectedAngler, setSelectedAngler] = useState<Angler | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [anglerToEdit, setAnglerToEdit] = useState<Angler | null>(null);
   const [anglerToDelete, setAnglerToDelete] = useState<Angler | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const PAGE_SIZE = 50;
 
-  const { data: anglers = [], isLoading } = useQuery<Angler[]>({
-    queryKey: ["/api/admin/anglers"],
+  useEffect(() => {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 400);
+    return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
+  }, [searchQuery]);
+
+  useEffect(() => { setPage(1); }, [statusFilter]);
+
+  const params = new URLSearchParams({
+    search: debouncedSearch,
+    page: String(page),
+    pageSize: String(PAGE_SIZE),
+    sortBy: "memberSince",
+    sortOrder: "desc",
+    ...(statusFilter !== "all" ? { status: statusFilter } : {}),
   });
+
+  const { data: response, isLoading } = useQuery<{ data: Angler[]; total: number }>({
+    queryKey: ["/api/admin/anglers", debouncedSearch, page, statusFilter],
+    queryFn: async () => {
+      const res = await fetch(`/api/admin/anglers?${params}`, { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch anglers");
+      return res.json();
+    },
+  });
+  const anglers = response?.data ?? [];
+  const totalAnglers = response?.total ?? 0;
+  const totalPages = Math.ceil(totalAnglers / PAGE_SIZE);
 
   const createMutation = useMutation({
     mutationFn: async (data: any) => {
@@ -260,17 +292,6 @@ export default function AdminAnglers() {
     enabled: !!selectedAngler,
   });
 
-  const filteredAnglers = anglers.filter((angler) => {
-    const fullName = `${angler.firstName} ${angler.lastName}`.toLowerCase();
-    const matchesSearch = 
-      fullName.includes(searchQuery.toLowerCase()) ||
-      angler.username.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      angler.email.toLowerCase().includes(searchQuery.toLowerCase());
-    
-    const matchesStatus = statusFilter === "all" || angler.status === statusFilter;
-    
-    return matchesSearch && matchesStatus;
-  });
 
   if (isLoading) {
     return (
@@ -383,7 +404,7 @@ export default function AdminAnglers() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {filteredAnglers.map((angler) => (
+              {anglers.map((angler) => (
                 <TableRow key={angler.id}>
                   <TableCell>
                     <div className="flex items-center gap-3">
@@ -473,9 +494,22 @@ export default function AdminAnglers() {
         </CardContent>
       </Card>
 
-      {filteredAnglers.length === 0 && (
+      {anglers.length === 0 && !isLoading && (
         <div className="text-center py-12 text-muted-foreground">
           No anglers found matching your criteria
+        </div>
+      )}
+
+      {totalPages > 1 && (
+        <div className="flex items-center justify-between pt-2">
+          <p className="text-sm text-muted-foreground">
+            Showing {((page - 1) * PAGE_SIZE) + 1}–{Math.min(page * PAGE_SIZE, totalAnglers)} of {totalAnglers.toLocaleString()} anglers
+          </p>
+          <div className="flex gap-2">
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.max(1, p - 1))} disabled={page === 1}>Previous</Button>
+            <span className="flex items-center px-3 text-sm">Page {page} of {totalPages}</span>
+            <Button variant="outline" size="sm" onClick={() => setPage(p => Math.min(totalPages, p + 1))} disabled={page === totalPages}>Next</Button>
+          </div>
         </div>
       )}
 

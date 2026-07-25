@@ -100,9 +100,6 @@ export default function TeamProfile() {
                       )}
                     </div>
                     <p className="text-sm text-muted-foreground mb-2">@{member.username}</p>
-                    {member.club && (
-                      <p className="text-sm text-muted-foreground">{member.club}</p>
-                    )}
                     <div className="mt-3">
                       <Badge 
                         variant="outline"

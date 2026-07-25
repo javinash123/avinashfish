@@ -28,6 +28,9 @@ import {
   Copy,
   Check,
   Share2,
+  Fish,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { FaWhatsapp } from "react-icons/fa";
 import { SiFacebook, SiX } from "react-icons/si";
@@ -84,6 +87,8 @@ export default function CompetitionDetails() {
   const [copiedInvite, setCopiedInvite] = useState(false);
   const [memberEmail, setMemberEmail] = useState("");
   const [addedMembers, setAddedMembers] = useState<Array<{ id: string; name: string; username: string }>>([]);
+  const [manageTeamEmail, setManageTeamEmail] = useState("");
+  const [galleryState, setGalleryState] = useState<{ images: string[]; name: string; index: number } | null>(null);
 
   const handleBookPeg = () => {
     if (!competition) return;
@@ -254,6 +259,10 @@ export default function CompetitionDetails() {
     onSuccess: (data) => {
       setAddedMembers(prev => [...prev, { id: data.id, name: data.name, username: data.username }]);
       setMemberEmail("");
+      setManageTeamEmail("");
+      refetchUserTeam();
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/teams`] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitions/${id}/participants`] });
       toast({
         title: "Member added!",
         description: `${data.name} has been added to your team`,
@@ -761,7 +770,7 @@ export default function CompetitionDetails() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className={`grid w-full ${competition.competitionMode === "team" ? "grid-cols-3" : "grid-cols-2"} h-auto`} data-testid="tabs-competition">
+          <TabsList className={`grid w-full ${competition.competitionMode === "team" ? "grid-cols-4" : "grid-cols-3"} h-auto`} data-testid="tabs-competition">
             {competition.competitionMode === "team" && (
               <TabsTrigger value="teams" className="text-xs sm:text-sm px-2 sm:px-4">Teams</TabsTrigger>
             )}
@@ -769,6 +778,7 @@ export default function CompetitionDetails() {
               {competition.competitionMode === "team" ? "All Participants" : "Participants"}
             </TabsTrigger>
             <TabsTrigger value="leaderboard" className="text-xs sm:text-sm px-2 sm:px-4">Leaderboard</TabsTrigger>
+            <TabsTrigger value="gallery" className="text-xs sm:text-sm px-2 sm:px-4">Gallery</TabsTrigger>
           </TabsList>
 
           <TabsContent value="participants" className="mt-6">
@@ -807,11 +817,6 @@ export default function CompetitionDetails() {
                           ) : (
                             <div className="font-medium truncate">
                               {participant.name}
-                            </div>
-                          )}
-                          {participant.club && (
-                            <div className="text-sm text-muted-foreground truncate">
-                              {participant.club}
                             </div>
                           )}
                         </div>
@@ -959,8 +964,128 @@ export default function CompetitionDetails() {
               isLive={true} 
             />
           </TabsContent>
+
+          <TabsContent value="gallery" className="mt-6">
+            {(() => {
+              const galleryEntries = leaderboard.filter((e: any) =>
+                (e.fishImages && e.fishImages.length > 0) || e.fishImageUrl
+              );
+              if (leaderboardLoading) {
+                return (
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                    {Array.from({ length: 8 }).map((_, i) => (
+                      <Skeleton key={i} className="aspect-square w-full rounded-lg" />
+                    ))}
+                  </div>
+                );
+              }
+              if (galleryEntries.length === 0) {
+                return (
+                  <Card>
+                    <CardContent className="p-12 text-center">
+                      <Fish className="h-16 w-16 mx-auto text-muted-foreground/40 mb-4" />
+                      <p className="text-muted-foreground">No fish photos yet. Photos appear here once weights are submitted.</p>
+                    </CardContent>
+                  </Card>
+                );
+              }
+              return (
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3">
+                  {galleryEntries.map((entry: any) => {
+                    const images: string[] = entry.fishImages?.length > 0
+                      ? entry.fishImages
+                      : entry.fishImageUrl
+                        ? [entry.fishImageUrl]
+                        : [];
+                    const thumbnail = images[0];
+                    return (
+                      <div
+                        key={`gallery-${entry.position}-${entry.pegNumber}`}
+                        className="group relative cursor-pointer rounded-lg overflow-hidden border hover-elevate"
+                        onClick={() => setGalleryState({ images, name: entry.anglerName, index: 0 })}
+                        data-testid={`gallery-entry-${entry.position}`}
+                      >
+                        <div className="aspect-square bg-muted">
+                          <img
+                            src={thumbnail}
+                            alt={`${entry.anglerName} fish`}
+                            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+                          />
+                        </div>
+                        <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/70 to-transparent p-2">
+                          <p className="text-white text-xs font-medium truncate">{entry.anglerName}</p>
+                          {images.length > 1 && (
+                            <p className="text-white/70 text-[10px]">{images.length} photos</p>
+                          )}
+                        </div>
+                        {images.length > 1 && (
+                          <div className="absolute top-2 right-2 bg-black/60 text-white text-[10px] px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                            <Fish className="h-2.5 w-2.5" />
+                            {images.length}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              );
+            })()}
+          </TabsContent>
         </Tabs>
       </div>
+
+      {/* Gallery photo viewer dialog */}
+      <Dialog open={!!galleryState} onOpenChange={(open) => !open && setGalleryState(null)}>
+        <DialogContent className="max-w-2xl p-0 overflow-hidden">
+          <DialogHeader className="p-4 pb-2">
+            <DialogTitle className="flex items-center gap-2">
+              <Fish className="h-5 w-5 text-primary" />
+              Fish Photos — {galleryState?.name}
+            </DialogTitle>
+          </DialogHeader>
+          {galleryState && (
+            <div className="relative">
+              <div className="relative aspect-video bg-black flex items-center justify-center">
+                <img
+                  src={galleryState.images[galleryState.index]}
+                  alt={`Fish photo ${galleryState.index + 1}`}
+                  className="max-h-full max-w-full object-contain"
+                />
+                {galleryState.images.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => setGalleryState(s => s ? { ...s, index: (s.index - 1 + s.images.length) % s.images.length } : null)}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                    >
+                      <ChevronLeft className="h-5 w-5" />
+                    </button>
+                    <button
+                      onClick={() => setGalleryState(s => s ? { ...s, index: (s.index + 1) % s.images.length } : null)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 bg-black/60 hover:bg-black/80 text-white rounded-full p-2 transition-colors"
+                    >
+                      <ChevronRight className="h-5 w-5" />
+                    </button>
+                  </>
+                )}
+              </div>
+              {galleryState.images.length > 1 && (
+                <div className="flex justify-center gap-1.5 p-3">
+                  {galleryState.images.map((_, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setGalleryState(s => s ? { ...s, index: i } : null)}
+                      className={`h-2 w-2 rounded-full transition-colors ${i === galleryState.index ? "bg-primary" : "bg-muted-foreground/40"}`}
+                    />
+                  ))}
+                </div>
+              )}
+              <div className="px-4 pb-3 text-center text-sm text-muted-foreground">
+                {galleryState.index + 1} / {galleryState.images.length}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isCreateTeamOpen} onOpenChange={setIsCreateTeamOpen}>
         <DialogContent className="max-w-md">
@@ -1216,6 +1341,42 @@ export default function CompetitionDetails() {
                   ))}
                 </div>
               </div>
+
+              {userTeam.isCaptain && userTeam.members.length < (competition?.maxTeamMembers || 4) && (
+                <div className="space-y-2">
+                  <Label>Add Member by Email</Label>
+                  <div className="flex gap-2">
+                    <Input
+                      type="email"
+                      value={manageTeamEmail}
+                      onChange={(e) => setManageTeamEmail(e.target.value)}
+                      placeholder="angler@example.com"
+                      data-testid="input-manage-member-email"
+                      onKeyPress={(e) => {
+                        if (e.key === "Enter" && manageTeamEmail.trim() && userTeam?.id) {
+                          addMemberByEmailMutation.mutate({ teamId: userTeam.id, email: manageTeamEmail.trim() });
+                          setManageTeamEmail("");
+                        }
+                      }}
+                    />
+                    <Button
+                      onClick={() => {
+                        if (!manageTeamEmail.trim() || !userTeam?.id) return;
+                        addMemberByEmailMutation.mutate({ teamId: userTeam.id, email: manageTeamEmail.trim() });
+                        setManageTeamEmail("");
+                      }}
+                      disabled={addMemberByEmailMutation.isPending || !manageTeamEmail.trim()}
+                      size="sm"
+                      data-testid="button-manage-add-member"
+                    >
+                      {addMemberByEmailMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <UserPlus className="h-4 w-4" />}
+                    </Button>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Enter an angler's registered email to add them directly to your team
+                  </p>
+                </div>
+              )}
               
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
